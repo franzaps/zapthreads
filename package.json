@@ -1,0 +1,43 @@
+{
+  "name": "zapthreads",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Threaded web comments on Nostr",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/zapthreads.umd.cjs",
+  "module": "./dist/zapthreads.js",
+  "exports": {
+    ".": {
+      "require": "./dist/zapthreads.umd.cjs",
+      "import": "./dist/zapthreads.js"
+    }
+  },
+  "scripts": {
+    "start": "vite",
+    "dev": "vite --config vite-app.config.js",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "license": "public domain",
+  "devDependencies": {
+    "esbuild": "^0.18.0",
+    "esbuild-css-modules-plugin": "^2.7.1",
+    "esbuild-plugin-solid": "^0.5.0",
+    "solid-devtools": "^0.27.0",
+    "solid-styled-components": "^0.28.5",
+    "vite": "^4.1.1",
+    "vite-plugin-externalize-deps": "^0.6.0",
+    "vite-plugin-solid": "^2.5.0"
+  },
+  "dependencies": {
+    "@nostr-dev-kit/ndk": "^0.4.5",
+    "@solid-primitives/scheduled": "^1.3.2",
+    "babel-preset-solid": "^1.7.4",
+    "micromark": "^3.2.0",
+    "micromark-extension-gfm-autolink-literal": "^1.0.5",
+    "solid-element": "^1.7.1",
+    "solid-js": "^1.7.6"
+  }
+}

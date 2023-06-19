@@ -1,0 +1,232 @@
+:root {
+  --ctr-font: -apple-system, "BlinkMacSystemFont", "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --ctr-text-color: #2B2B2B;
+  --ctr-textarea-color: #2B2B2B;
+  --ctr-icon-color: #656565;
+  --ctr-link-color:  #92379c;
+  --ctr-login-button-color: #92379c;
+  --ctr-background-color: rgba(0, 0, 0, 0.03);
+}
+
+/****/
+
+#ctr-root {
+  font-family: var(--ctr-font);
+  font-size: 16px;
+  color: var(--ctr-text-color, #2B2B2B);
+  line-height: 19px;
+  border: 1px solid transparent; /* Removes margin collapse */
+}
+
+#ctr-root {
+  margin-top: 3rem;
+}
+
+#ctr-subtitle {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+/* Comment */
+
+.ctr-comment {
+  position: relative;
+  margin: 0rem;
+  padding: 0rem;
+  background-color: var(--ctr-background-color, rgba(0, 0, 0, 0.03));
+}
+
+.ctr-comment-text {
+  padding: 1rem;
+}
+
+.ctr-comment:first-child {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.ctr-comment:last-child {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.ctr-comment-info {
+  display: flex;
+  align-items: center;
+}
+
+.ctr-comment-info-picture {
+  width: 4rem;
+}
+
+ul.ctr-comment-info-items {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+ul.ctr-comment-info-items li {
+  display: inline-block;
+  text-align: center;
+  cursor: default;
+}
+
+ul.ctr-comment-info-items li:not(:first-child)::before {
+  padding: 0 0.2rem 0 0.35rem;
+  content: " • ";
+}
+
+ul.ctr-comment-info-items li a {
+  color: var(--ctr-link-color, #2B2B2B);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ctr-comment-info-picture img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  padding: 0.5rem;
+  position: relative;
+  display: block;
+  object-fit: cover;
+}
+
+.ctr-comment-body {
+  margin-top: -1rem;
+  padding-left: 4rem;
+}
+
+.ctr-comment-body a {
+  color: var(--ctr-link-color, #2B2B2B);
+}
+
+.ctr-comment-replies {
+  margin-left: 2em;
+}
+
+/* Styling the reply to comment form */
+
+ul.ctr-comment-actions {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+ul.ctr-comment-actions li {
+  display: inline-flex;
+  align-items: center;
+  text-align: center;
+  padding: 0 2rem 0 0;
+  cursor: default;
+}
+
+ul.ctr-comment-actions li a {
+  cursor: pointer;
+  padding: 0 0.25rem 0 0;
+}
+
+ul.ctr-comment-actions li span {
+  padding: 0;
+}
+
+.ctr-comment-actions svg {
+  fill: var(--ctr-icon-color);
+}
+
+.ctr-comment-action-zap svg:hover {
+  fill: #ffd53d;
+  stroke: #b2ac68;
+  stroke-width: 1px;
+}
+
+.ctr-comment-action-like svg:hover {
+  fill: #e74c4c;
+}
+
+.ctr-comment-action-reply svg:hover {
+  fill: #b65bf3;
+}
+
+.ctr-reply-form {
+  padding-right: 0.5rem;
+}
+
+.ctr-reply-form textarea {
+  font-family: var(--ctr-font);
+  font-size: 16px;
+  color: var(--ctr-textarea-color, #2B2B2B);
+  line-height: 19px;
+
+  background-color: #fdfdfd;
+  border: 1px solid #BBB;
+  outline: none;
+  width: calc(100% - 1.5rem);
+  padding: 0.7rem;
+  margin: 0.5rem 0;
+  height: 4rem;
+  border-radius: 4px;
+  resize: none;
+}
+
+.ctr-reply-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ctr-reply-controls .ctr-comment-info-picture {
+  width: 3rem;
+}
+
+.ctr-reply-controls .ctr-comment-info-picture img {
+  width: 20px;
+  height: 20px;
+}
+
+.ctr-reply-controls button {
+  font-family: var(--ctr-font);
+  appearance: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ctr-reply-login-button {
+  margin-left: 1rem;
+  background-color: var(--ctr-login-button-color);
+  color: white;
+}
+
+.ctr-reply-button {
+  color: var(--ctr-text-color);
+  background-color: var(--ctr-background-color);
+}
+
+
+
+/* new */
+
+.ctr-comment-new .ctr-reply-form {
+  margin-top: 0.5rem;
+}
+
+.ctr-comment-new .ctr-comment-body {
+  padding: 0;
+}
+
+.ctr-comment-new .ctr-comment-actions {
+  font-size: 1.1rem;
+}
+
