@@ -15,25 +15,25 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [x] URL
  - [x] Comment author metadata
  - [x] NIP-07 login
+   - [ ] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
  - [x] Add comments to anchor and reply to other comments
-   - [ ] Publish and sync with relays
+   - [ ] [Publish and sync with relays](https://github.com/fr4nzap/zapthreads/issues/3)
    - [ ] Creation of base anchors if none
  - [x] Rich text support
    - [x] Markdown
    - [ ] Parse nostr links and references, optional image loading
  - [ ] Zaps and likes (for both naddr/anchor and comments)
-   - [ ] Read
+   - [ ] [Ability to disable](https://github.com/fr4nzap/zapthreads/issues/4)
+   - [ ] Read (NIP-45?)
    - [ ] Write
+   - [ ] Splits
  - [ ] Sort by top, replies, zaps, oldest
- - [ ] Relay selection
-   - [ ] Proper relay selection (NIP-05 + NIP-65)
+ - [ ] Proper relay selection (NIP-05, nprofile, NIP-65)
  - [x] CSS themes (and dark theme)
    - [ ] Autodetect color mode
  - [ ] i18n, language support
    - [ ] Autodetect
    - [ ] Inherit from host
- - [ ] Zap splits
- - [ ] Share NIP-07 session with host
  - [ ] Optimized build
    - [ ] Reuse host NDK
    - [ ] Vite tree-shaking
@@ -44,7 +44,7 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [x] Web component (custom element)
    - [x] Embeddable script
    - [x] Solid
-   - [ ] React
+   - [ ] [React](https://github.com/fr4nzap/zapthreads/issues/1)
    - [ ] Vue
    - [ ] Svelte
 
@@ -69,6 +69,16 @@ Arguments:
 
  - `relays`: comma separated list of preferred relays
  - `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
+
+## Customize
+
+### CSS
+
+```js
+const style = document.createElement('style');
+style.innerHTML = '#ctr-root { font-size: 12em; }';
+document.querySelector('zap-threads').shadowRoot.appendChild(style);
+```
 
 ## Development
 
