@@ -15,10 +15,8 @@
     }
   },
   "scripts": {
-    "start": "vite",
     "dev": "vite --config vite-app.config.js",
-    "build": "vite build",
-    "serve": "vite preview"
+    "build": "vite build"
   },
   "license": "public domain",
   "devDependencies": {

@@ -42,6 +42,27 @@ Lightweight and extremely customizable. Available as web component.
    - [ ] Vue
    - [ ] Svelte
 
+## Usage
+
+`npm add zapthreads` (SOON™️)
+
+As web component:
+
+```js
+import "zapthreads";
+
+// ...
+
+<zap-threads relays="wss://relay.damus.io,wss://eden.nostr.land" anchor="naddr..." />
+```
+
+## Development
+
+ - Install with `pnpm i` and run the app with `pnpm dev`
+ - Build with `pnpm build`, it will place the bundles in `dist`
+
+Any questions or ideas, please open an issue!
+
 ## LICENSE
 
 This is free and unencumbered software released into the public domain.
