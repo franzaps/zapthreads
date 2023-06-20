@@ -1,15 +1,16 @@
 import { Accessor, createContext, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import NDK, { NDKNip07Signer, NDKEvent, NDKPrivateKeySigner, NDKSigner, NDKSubscription, NDKFilter, filterFromId } from "@nostr-dev-kit/ndk";
+import NDK, { NDKEvent, NDKSigner, NDKSubscription, NDKFilter, filterFromId } from "@nostr-dev-kit/ndk";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { nest } from "@nostr-dev-kit/ndk";
 import { Thread } from "./Thread";
-import { createMutable } from "solid-js/store";
+import { createMutable, createStore } from "solid-js/store";
 import { RootComment } from "./RootComment";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 
 export const usersStore = createMutable<{ [key: string]: { timestamp: number, npub?: string, name?: string, imgUrl?: string; }; }>({});
 export const eventsStore = createMutable<{ [key: string]: NDKEvent; }>({});
+export const signersStore = createMutable<{ [key: string]: NDKSigner; }>({});
 
 const ZapThreads = (props: { anchor: string, relays: string[]; }) => {
   if (!props.anchor.startsWith('naddr') && !props.anchor.startsWith('http')) {
@@ -47,7 +48,6 @@ const ZapThreads = (props: { anchor: string, relays: string[]; }) => {
         }
       });
       sub.on('error', () => 'error');
-      sub.on('eose', () => console.log('EOSE'));
     } catch (e) {
       // TODO properly handle error
       console.log(e);
@@ -57,9 +57,6 @@ const ZapThreads = (props: { anchor: string, relays: string[]; }) => {
   onCleanup(() => {
     sub?.stop();
   });
-
-  const anonymousSigner = NDKPrivateKeySigner.generate();
-  const loggedInSigner = new NDKNip07Signer();
 
   const scheduledDebounce = createScheduled(fn => debounce(fn, 16));
   const debouncedEvents = createMemo((e: NDKEvent[] = []) => {
@@ -97,7 +94,8 @@ const ZapThreads = (props: { anchor: string, relays: string[]; }) => {
   });
 
   return <div id="ctr-root">
-    <ZapThreadsContext.Provider value={{ ndk, filter, anonymousSigner, loggedInSigner }}>
+    <style>{style}</style>
+    <ZapThreadsContext.Provider value={{ ndk, filter }}>
       <RootComment />
       <h2 id="ctr-title">{Object.keys(eventsStore).length} comments</h2>
       <h3 id="ctr-subtitle">2397 sats</h3>
@@ -111,8 +109,6 @@ export default ZapThreads;
 export const ZapThreadsContext = createContext<{
   ndk: NDK,
   filter: Accessor<NDKFilter | undefined>;
-  anonymousSigner: NDKSigner,
-  loggedInSigner: NDKSigner;
 }>();
 
 const filterToReplaceableId = (filter: NDKFilter): string => {
@@ -121,8 +117,5 @@ const filterToReplaceableId = (filter: NDKFilter): string => {
 
 customElement('zap-threads', { relays: "", anchor: "" }, (props) => {
   const relays = props.relays.split(",");
-  return <>
-    <style>{style}</style>
-    <ZapThreads relays={relays} anchor={props.anchor} />
-  </>;
+  return <ZapThreads relays={relays} anchor={props.anchor} />;
 });

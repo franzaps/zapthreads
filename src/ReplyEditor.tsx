@@ -1,15 +1,17 @@
-import { NDKEvent, NDKFilter, NDKSigner, NDKTag } from "@nostr-dev-kit/ndk";
-import { ZapThreadsContext, eventsStore, usersStore } from "./ZapThreads";
+import { NDKEvent, NDKFilter, NDKNip07Signer, NDKPrivateKeySigner, NDKTag } from "@nostr-dev-kit/ndk";
+import { ZapThreadsContext, eventsStore, signersStore, usersStore } from "./ZapThreads";
 import { defaultPicture, userDisplay } from "./util";
 import { Show, createSignal, useContext } from "solid-js";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { ndk, filter, anonymousSigner, loggedInSigner } = useContext(ZapThreadsContext)!;
+  const { ndk, filter } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
 
   const login = async () => {
-    const u = await loggedInSigner.user();
+    signersStore.default ||= new NDKNip07Signer();
+
+    const u = await signersStore.default.user();
     if (u.npub !== undefined) {
       usersStore.default = { timestamp: 0, npub: u.npub };
       usersStore[u.hexpubkey()] = usersStore.default;
@@ -24,7 +26,11 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     }
   };
 
-  const publish = async (signer: NDKSigner) => {
+  const publish = async () => {
+    signersStore.anonymous ||= NDKPrivateKeySigner.generate();
+
+    const signer = signersStore.default || signersStore.anonymous;
+
     const content = comment().trim();
     if (!content) {
       return;
@@ -51,7 +57,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     }
 
     const rawEvent = await event.toNostrEvent();
-    await anonymousSigner.sign(rawEvent);
+    await signer.sign(rawEvent);
 
     console.log(JSON.stringify(rawEvent, null, 2));
 
@@ -74,14 +80,14 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       <Show
         when={usersStore.default}
         fallback={<>
-          <button class="ctr-reply-button" onClick={() => publish(anonymousSigner)}>Reply anonymously</button>
+          <button class="ctr-reply-button" onClick={() => publish()}>Reply anonymously</button>
           <button class="ctr-reply-login-button" onClick={login}>Log-in</button>
         </>}
       >
         <div class="ctr-comment-info-picture">
           <img src={usersStore.default.imgUrl || defaultPicture} />
         </div>
-        <button class="ctr-reply-button" onClick={() => publish(loggedInSigner)}>Reply as {userDisplay(usersStore.default.npub!, usersStore.default.name)}</button>
+        <button class="ctr-reply-button" onClick={() => publish()}>Reply as {userDisplay(usersStore.default.npub!, usersStore.default.name)}</button>
       </Show>
     </div>
   </div>;

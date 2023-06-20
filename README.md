@@ -2,24 +2,23 @@
 
 A threaded web commenting system built on Nostr. Inspired by [stacker.news](https://stacker.news) and [NoComment](https://github.com/fiatjaf/nocomment).
 
-![](https://nostr.build/i/bcd4d4f15871f3d366681bea847b9a5b89b0fb118c17e2bb65da48177cc7dfc9.jpg)
-
 ![](https://nostr.build/i/0c9c2fbd41a9f6a8b0095bfbbae7562c8ed316f8cc5188de044fb453dbd2b1f5.jpg)
 
 _(Zaps and likes count are fake random numbers at the moment)_
 
 ## Features (and goals)
 
-Lightweight and extremely customizable. Available as web component.
+Lightweight and extremely customizable. Available as web component and embeddable script.
 
  - [x] Threaded comments
    - [x] naddr
    - [x] URL
  - [x] Comment author metadata
  - [x] NIP-07 login
- - [-] Add comments to anchor and reply to other comments
-   - [ ] Publish and sync with relay
- - [-] Rich text support
+ - [x] Add comments to anchor and reply to other comments
+   - [ ] Publish and sync with relays
+   - [ ] Creation of base anchors if none
+ - [x] Rich text support
    - [x] Markdown
    - [ ] Parse nostr links and references, optional image loading
  - [ ] Zaps and likes (for both naddr/anchor and comments)
@@ -38,24 +37,28 @@ Lightweight and extremely customizable. Available as web component.
  - [ ] Optimized build
    - [ ] Reuse host NDK
    - [ ] Vite tree-shaking
- - [-] Allow to customize most elements
+ - [x] Allow to customize most elements
    - [x] Full CSS control via `shadowRoot` style
    - [ ] Better/more props (color mode, language)
  - [ ] Available as multiple libraries
    - [x] Web component (custom element)
+   - [x] Embeddable script
    - [x] Solid
    - [ ] React
    - [ ] Vue
    - [ ] Svelte
 
+Right now it is ~90kb gzipped with all styles and dependencies and no tree-shaking. It will get much better.
+
 ## Usage
 
 `npm add zapthreads` (SOON™️)
 
-As web component:
-
 ```js
 import "zapthreads";
+// or
+<script src="path/to/zapthreads.umd.cjs"></script>
+<link rel="stylesheet" href="/path/to/style.css">
 
 // ...
 
