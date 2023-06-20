@@ -21,7 +21,7 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [ ] Creation of base anchors if none
  - [x] Rich text support
    - [x] Markdown
-   - [ ] [Parse nostr links and references](https://github.com/fr4nzap/zapthreads/issues/5)
+   - [x] [Parse nostr links and references](https://github.com/fr4nzap/zapthreads/issues/5)
  - [ ] Zaps and likes (for both naddr/anchor and comments)
    - [x] [Ability to disable](https://github.com/fr4nzap/zapthreads/issues/4)
    - [ ] Read (NIP-45?)
@@ -36,7 +36,7 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [ ] Inherit from host
  - [ ] Optimized build
    - [ ] Reuse host NDK
-   - [ ] Vite tree-shaking
+   - [ ] [Tree-shaking](https://github.com/fr4nzap/zapthreads/issues/6)
  - [x] Allow to customize most elements
    - [x] Full CSS control via `shadowRoot` style
    - [ ] Better/more props (color mode, language)
