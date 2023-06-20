@@ -37,7 +37,14 @@
 }
 
 .ctr-comment-text {
+  line-break: loose;
+  word-break: break-word;
   padding: 1rem;
+}
+
+.ctr-comment-text pre {
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap;
 }
 
 .ctr-comment:first-child {

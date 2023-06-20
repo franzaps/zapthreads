@@ -1,6 +1,6 @@
 import { NDKNestedEvent } from "@nostr-dev-kit/ndk";
 import { Accessor, createEffect, createSignal, useContext } from "solid-js";
-import { defaultPicture, svgWidth, timeAgo, userDisplay } from "./util";
+import { defaultPicture, shortenEncodedId, svgWidth, timeAgo } from "./util";
 import { usersStore } from "./ZapThreads";
 
 export const CommentInfo = (props: { event: Accessor<NDKNestedEvent>; }) => {
@@ -23,7 +23,7 @@ export const CommentInfo = (props: { event: Accessor<NDKNestedEvent>; }) => {
     </div>
     <ul class="ctr-comment-info-items">
       <li class="ctr-comment-info-item ctr-comment-info-author">
-        <a href={'https://nostr.com/' + npub()} target="_blank" >{userDisplay(npub(), usersStore[pubkey()]?.name)}</a>
+        <a href={'https://nostr.com/' + npub()} target="_blank" >{usersStore[pubkey()]?.name || shortenEncodedId(npub())}</a>
       </li>
       <li class="ctr-comment-info-item ctr-comment-info-time">{timeAgo(props.event().created_at! * 1000)}</li>
       <li class="ctr-comment-info-item ctr-comment-info-replies">{props.event().totalChildren() == 1 ? '1 reply' : `${props.event().totalChildren()} replies`}</li>

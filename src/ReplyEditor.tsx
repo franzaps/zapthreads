@@ -1,6 +1,6 @@
 import { NDKEvent, NDKFilter, NDKNip07Signer, NDKPrivateKeySigner, NDKTag } from "@nostr-dev-kit/ndk";
 import { ZapThreadsContext, eventsStore, signersStore, usersStore } from "./ZapThreads";
-import { defaultPicture, userDisplay } from "./util";
+import { defaultPicture, shortenEncodedId } from "./util";
 import { Show, createSignal, useContext } from "solid-js";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
@@ -87,7 +87,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         <div class="ctr-comment-info-picture">
           <img src={usersStore.default.imgUrl || defaultPicture} />
         </div>
-        <button class="ctr-reply-button" onClick={() => publish()}>Reply as {userDisplay(usersStore.default.npub!, usersStore.default.name)}</button>
+        <button class="ctr-reply-button" onClick={() => publish()}>Reply as {usersStore.default.name || shortenEncodedId(usersStore.default.npub!)}</button>
       </Show>
     </div>
   </div>;

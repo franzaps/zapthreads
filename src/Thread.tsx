@@ -1,9 +1,7 @@
 import { NDKNestedEvent } from "@nostr-dev-kit/ndk";
-import { micromark } from "micromark";
-import { gfmAutolinkLiteral, gfmAutolinkLiteralHtml } from "micromark-extension-gfm-autolink-literal";
 import { Index, Show, createSignal } from "solid-js";
 import { CommentInfo } from "./CommentInfo";
-import { randomCount, svgWidth } from "./util";
+import { parseContent, randomCount, svgWidth } from "./util";
 import { ReplyEditor } from "./ReplyEditor";
 import { preferencesStore } from "./ZapThreads";
 
@@ -18,10 +16,7 @@ export const Thread = (props: { nestedEvents: () => NDKNestedEvent[]; }) => {
             <div class="ctr-comment-text">
               <CommentInfo event={event} />
               <div class="ctr-comment-body">
-                <span innerHTML={micromark(event().content, {
-                  extensions: [gfmAutolinkLiteral],
-                  htmlExtensions: [gfmAutolinkLiteralHtml]
-                })}></span>
+                <span innerHTML={parseContent(event())}></span>
                 <ul class="ctr-comment-actions">
                   <Show when={!preferencesStore.disableZaps}>
                     <li class="ctr-comment-action-zap">
