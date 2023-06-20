@@ -1,10 +1,9 @@
 import { NDKNestedEvent } from "@nostr-dev-kit/ndk";
 import { Accessor, createEffect, createSignal, useContext } from "solid-js";
 import { defaultPicture, svgWidth, timeAgo, userDisplay } from "./util";
-import { ZapThreadsContext, usersStore } from "./ZapThreads";
+import { usersStore } from "./ZapThreads";
 
 export const CommentInfo = (props: { event: Accessor<NDKNestedEvent>; }) => {
-  const { ndk } = useContext(ZapThreadsContext)!;
   const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
 
   const npub = () => props.event().author.npub;

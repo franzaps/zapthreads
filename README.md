@@ -21,9 +21,9 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [ ] Creation of base anchors if none
  - [x] Rich text support
    - [x] Markdown
-   - [ ] Parse nostr links and references, optional image loading
+   - [ ] [Parse nostr links and references](https://github.com/fr4nzap/zapthreads/issues/5)
  - [ ] Zaps and likes (for both naddr/anchor and comments)
-   - [ ] [Ability to disable](https://github.com/fr4nzap/zapthreads/issues/4)
+   - [x] [Ability to disable](https://github.com/fr4nzap/zapthreads/issues/4)
    - [ ] Read (NIP-45?)
    - [ ] Write
    - [ ] Splits
@@ -54,7 +54,7 @@ Right now it is ~90kb gzipped with all styles and dependencies and no tree-shaki
 
 `npm add zapthreads` (SOON™️)
 
-```js
+```html
 import "zapthreads";
 // or
 <script src="path/to/zapthreads.umd.cjs"></script>
@@ -62,13 +62,31 @@ import "zapthreads";
 
 // ...
 
-<zap-threads relays="wss://relay.damus.io,wss://eden.nostr.land" anchor="naddr..." />
+<zap-threads anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz" />
 ```
 
 Arguments:
 
- - `relays`: comma separated list of preferred relays
- - `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
+ - (required) `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
+ - (optional) `relays`: comma separated list of preferred relays (defaults to `["wss://relay.damus.io", "wss://eden.nostr.land"]`)
+ - (optional) `disableLikes`: defaults to `false`
+ - (optional) `disableZaps`: defaults to `false`
+
+```html
+<zap-threads 
+  anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz"
+  relays="wss://relay.nostr.band"
+  disableLikes="true"
+  />
+```
+
+As Solid component:
+
+```js
+import ZapThreads from 'zapthreads';
+
+<ZapThreads anchor={anchor} relays={relays} />
+```
 
 ## Customize
 
