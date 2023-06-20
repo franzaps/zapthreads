@@ -13,7 +13,7 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/ZapThreads.tsx'),
       name: 'ZapThreads',
       fileName: 'zapthreads',
-      formats: ['iife']
+      formats: ['cjs', 'umd', 'iife']
     },
     rollupOptions: {
       // external: ['@nostr-dev-kit/ndk'],
