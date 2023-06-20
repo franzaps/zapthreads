@@ -2,6 +2,12 @@
 
 A threaded web commenting system built on Nostr. Inspired by [stacker.news](https://stacker.news) and [NoComment](https://github.com/fiatjaf/nocomment).
 
+![](https://nostr.build/i/bcd4d4f15871f3d366681bea847b9a5b89b0fb118c17e2bb65da48177cc7dfc9.jpg)
+
+![](https://nostr.build/i/0c9c2fbd41a9f6a8b0095bfbbae7562c8ed316f8cc5188de044fb453dbd2b1f5.jpg)
+
+_(Zaps and likes count are fake random numbers at the moment)_
+
 ## Features (and goals)
 
 Lightweight and extremely customizable. Available as web component.
@@ -55,6 +61,11 @@ import "zapthreads";
 
 <zap-threads relays="wss://relay.damus.io,wss://eden.nostr.land" anchor="naddr..." />
 ```
+
+Arguments:
+
+ - `relays`: comma separated list of preferred relays
+ - `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
 
 ## Development
 
