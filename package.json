@@ -7,11 +7,11 @@
     "dist"
   ],
   "main": "./dist/zapthreads.umd.cjs",
-  "module": "./dist/zapthreads.js",
+  "module": "./dist/zapthreads.cjs",
   "exports": {
     ".": {
       "require": "./dist/zapthreads.umd.cjs",
-      "import": "./dist/zapthreads.js"
+      "import": "./dist/zapthreads.cjs"
     }
   },
   "scripts": {
