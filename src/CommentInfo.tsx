@@ -1,19 +1,17 @@
-import { NDKNestedEvent } from "@nostr-dev-kit/ndk";
-import { Accessor, createEffect, createSignal, useContext } from "solid-js";
-import { defaultPicture, shortenEncodedId, svgWidth, timeAgo } from "./util";
-import { usersStore } from "./ZapThreads";
+import { Accessor, createEffect, createSignal } from "solid-js";
+import { defaultPicture, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util";
+import { NestedNote, usersStore } from "./ZapThreads";
+import { nip19 } from "nostr-tools";
 
-export const CommentInfo = (props: { event: Accessor<NDKNestedEvent>; }) => {
+export const CommentInfo = (props: { event: Accessor<NestedNote>; }) => {
   const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
 
-  const npub = () => props.event().author.npub;
-  const pubkey = () => props.event().author.hexpubkey();
+  const pubkey = () => props.event().pubkey;
+  const npub = () => nip19.npubEncode(pubkey());
 
   createEffect(async () => {
-    const a = props.event().author;
-    usersStore[a.hexpubkey()] ||= { timestamp: 0, npub: a.npub };
-
-    const imgUrl = usersStore[a.hexpubkey()]?.imgUrl;
+    usersStore[pubkey()] ||= { timestamp: 0, npub: npub() };
+    const imgUrl = usersStore[pubkey()]?.imgUrl;
     setProfilePicture(imgUrl || defaultPicture);
   });
 
@@ -26,7 +24,7 @@ export const CommentInfo = (props: { event: Accessor<NDKNestedEvent>; }) => {
         <a href={'https://nostr.com/' + npub()} target="_blank" >{usersStore[pubkey()]?.name || shortenEncodedId(npub())}</a>
       </li>
       <li class="ctr-comment-info-item ctr-comment-info-time">{timeAgo(props.event().created_at! * 1000)}</li>
-      <li class="ctr-comment-info-item ctr-comment-info-replies">{props.event().totalChildren() == 1 ? '1 reply' : `${props.event().totalChildren()} replies`}</li>
+      <li class="ctr-comment-info-item ctr-comment-info-replies">{totalChildren(props.event()) == 1 ? '1 reply' : `${totalChildren(props.event())} replies`}</li>
     </ul>
   </div>;
 };

@@ -1,11 +1,10 @@
-import { NDKNestedEvent } from "@nostr-dev-kit/ndk";
 import { Index, Show, createSignal } from "solid-js";
 import { CommentInfo } from "./CommentInfo";
 import { parseContent, randomCount, svgWidth } from "./util";
 import { ReplyEditor } from "./ReplyEditor";
-import { preferencesStore } from "./ZapThreads";
+import { NestedNote, preferencesStore } from "./ZapThreads";
 
-export const Thread = (props: { nestedEvents: () => NDKNestedEvent[]; }) => {
+export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   return <div class="ctr-thread">
     <Index each={sortByDate(props.nestedEvents())}>
       {
@@ -55,6 +54,6 @@ export const Thread = (props: { nestedEvents: () => NDKNestedEvent[]; }) => {
   </div>;
 };
 
-const sortByDate = (arr: NDKNestedEvent[]) => arr.sort((a, b) => (a.created_at || 0) >= (b.created_at || 0)
+const sortByDate = (arr: NestedNote[]) => arr.sort((a, b) => (a.created_at || 0) >= (b.created_at || 0)
   ? -1
   : 1);

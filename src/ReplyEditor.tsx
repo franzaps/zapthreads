@@ -1,51 +1,60 @@
-import { NDKEvent, NDKFilter, NDKNip07Signer, NDKPrivateKeySigner, NDKTag } from "@nostr-dev-kit/ndk";
-import { ZapThreadsContext, eventsStore, signersStore, usersStore } from "./ZapThreads";
-import { defaultPicture, shortenEncodedId } from "./util";
+import { Filter } from "nostr-tools/lib/filter";
+import { EventSigner, User, ZapThreadsContext, eventsStore, usersStore } from "./ZapThreads";
+import { defaultPicture, shortenEncodedId, updateMetadata } from "./util";
 import { Show, createSignal, useContext } from "solid-js";
+import { UnsignedEvent, Event, nip19, generatePrivateKey, getSignature, getPublicKey } from "nostr-tools";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { ndk, filter } = useContext(ZapThreadsContext)!;
+  const { pool, relays, filter } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
 
   const login = async () => {
-    signersStore.default ||= new NDKNip07Signer();
+    const defaultPubKey = await window.nostr!.getPublicKey();
+    if (defaultPubKey !== undefined) {
+      usersStore.default = usersStore[defaultPubKey] = {
+        timestamp: 0,
+        npub: nip19.npubEncode(defaultPubKey),
+        signEvent: window.nostr!.signEvent
+      };
 
-    const u = await signersStore.default.user();
-    if (u.npub !== undefined) {
-      usersStore.default = { timestamp: 0, npub: u.npub };
-      usersStore[u.hexpubkey()] = usersStore.default;
-      if (u.profile === undefined) {
-        u.ndk = ndk;
-        await u.fetchProfile();
-        usersStore.default = { ...usersStore.default, name: u.profile!.displayName, imgUrl: u.profile!.image };
-        usersStore[u.hexpubkey()] = { timestamp: 0, name: u.profile!.displayName, imgUrl: u.profile!.image };
+      if (usersStore.default.name === undefined) {
+        const result = await pool.list(relays, [{
+          kinds: [0],
+          authors: [defaultPubKey]
+        }]);
+        updateMetadata(result);
       }
     } else {
-      console.log('DENIED ACCESS');
+      alert('Access was denied');
     }
   };
 
-  const publish = async () => {
-    signersStore.anonymous ||= NDKPrivateKeySigner.generate();
-
-    const signer = signersStore.default || signersStore.anonymous;
-
-    const content = comment().trim();
-    if (!content) {
-      return;
+  const publish = async (user: User) => {
+    if (!usersStore.anonymous) {
+      const sk = generatePrivateKey();
+      usersStore.anonymous = {
+        timestamp: 0,
+        npub: nip19.npubEncode(getPublicKey(sk)),
+        signEvent: async (event) => ({ sig: getSignature(event, sk) }),
+      };
     }
 
-    const event = new NDKEvent(ndk);
-    const user = await signer.user();
-    event.kind = 1;
-    event.created_at = Math.round(Date.now() / 1000);
-    event.content = content;
-    event.pubkey = user.hexpubkey();
-    event.tag(user);
+    if (!user.signEvent) return;
+
+    const content = comment().trim();
+    if (!content) return;
+
+    const unsignedEvent: UnsignedEvent<1> = {
+      kind: 1,
+      created_at: Math.round(Date.now() / 1000),
+      content: content,
+      pubkey: nip19.decode(user.npub!).data.toString(),
+      tags: [], // event.tag(user());
+    };
 
     // Set root
-    event.tags.push(tagFor(filter()!));
+    unsignedEvent.tags.push(tagFor(filter()!));
 
     // Set reply
     if (props.replyTo) {
@@ -53,19 +62,26 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       // const type = props.replyTo.reply?.id != null ? "reply" : "root";
       // TODO restore when root is the article ("a")
       const reply = ["e", props.replyTo, "", "reply"];
-      event.tags.push(reply);
+      unsignedEvent.tags.push(reply);
     }
 
-    const rawEvent = await event.toNostrEvent();
-    await signer.sign(rawEvent);
+    const signature = await user.signEvent(unsignedEvent);
 
-    console.log(JSON.stringify(rawEvent, null, 2));
+    console.log(JSON.stringify(unsignedEvent, null, 2));
 
-    // await event.publish();
+    const event: Event<1> = { ...unsignedEvent, ...signature, id: '???' };
+
+    // const sub = pool.publish(relays, event);
+    // sub.on('ok', function ok() {
+    //   sub.off('ok', ok);
+    // });
+    // sub.on('failed', function failed() {
+    //   sub.off('failed', failed);
+    // });
 
     setComment('');
-
     eventsStore[event.id] = event;
+
     props.onDone?.call(this);
   };
 
@@ -80,23 +96,32 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       <Show
         when={usersStore.default}
         fallback={<>
-          <button class="ctr-reply-button" onClick={() => publish()}>Reply anonymously</button>
-          <button class="ctr-reply-login-button" onClick={login}>Log-in</button>
+          <button class="ctr-reply-button" onClick={() => publish(usersStore.anonymous)}>Reply anonymously</button>
+          {window.nostr && <button class="ctr-reply-login-button" onClick={login}>Log-in</button>}
         </>}
       >
         <div class="ctr-comment-info-picture">
           <img src={usersStore.default.imgUrl || defaultPicture} />
         </div>
-        <button class="ctr-reply-button" onClick={() => publish()}>Reply as {usersStore.default.name || shortenEncodedId(usersStore.default.npub!)}</button>
+        <button class="ctr-reply-button" onClick={() => publish(usersStore.default)}>Reply as {usersStore.default.name || shortenEncodedId(usersStore.default.npub!)}</button>
       </Show>
     </div>
   </div>;
 };
 
-function tagFor(filter: NDKFilter): NDKTag {
+function tagFor(filter: Filter): string[] {
   if (filter["#e"]) {
     return ["e", filter["#e"][0], "", "root"];
   } else {
     return ["a", filter["#a"][0], "", "root"];
+  }
+}
+
+declare global {
+  interface Window {
+    nostr?: {
+      getPublicKey(): Promise<string>;
+      signEvent: EventSigner;
+    };
   }
 }

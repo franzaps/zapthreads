@@ -1,13 +1,28 @@
-import { NDKEvent, NDKNestedEvent } from "@nostr-dev-kit/ndk";
-import { nip10, nip19, nip27 } from "nostr-tools";
+import { nip19, nip27 } from "nostr-tools";
 import { micromark } from "micromark";
 import { gfmAutolinkLiteral, gfmAutolinkLiteralHtml } from "micromark-extension-gfm-autolink-literal";
-import { usersStore } from "./ZapThreads";
-
+import { usersStore, NestedNote } from "./ZapThreads";
+import { Event } from "nostr-tools";
 
 // Misc profile helpers
 
-export const parseContent = (e: NDKEvent): string => {
+export const updateMetadata = (result: Event<0>[]): void => {
+  // For each metadata event, check if it was created later
+  // and merge interesting properties into usersStore entry
+  result.forEach(e => {
+    const payload = JSON.parse(e.content);
+    if (usersStore[e.pubkey].timestamp < e.created_at!) {
+      usersStore[e.pubkey] = {
+        ...usersStore[e.pubkey],
+        timestamp: e.created_at!,
+        imgUrl: payload.image || payload.picture,
+        name: payload.displayName || payload.display_name || payload.name,
+      };
+    }
+  });
+};
+
+export const parseContent = (e: Event<1>): string => {
 
   let content = e.content;
 
@@ -74,14 +89,8 @@ export function timeAgo(timestamp: number) {
 
 // extensions
 
-declare module '@nostr-dev-kit/ndk' {
-  interface NDKNestedEvent {
-    totalChildren(): number;
-  }
-}
-
-NDKNestedEvent.prototype.totalChildren = function () {
-  return this.children.reduce<number>((acc, c) => {
-    return acc + c.totalChildren();
-  }, this.children.length);
+export const totalChildren = (event: NestedNote): number => {
+  return event.children.reduce<number>((acc, c) => {
+    return acc + totalChildren(c);
+  }, event.children.length);
 };
