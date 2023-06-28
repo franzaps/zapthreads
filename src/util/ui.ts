@@ -1,4 +1,4 @@
-import { nip19, nip27 } from "nostr-tools";
+import { Filter, nip19, nip27 } from "nostr-tools";
 import { micromark } from "micromark";
 import { gfmAutolinkLiteral, gfmAutolinkLiteralHtml } from "micromark-extension-gfm-autolink-literal";
 import { Event } from "nostr-tools";
@@ -28,6 +28,14 @@ export const filterToReplaceableId = (id: string): string => {
   const decoded = nip19.decode(id);
   const data = decoded.data as AddressPointer;
   return `${data.kind}:${data.pubkey}:${data.identifier}`;
+};
+
+export const tagFor = (filter: Filter): string[] => {
+  if (filter["#e"]) {
+    return ["e", filter["#e"][0], "", "root"];
+  } else {
+    return ["a", filter["#a"][0], "", "root"];
+  }
 };
 
 export const parseContent = (e: Event): string => {
@@ -73,7 +81,7 @@ export const randomCount = () => Math.floor(Math.random() * 42);
 
 export const defaultPicture = 'data:image/svg+xml;utf-8,<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><circle cx="512" cy="512" r="512" fill="%23333" fill-rule="evenodd" /></svg>';
 
-export function timeAgo(timestamp: number) {
+export const timeAgo = (timestamp: number) => {
   const now = new Date();
   const secondsPast = Math.floor((now.getTime() - timestamp) / 1000);
   if (secondsPast < 60) {
@@ -93,7 +101,7 @@ export function timeAgo(timestamp: number) {
     const year = date.getFullYear() === now.getFullYear() ? '' : ' ' + date.getFullYear();
     return day + year;
   }
-}
+};
 
 // extensions
 
