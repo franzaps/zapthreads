@@ -1,5 +1,5 @@
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
-import { Show, createSignal, useContext } from "solid-js";
+import { Show, createEffect, createSignal, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
 import { EventSigner, User, eventsStore, usersStore, preferencesStore, ZapThreadsContext } from "./util/stores";
 import { randomCount, svgWidth } from "./util/ui";
@@ -16,33 +16,50 @@ declare global {
 }
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { pool, relays, filter } = useContext(ZapThreadsContext)!;
+  const { pool, relays, filter, pubkey } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
+
+  createEffect(() => {
+    if (pubkey() && !usersStore[pubkey()!]?.loggedIn) {
+      logout(); // log out any previous session
+      login();
+    }
+    if (!pubkey() && loggedInUser()) {
+      logout();
+    }
+  });
 
   const loggedInUser = () => {
     return Object.values(usersStore).find(u => u.loggedIn === true);
   };
 
   const login = async () => {
-    const pubkey = await window.nostr!.getPublicKey();
-    if (pubkey) {
-      usersStore[pubkey] = {
+    const _pubkey = pubkey() || await window.nostr!.getPublicKey();
+    if (_pubkey) {
+      usersStore[_pubkey] = {
         timestamp: 0,
         loggedIn: true,
-        npub: npubEncode(pubkey),
+        npub: npubEncode(_pubkey),
         signEvent: async (event) => window.nostr!.signEvent(event),
       };
 
-      if (!usersStore[pubkey].name) {
-        const result = await pool.list(relays, [{
+      if (!usersStore[_pubkey].name) {
+        const result = await pool.list(relays(), [{
           kinds: [0],
-          authors: [pubkey]
+          authors: [_pubkey]
         }]);
         updateMetadata(result);
       }
     } else {
       alert('Access was denied');
+    }
+  };
+
+  const logout = () => {
+    const user = loggedInUser();
+    if (user) {
+      user.loggedIn = false;
     }
   };
 

@@ -13,6 +13,7 @@ export const preferencesStore = createMutable<{ [key: string]: any; }>({});
 
 export const ZapThreadsContext = createContext<{
   pool: SimplePool,
-  relays: string[],
+  relays: Accessor<string[]>,
   filter: Accessor<Filter | undefined>;
+  pubkey: Accessor<string | undefined>;
 }>();
