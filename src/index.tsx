@@ -80,13 +80,13 @@ const ZapThreads = (props: { anchor: string, relays: string[]; disableLikes?: bo
     }
   });
 
-  return <div id="ctr-root">
+  return <div id="ztr-root">
     <style>{style}</style>
     <ZapThreadsContext.Provider value={{ pool, relays, filter }}>
       <RootComment />
-      <h2 id="ctr-title">{Object.keys(eventsStore).length} comments</h2>
+      <h2 id="ztr-title">{Object.keys(eventsStore).length} comments</h2>
       <Show when={!preferencesStore.disableZaps}>
-        <h3 id="ctr-subtitle">2397 sats</h3>
+        <h3 id="ztr-subtitle">2397 sats</h3>
       </Show>
       <Thread nestedEvents={nestedEvents} />
     </ZapThreadsContext.Provider>

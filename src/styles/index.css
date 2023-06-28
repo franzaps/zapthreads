@@ -10,7 +10,7 @@
 
 /****/
 
-#ctr-root {
+#ztr-root {
   font-family: var(--ztr-font);
   font-size: 16px;
   color: var(--ztr-text-color, #2B2B2B);
@@ -18,55 +18,55 @@
   border: 1px solid transparent; /* Removes margin collapse */
 }
 
-#ctr-root {
+#ztr-root {
   margin-top: 3rem;
 }
 
-#ctr-subtitle {
+#ztr-subtitle {
   font-size: 1.2rem;
   color: #666;
 }
 
 /* Comment */
 
-.ctr-comment {
+.ztr-comment {
   position: relative;
   margin: 0rem;
   padding: 0rem;
   background-color: var(--ztr-background-color, rgba(0, 0, 0, 0.03));
 }
 
-.ctr-comment-text {
+.ztr-comment-text {
   line-break: loose;
   word-break: break-word;
   padding: 1rem;
 }
 
-.ctr-comment-text pre {
+.ztr-comment-text pre {
   white-space: pre-wrap;
   white-space: -moz-pre-wrap;
 }
 
-.ctr-comment:first-child {
+.ztr-comment:first-child {
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
 }
 
-.ctr-comment:last-child {
+.ztr-comment:last-child {
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
 }
 
-.ctr-comment-info {
+.ztr-comment-info {
   display: flex;
   align-items: center;
 }
 
-.ctr-comment-info-picture {
+.ztr-comment-info-picture {
   width: 4rem;
 }
 
-ul.ctr-comment-info-items {
+ul.ztr-comment-info-items {
   display: flex;
   align-items: center;
   list-style: none;
@@ -75,24 +75,24 @@ ul.ctr-comment-info-items {
   font-size: 0.95rem;
 }
 
-ul.ctr-comment-info-items li {
+ul.ztr-comment-info-items li {
   display: inline-block;
   text-align: center;
   cursor: default;
 }
 
-ul.ctr-comment-info-items li:not(:first-child)::before {
+ul.ztr-comment-info-items li:not(:first-child)::before {
   padding: 0 0.2rem 0 0.35rem;
   content: " • ";
 }
 
-ul.ctr-comment-info-items li a {
+ul.ztr-comment-info-items li a {
   color: var(--ztr-link-color, #2B2B2B);
   text-decoration: none;
   font-weight: 600;
 }
 
-.ctr-comment-info-picture img {
+.ztr-comment-info-picture img {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -102,22 +102,22 @@ ul.ctr-comment-info-items li a {
   object-fit: cover;
 }
 
-.ctr-comment-body {
+.ztr-comment-body {
   margin-top: -1rem;
   padding-left: 4rem;
 }
 
-.ctr-comment-body a {
+.ztr-comment-body a {
   color: var(--ztr-link-color, #2B2B2B);
 }
 
-.ctr-comment-replies {
+.ztr-comment-replies {
   margin-left: 2em;
 }
 
 /* Styling the reply to comment form */
 
-ul.ctr-comment-actions {
+ul.ztr-comment-actions {
   display: flex;
   align-items: center;
   list-style: none;
@@ -128,7 +128,7 @@ ul.ctr-comment-actions {
   user-select: none;
 }
 
-ul.ctr-comment-actions li {
+ul.ztr-comment-actions li {
   display: inline-flex;
   align-items: center;
   text-align: center;
@@ -136,38 +136,38 @@ ul.ctr-comment-actions li {
   cursor: default;
 }
 
-ul.ctr-comment-actions li a {
+ul.ztr-comment-actions li a {
   cursor: pointer;
   padding: 0 0.25rem 0 0;
 }
 
-ul.ctr-comment-actions li span {
+ul.ztr-comment-actions li span {
   padding: 0;
 }
 
-.ctr-comment-actions svg {
+.ztr-comment-actions svg {
   fill: var(--ztr-icon-color);
 }
 
-.ctr-comment-action-zap svg:hover {
+.ztr-comment-action-zap svg:hover {
   fill: #ffd53d;
   stroke: #b2ac68;
   stroke-width: 1px;
 }
 
-.ctr-comment-action-like svg:hover {
+.ztr-comment-action-like svg:hover {
   fill: #e74c4c;
 }
 
-.ctr-comment-action-reply svg:hover {
+.ztr-comment-action-reply svg:hover {
   fill: #b65bf3;
 }
 
-.ctr-reply-form {
+.ztr-reply-form {
   padding-right: 0.5rem;
 }
 
-.ctr-reply-form textarea {
+.ztr-reply-form textarea {
   font-family: var(--ztr-font);
   font-size: 16px;
   color: var(--ztr-textarea-color, #2B2B2B);
@@ -184,22 +184,22 @@ ul.ctr-comment-actions li span {
   resize: none;
 }
 
-.ctr-reply-controls {
+.ztr-reply-controls {
   display: flex;
   align-items: center;
   justify-content: flex-end;
 }
 
-.ctr-reply-controls .ctr-comment-info-picture {
+.ztr-reply-controls .ztr-comment-info-picture {
   width: 3rem;
 }
 
-.ctr-reply-controls .ctr-comment-info-picture img {
+.ztr-reply-controls .ztr-comment-info-picture img {
   width: 20px;
   height: 20px;
 }
 
-.ctr-reply-controls button {
+.ztr-reply-controls button {
   font-family: var(--ztr-font);
   appearance: none;
   border: none;
@@ -210,13 +210,13 @@ ul.ctr-comment-actions li span {
   cursor: pointer;
 }
 
-.ctr-reply-login-button {
+.ztr-reply-login-button {
   margin-left: 1rem;
   background-color: var(--ztr-login-button-color);
   color: white;
 }
 
-.ctr-reply-button {
+.ztr-reply-button {
   color: var(--ztr-text-color);
   background-color: var(--ztr-background-color);
 }
@@ -225,15 +225,15 @@ ul.ctr-comment-actions li span {
 
 /* new */
 
-.ctr-comment-new .ctr-reply-form {
+.ztr-comment-new .ztr-reply-form {
   margin-top: 0.5rem;
 }
 
-.ctr-comment-new .ctr-comment-body {
+.ztr-comment-new .ztr-comment-body {
   padding: 0;
 }
 
-.ctr-comment-new .ctr-comment-actions {
+.ztr-comment-new .ztr-comment-actions {
   font-size: 1.1rem;
 }
 

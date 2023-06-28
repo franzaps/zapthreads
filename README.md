@@ -94,7 +94,7 @@ import ZapThreads from 'zapthreads';
 
 ```js
 const style = document.createElement('style');
-style.innerHTML = '#ctr-root { font-size: 12em; }';
+style.innerHTML = '#ztr-root { font-size: 12em; }';
 document.querySelector('zap-threads').shadowRoot.appendChild(style);
 ```
 
