@@ -1,8 +1,9 @@
 import { Index, Show, createSignal } from "solid-js";
-import { CommentInfo } from "./CommentInfo";
-import { parseContent, randomCount, svgWidth } from "./util";
-import { ReplyEditor } from "./ReplyEditor";
-import { NestedNote, preferencesStore } from "./ZapThreads";
+import { CommentInfo } from "./comment-info";
+import { parseContent, randomCount, svgWidth } from "./util/ui";
+import { ReplyEditor } from "./reply-editor";
+import { NestedNote } from "./util/nest";
+import { preferencesStore } from "./util/stores";
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   return <div class="ctr-thread">

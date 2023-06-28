@@ -1,4 +1,4 @@
-import { nest } from "./nip10";
+import { nest } from "./nest";
 
 describe("NestedNote", () => {
 

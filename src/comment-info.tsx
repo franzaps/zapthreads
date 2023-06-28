@@ -1,7 +1,8 @@
 import { Accessor, createEffect, createSignal } from "solid-js";
-import { defaultPicture, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util";
-import { NestedNote, usersStore } from "./ZapThreads";
+import { defaultPicture, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { nip19 } from "nostr-tools";
+import { NestedNote } from "./util/nest";
+import { usersStore } from "./util/stores";
 
 export const CommentInfo = (props: { event: Accessor<NestedNote>; }) => {
   const [profilePicture, setProfilePicture] = createSignal(defaultPicture);

@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
-import { ReplyEditor } from "./ReplyEditor";
-import { randomCount, svgWidth } from "./util";
-import { preferencesStore } from "./ZapThreads";
+import { ReplyEditor } from "./reply-editor";
+import { randomCount, svgWidth } from "./util/ui";
+import { preferencesStore } from "./util/stores";
 
 export const RootComment = () => {
   return <div class="ctr-comment-new">

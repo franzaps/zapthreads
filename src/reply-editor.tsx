@@ -1,27 +1,33 @@
 import { Filter } from "nostr-tools/lib/filter";
-import { EventSigner, User, ZapThreadsContext, eventsStore, usersStore } from "./ZapThreads";
-import { defaultPicture, shortenEncodedId, updateMetadata } from "./util";
+import { ZapThreadsContext } from ".";
+import { defaultPicture, shortenEncodedId, updateMetadata } from "./util/ui";
 import { Show, createSignal, useContext } from "solid-js";
-import { UnsignedEvent, Event, nip19, generatePrivateKey, getSignature, getPublicKey } from "nostr-tools";
+import { UnsignedEvent, Event, nip19, generatePrivateKey, getSignature, getPublicKey, getEventHash } from "nostr-tools";
+import { EventSigner, User, eventsStore, usersStore } from "./util/stores";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const { pool, relays, filter } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
 
+  const loggedInUser = () => {
+    return Object.values(usersStore).find(u => u.loggedIn === true);
+  };
+
   const login = async () => {
-    const defaultPubKey = await window.nostr!.getPublicKey();
-    if (defaultPubKey !== undefined) {
-      usersStore.default = usersStore[defaultPubKey] = {
+    const pubkey = await window.nostr!.getPublicKey();
+    if (pubkey) {
+      usersStore[pubkey] = {
         timestamp: 0,
-        npub: nip19.npubEncode(defaultPubKey),
-        signEvent: window.nostr!.signEvent
+        loggedIn: true,
+        npub: nip19.npubEncode(pubkey),
+        signEvent: async (event) => window.nostr!.signEvent(event),
       };
 
-      if (usersStore.default.name === undefined) {
+      if (!usersStore[pubkey].name) {
         const result = await pool.list(relays, [{
           kinds: [0],
-          authors: [defaultPubKey]
+          authors: [pubkey]
         }]);
         updateMetadata(result);
       }
@@ -31,9 +37,9 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   };
 
   const publish = async (user: User) => {
-    if (!usersStore.anonymous) {
+    if (!user && !usersStore.anonymous) {
       const sk = generatePrivateKey();
-      usersStore.anonymous = {
+      user = usersStore.anonymous = {
         timestamp: 0,
         npub: nip19.npubEncode(getPublicKey(sk)),
         signEvent: async (event) => ({ sig: getSignature(event, sk) }),
@@ -50,7 +56,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       created_at: Math.round(Date.now() / 1000),
       content: content,
       pubkey: nip19.decode(user.npub!).data.toString(),
-      tags: [], // event.tag(user());
+      tags: []
     };
 
     // Set root
@@ -65,11 +71,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       unsignedEvent.tags.push(reply);
     }
 
+    const id = getEventHash(unsignedEvent);
     const signature = await user.signEvent(unsignedEvent);
 
-    console.log(JSON.stringify(unsignedEvent, null, 2));
-
-    const event: Event<1> = { ...unsignedEvent, ...signature, id: '???' };
+    const event: Event<1> = { id, ...unsignedEvent, ...signature };
 
     // const sub = pool.publish(relays, event);
     // sub.on('ok', function ok() {
@@ -79,6 +84,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     //   sub.off('failed', failed);
     // });
 
+    console.log(JSON.stringify(event, null, 2));
     setComment('');
     eventsStore[event.id] = event;
 
@@ -94,16 +100,16 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     />
     <div class="ctr-reply-controls">
       <Show
-        when={usersStore.default}
+        when={loggedInUser()}
         fallback={<>
           <button class="ctr-reply-button" onClick={() => publish(usersStore.anonymous)}>Reply anonymously</button>
           {window.nostr && <button class="ctr-reply-login-button" onClick={login}>Log-in</button>}
         </>}
       >
         <div class="ctr-comment-info-picture">
-          <img src={usersStore.default.imgUrl || defaultPicture} />
+          <img src={loggedInUser()!.imgUrl || defaultPicture} />
         </div>
-        <button class="ctr-reply-button" onClick={() => publish(usersStore.default)}>Reply as {usersStore.default.name || shortenEncodedId(usersStore.default.npub!)}</button>
+        <button class="ctr-reply-button" onClick={() => publish(loggedInUser()!)}>Reply as {loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}</button>
       </Show>
     </div>
   </div>;

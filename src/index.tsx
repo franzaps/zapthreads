@@ -1,21 +1,13 @@
 import { Accessor, Show, createContext, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
-import { Thread } from "./Thread";
-import { createMutable } from "solid-js/store";
-import { RootComment } from "./RootComment";
+import { RootComment } from "./root-comment";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { Event, Filter, SimplePool, Sub, UnsignedEvent, nip19 } from "nostr-tools";
-import { updateMetadata } from "./util";
-import { AddressPointer } from "nostr-tools/lib/nip19";
-import { NestedNote, nest } from "./nip10";
-
-export type EventSigner = (event: UnsignedEvent<1>) => Promise<{ sig: string; }>;
-export type User = { timestamp: number, npub?: string, name?: string, imgUrl?: string; signEvent?: EventSigner; };
-
-export const usersStore = createMutable<{ [key: string]: User; }>({});
-export const eventsStore = createMutable<{ [key: string]: Event<1>; }>({});
-export const preferencesStore = createMutable<{ [key: string]: any; }>({});
+import { Event, Filter, SimplePool, Sub } from "nostr-tools";
+import { filterToReplaceableId, updateMetadata } from "./util/ui";
+import { nest } from "./util/nest";
+import { eventsStore, preferencesStore } from "./util/stores";
+import { Thread } from "./thread";
 
 const ZapThreads = (props: { anchor: string, relays: string[]; disableLikes?: boolean, disableZaps?: boolean; }) => {
   if (!props.anchor.startsWith('naddr') && !props.anchor.startsWith('http')) {
@@ -55,9 +47,6 @@ const ZapThreads = (props: { anchor: string, relays: string[]; disableLikes?: bo
           eventsStore[e.id] = e;
         }
       });
-
-      // TODO
-      // sub.on('error', () => 'error');
     } catch (e) {
       // TODO properly handle error
       console.log(e);
@@ -83,12 +72,10 @@ const ZapThreads = (props: { anchor: string, relays: string[]; disableLikes?: bo
   createEffect(async () => {
     if (profilesDebounce() && Object.keys(eventsStore).length > 0) {
       const authorPubkeys = Object.values(eventsStore).map(e => e.pubkey);
-
       const result = await pool.list(relays, [{
         kinds: [0],
-        authors: [...new Set(authorPubkeys)] // make pubkeys unique
+        authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
       }]);
-
       updateMetadata(result);
     }
   });
@@ -113,12 +100,6 @@ export const ZapThreadsContext = createContext<{
   relays: string[],
   filter: Accessor<Filter | undefined>;
 }>();
-
-const filterToReplaceableId = (id: string): string => {
-  const decoded = nip19.decode(id);
-  const data = decoded.data as AddressPointer;
-  return `${data.kind}:${data.pubkey}:${data.identifier}`;
-};
 
 customElement('zap-threads', { relays: "", anchor: "", 'disable-likes': "", 'disable-zaps': "" }, (props) => {
   const relays = props.relays === "" ? [] : props.relays.split(",");

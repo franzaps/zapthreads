@@ -1,8 +1,10 @@
 import { nip19, nip27 } from "nostr-tools";
 import { micromark } from "micromark";
 import { gfmAutolinkLiteral, gfmAutolinkLiteralHtml } from "micromark-extension-gfm-autolink-literal";
-import { usersStore, NestedNote } from "./ZapThreads";
 import { Event } from "nostr-tools";
+import { NestedNote } from "./nest";
+import { AddressPointer } from "nostr-tools/lib/nip19";
+import { usersStore } from "./stores";
 
 // Misc profile helpers
 
@@ -22,7 +24,13 @@ export const updateMetadata = (result: Event<0>[]): void => {
   });
 };
 
-export const parseContent = (e: Event<1>): string => {
+export const filterToReplaceableId = (id: string): string => {
+  const decoded = nip19.decode(id);
+  const data = decoded.data as AddressPointer;
+  return `${data.kind}:${data.pubkey}:${data.identifier}`;
+};
+
+export const parseContent = (e: Event): string => {
 
   let content = e.content;
 
