@@ -3,7 +3,7 @@ import { render } from 'solid-js/web';
 
 import './style.css';
 import '../src/styles/index.css';
-import ZapThreads from '../src/ZapThreads';
+import ZapThreads from '../src';
 
 const root = document.getElementById('root');
 
