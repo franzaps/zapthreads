@@ -1,9 +1,7 @@
-import { Filter } from "nostr-tools/lib/filter";
-import { ZapThreadsContext } from ".";
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
 import { Show, createSignal, useContext } from "solid-js";
 import { UnsignedEvent, Event, nip19, generatePrivateKey, getSignature, getPublicKey, getEventHash } from "nostr-tools";
-import { EventSigner, User, eventsStore, usersStore, preferencesStore } from "./util/stores";
+import { EventSigner, User, eventsStore, usersStore, preferencesStore, ZapThreadsContext } from "./util/stores";
 import { randomCount, svgWidth } from "./util/ui";
 
 declare global {

@@ -1,13 +1,13 @@
-import { Accessor, Show, createContext, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
-import { RootComment } from "./root-comment";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { Event, Filter, SimplePool, Sub } from "nostr-tools";
 import { filterToReplaceableId, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
-import { eventsStore, preferencesStore } from "./util/stores";
+import { ZapThreadsContext, eventsStore, preferencesStore } from "./util/stores";
 import { Thread } from "./thread";
+import { RootComment } from "./reply";
 
 const ZapThreads = (props: { anchor: string, relays: string[]; disableLikes?: boolean, disableZaps?: boolean; }) => {
   if (!props.anchor.startsWith('naddr') && !props.anchor.startsWith('http')) {
@@ -94,12 +94,6 @@ const ZapThreads = (props: { anchor: string, relays: string[]; disableLikes?: bo
 };
 
 export default ZapThreads;
-
-export const ZapThreadsContext = createContext<{
-  pool: SimplePool,
-  relays: string[],
-  filter: Accessor<Filter | undefined>;
-}>();
 
 customElement('zap-threads', { relays: "", anchor: "", 'disable-likes': "", 'disable-zaps': "" }, (props) => {
   const relays = props.relays === "" ? [] : props.relays.split(",");
