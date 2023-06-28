@@ -2,12 +2,15 @@ import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { Event, Filter, SimplePool, Sub } from "nostr-tools";
 import { filterToReplaceableId, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
 import { ZapThreadsContext, eventsStore, preferencesStore } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
+import { Filter } from "./nostr-tools/filter";
+import { SimplePool } from "./nostr-tools/pool";
+import { Sub } from "./nostr-tools/relay";
+import { Event } from "./nostr-tools/event";
 
 const ZapThreads = (props: { anchor: string, relays: string[]; disableLikes?: boolean, disableZaps?: boolean; }) => {
   if (!props.anchor.startsWith('naddr') && !props.anchor.startsWith('http')) {

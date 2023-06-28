@@ -1,8 +1,10 @@
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
 import { Show, createSignal, useContext } from "solid-js";
-import { UnsignedEvent, Event, nip19, generatePrivateKey, getSignature, getPublicKey, getEventHash } from "nostr-tools";
+import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
 import { EventSigner, User, eventsStore, usersStore, preferencesStore, ZapThreadsContext } from "./util/stores";
 import { randomCount, svgWidth } from "./util/ui";
+import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
+import { decode, npubEncode } from "./nostr-tools/nip19";
 
 declare global {
   interface Window {
@@ -28,7 +30,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       usersStore[pubkey] = {
         timestamp: 0,
         loggedIn: true,
-        npub: nip19.npubEncode(pubkey),
+        npub: npubEncode(pubkey),
         signEvent: async (event) => window.nostr!.signEvent(event),
       };
 
@@ -49,7 +51,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       const sk = generatePrivateKey();
       user = usersStore.anonymous = {
         timestamp: 0,
-        npub: nip19.npubEncode(getPublicKey(sk)),
+        npub: npubEncode(getPublicKey(sk)),
         signEvent: async (event) => ({ sig: getSignature(event, sk) }),
       };
     }
@@ -63,7 +65,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       kind: 1,
       created_at: Math.round(Date.now() / 1000),
       content: content,
-      pubkey: nip19.decode(user.npub!).data.toString(),
+      pubkey: decode(user.npub!).data.toString(),
       tags: []
     };
 

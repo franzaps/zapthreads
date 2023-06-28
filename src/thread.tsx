@@ -3,7 +3,7 @@ import { defaultPicture, parseContent, randomCount, shortenEncodedId, svgWidth, 
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
 import { preferencesStore, usersStore } from "./util/stores";
-import { nip19 } from "nostr-tools";
+import { npubEncode } from "./nostr-tools/nip19";
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   return <div class="ztr-thread">
@@ -59,7 +59,7 @@ export const CommentInfo = (props: { event: Accessor<NestedNote>; }) => {
   const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
 
   const pubkey = () => props.event().pubkey;
-  const npub = () => nip19.npubEncode(pubkey());
+  const npub = () => npubEncode(pubkey());
 
   createEffect(async () => {
     usersStore[pubkey()] ||= { timestamp: 0, npub: npub() };

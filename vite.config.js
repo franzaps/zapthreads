@@ -1,4 +1,3 @@
-import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 
@@ -8,20 +7,12 @@ export default defineConfig({
     solidPlugin(),
   ],
   build: {
-    minify: true,
+    minify: 'terser',
     lib: {
-      entry: resolve(__dirname, 'src/ZapThreads.tsx'),
+      entry: './src/index.tsx',
       name: 'ZapThreads',
       fileName: 'zapthreads',
       formats: ['cjs', 'umd', 'iife']
-    },
-    rollupOptions: {
-      // external: ['@nostr-dev-kit/ndk'],
-      // output: {
-      //   globals: {
-      //     "@nostr-dev-kit/ndk": 'NDK',
-      //   },
-      // },
     },
   },
 });

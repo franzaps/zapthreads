@@ -1,4 +1,5 @@
-import { nip10, Event } from "nostr-tools";
+import { Event } from "../nostr-tools/event";
+import { parse } from "../nostr-tools/nip10";
 
 export type NestedNote = Event & { rootId?: string, replyId?: string, children: NestedNote[]; };
 
@@ -7,7 +8,7 @@ export function nest(events: Event[], anchorIds?: string[]): NestedNote[] {
     let rootId: string | undefined;
     let replyId: string | undefined;
 
-    const nip10Result = nip10.parse(e);
+    const nip10Result = parse(e);
     const aTag = e.tags.find(t => t[0] === "a");
     // If "a" tag is present use it as sole anchor
     if (anchorIds && aTag) {

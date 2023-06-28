@@ -1,10 +1,11 @@
-import { Filter, nip19, nip27 } from "nostr-tools";
 import { micromark } from "micromark";
 import { gfmAutolinkLiteral, gfmAutolinkLiteralHtml } from "micromark-extension-gfm-autolink-literal";
-import { Event } from "nostr-tools";
+import { Event } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { AddressPointer } from "nostr-tools/lib/nip19";
 import { usersStore } from "./stores";
+import { AddressPointer, decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
+import { Filter } from "../nostr-tools/filter";
+import { replaceAll } from "../nostr-tools/nip27";
 
 // Misc profile helpers
 
@@ -25,7 +26,7 @@ export const updateMetadata = (result: Event<0>[]): void => {
 };
 
 export const filterToReplaceableId = (id: string): string => {
-  const decoded = nip19.decode(id);
+  const decoded = decode(id);
   const data = decoded.data as AddressPointer;
   return `${data.kind}:${data.pubkey}:${data.identifier}`;
 };
@@ -46,13 +47,13 @@ export const parseContent = (e: Event): string => {
   content = content.replace(/\#\[([0-9])\]/g, (match, capture) => {
     switch (e.tags[capture][0]) {
       case "e":
-        return 'nostr:' + nip19.noteEncode(e.tags[capture][1]);
+        return 'nostr:' + noteEncode(e.tags[capture][1]);
       case "a":
         const [kind, pubkey, identifier] = e.tags[capture][1].split(":");
-        return 'nostr:' + nip19.naddrEncode({ identifier, pubkey, kind: parseInt(kind) });
+        return 'nostr:' + naddrEncode({ identifier, pubkey, kind: parseInt(kind) });
       case "p":
         const _pubkey = e.tags[capture][1];
-        const npub = nip19.npubEncode(_pubkey);
+        const npub = npubEncode(_pubkey);
         const text = usersStore[_pubkey]?.name || shortenEncodedId(npub);
         return `[@${text}](https://nostr.com/${npub})`;
       default:
@@ -61,7 +62,7 @@ export const parseContent = (e: Event): string => {
   });
 
   // NIP-27 => Markdown
-  content = nip27.replaceAll(content, ({ decoded, value }) => {
+  content = replaceAll(content, ({ decoded, value }) => {
     return `[@${shortenEncodedId(value)}](https://nostr.com/${value})`;
   });
 

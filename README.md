@@ -13,6 +13,7 @@ Lightweight and extremely customizable. Available as web component and embeddabl
  - [x] Threaded comments
    - [x] naddr
    - [x] URL
+   - [ ] [Any NIP-19 entity](https://github.com/fr4nzap/zapthreads/issues/7)
  - [x] Comment author metadata
  - [x] NIP-07 login
    - [ ] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
@@ -34,9 +35,8 @@ Lightweight and extremely customizable. Available as web component and embeddabl
  - [ ] i18n, language support
    - [ ] Autodetect
    - [ ] Inherit from host
- - [ ] Optimized build
-   - [ ] Reuse host NDK
-   - [ ] [Tree-shaking](https://github.com/fr4nzap/zapthreads/issues/6)
+ - [x] Optimized build
+   - [x] [Tree-shaking](https://github.com/fr4nzap/zapthreads/issues/6)
  - [x] Allow to customize most elements
    - [x] Full CSS control via `shadowRoot` style
    - [ ] Better/more props (color mode, language)
@@ -48,7 +48,7 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [ ] Vue
    - [ ] Svelte
 
-Right now it is ~90kb gzipped with all styles and dependencies and no tree-shaking. It will get much better.
+It's currently ~46kb minified/gzipped with base styles and assets (versus nocomment's ~244kb).
 
 ## Usage
 
