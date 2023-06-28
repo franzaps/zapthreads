@@ -1,4 +1,4 @@
-import { Accessor, Index, Show, createEffect, createSignal } from "solid-js";
+import { Accessor, Index, Show, createEffect, createSignal, onCleanup } from "solid-js";
 import { defaultPicture, parseContent, randomCount, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
@@ -61,11 +61,25 @@ export const CommentInfo = (props: { event: Accessor<NestedNote>; }) => {
   const pubkey = () => props.event().pubkey;
   const npub = () => npubEncode(pubkey());
 
-  createEffect(async () => {
+  createEffect(() => {
     usersStore[pubkey()] ||= { timestamp: 0, npub: npub() };
     const imgUrl = usersStore[pubkey()]?.imgUrl;
     setProfilePicture(imgUrl || defaultPicture);
   });
+
+  // Update createdAt every minute
+  let timer: any;
+  const createdAt = () => timeAgo(props.event().created_at! * 1000);
+  const [createdTimeAgo, setCreatedTimeAgo] = createSignal<string>();
+
+  createEffect(() => {
+    setCreatedTimeAgo(createdAt());
+    timer = setInterval(() => {
+      setCreatedTimeAgo(createdAt());
+    }, 60 * 1000);
+  });
+
+  onCleanup(() => clearInterval(timer));
 
   return <div class="ztr-comment-info">
     <div class="ztr-comment-info-picture">
@@ -75,7 +89,7 @@ export const CommentInfo = (props: { event: Accessor<NestedNote>; }) => {
       <li class="ztr-comment-info-item ztr-comment-info-author">
         <a href={'https://nostr.com/' + npub()} target="_blank" >{usersStore[pubkey()]?.name || shortenEncodedId(npub())}</a>
       </li>
-      <li class="ztr-comment-info-item ztr-comment-info-time">{timeAgo(props.event().created_at! * 1000)}</li>
+      <li class="ztr-comment-info-item ztr-comment-info-time">{createdTimeAgo()}</li>
       <li class="ztr-comment-info-item ztr-comment-info-replies">{totalChildren(props.event()) == 1 ? '1 reply' : `${totalChildren(props.event())} replies`}</li>
     </ul>
   </div>;
