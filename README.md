@@ -13,10 +13,10 @@ Lightweight and extremely customizable. Available as web component and embeddabl
  - [x] Threaded comments
    - [x] naddr
    - [x] URL
-   - [ ] [Any NIP-19 entity](https://github.com/fr4nzap/zapthreads/issues/7)
+   - [x] [note, nevent](https://github.com/fr4nzap/zapthreads/issues/7)
  - [x] Comment author metadata
  - [x] NIP-07 login
-   - [ ] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
+   - [x] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
  - [x] Add comments to anchor and reply to other comments
    - [x] [Publish and sync with relays](https://github.com/fr4nzap/zapthreads/issues/3)
    - [ ] Creation of base anchors if none
