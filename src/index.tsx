@@ -2,7 +2,7 @@ import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { filterToReplaceableId, updateMetadata } from "./util/ui";
+import { encodedEntityToFilter, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
 import { ZapThreadsContext, eventsStore, preferencesStore } from "./util/stores";
 import { Thread } from "./thread";
@@ -12,8 +12,8 @@ import { SimplePool } from "./nostr-tools/pool";
 import { Event } from "./nostr-tools/event";
 
 export default function ZapThreads(props: ZapThreadsProps) {
-  if (!props.anchor.startsWith('naddr') && !props.anchor.startsWith('http')) {
-    throw "Only NIP-19 naddr and URLs are supported";
+  if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
+    throw "Only NIP-19 naddr, note and nevent encoded entities and URLs are supported";
   }
 
   // Store preferences
@@ -38,9 +38,8 @@ export default function ZapThreads(props: ZapThreadsProps) {
         ]);
         const eventIdsForUrl = eventsForUrl.map((e) => e.id);
         setFilter({ "#e": eventIdsForUrl });
-      } else { // naddr
-        const id = filterToReplaceableId(props.anchor);
-        setFilter({ "#a": [id] });
+      } else {
+        setFilter(encodedEntityToFilter(props.anchor));
       }
 
       const sub = pool.sub(relays(), [{ ...filter(), kinds: [1] }]);

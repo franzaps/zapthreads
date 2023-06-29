@@ -25,10 +25,14 @@ export const updateMetadata = (result: Event<0>[]): void => {
   });
 };
 
-export const filterToReplaceableId = (id: string): string => {
-  const decoded = decode(id);
-  const data = decoded.data as AddressPointer;
-  return `${data.kind}:${data.pubkey}:${data.identifier}`;
+export const encodedEntityToFilter = (entity: string): Filter => {
+  const decoded = decode(entity);
+  switch (decoded.type) {
+    case 'nevent': return { "#e": [decoded.data.id] };
+    case 'note': return { "#e": [decoded.data] };
+    case 'naddr': return { "#a": [`${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`] };
+    default: return {};
+  }
 };
 
 export const tagFor = (filter: Filter): string[] => {

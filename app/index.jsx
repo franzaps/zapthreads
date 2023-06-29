@@ -14,8 +14,11 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-const fiatjaf = "https://fiatjaf.com/nostr.html";
-const purpleHighlights = "naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz";
+const fiatjafUrl = "https://fiatjaf.com/nostr.html";
+const gigiArticle = "naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz";
+const someNote = "note1nndua46su6c7zf6t0h68edpn74j5znws3jyhzelt5as74hhgg8xq4qmzwn";
+const highlightEvent = "nevent1qqsprhvdfau2ezh6mjpess9g5v6g9c657j99jke04s3hc7xrv4vve4qzypl62m6ad932k83u6sjwwkxrqq4cve0hkrvdem5la83g34m4rtqegx3l8d3";
+
 const relays = ["wss://relay.damus.io", "wss://eden.nostr.land"];
 const defaultPubkey = "726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11";
 
@@ -34,6 +37,6 @@ render(() => {
     Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
     </p>
     
-    <ZapThreads anchor={purpleHighlights} relays={relays} disableZaps={true} disableLikes={true} disablePublish={true} pubkey={pubkey()} />
+    <ZapThreads anchor={gigiArticle} relays={relays} disableZaps={true} disableLikes={true} disablePublish={true} pubkey={pubkey()} />
   </>
 }, root);
