@@ -46,7 +46,6 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         signEvent: async function (event) {
           const extensionPubkey = await window.nostr!.getPublicKey();
           if (pubkey() !== extensionPubkey) {
-            logout();
             throw `Pubkey mismatch: ${pubkey()} !== ${extensionPubkey}`;
           }
           return window.nostr!.signEvent(event);
