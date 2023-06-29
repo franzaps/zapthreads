@@ -18,7 +18,7 @@ Lightweight and extremely customizable. Available as web component and embeddabl
  - [x] NIP-07 login
    - [ ] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
  - [x] Add comments to anchor and reply to other comments
-   - [ ] [Publish and sync with relays](https://github.com/fr4nzap/zapthreads/issues/3)
+   - [x] [Publish and sync with relays](https://github.com/fr4nzap/zapthreads/issues/3)
    - [ ] Creation of base anchors if none
  - [x] Rich text support
    - [x] Markdown
@@ -68,14 +68,17 @@ import "zapthreads";
 Arguments:
 
  - (required) `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
+ - (optional) `pubkey`: Pubkey (in hex format) to log in the user as 
  - (optional) `relays`: comma separated list of preferred relays (defaults to `["wss://relay.damus.io", "wss://eden.nostr.land"]`)
  - (optional) `disableLikes`: defaults to `false`
  - (optional) `disableZaps`: defaults to `false`
+ - (optional) `disablePublish`: defaults to `false`
 
 ```html
 <zap-threads 
   anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz"
-  relays="wss://relay.nostr.band"
+  pubkey="726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11"
+  relays="wss://relay.nostr.band,wss://nostr-pub.wellorder.net/"
   disableLikes="true"
   />
 ```

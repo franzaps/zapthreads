@@ -19,6 +19,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   const { pool, relays, filter, pubkey } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
+  const [loading, setLoading] = createSignal(false);
+  const [errorMessage, setErrorMessage] = createSignal('');
 
   createEffect(() => {
     if (pubkey() && !usersStore[pubkey()!]?.loggedIn) {
@@ -103,41 +105,69 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
     const event: Event<1> = { id, ...unsignedEvent, ...signature };
 
-    // const sub = pool.publish(relays, event);
-    // sub.on('ok', function ok() {
-    //   sub.off('ok', ok);
-    // });
-    // sub.on('failed', function failed() {
-    //   sub.off('failed', failed);
-    // });
+    const onSuccess = () => {
+      setLoading(false);
+      // reset comment & error message
+      setComment('');
+      setErrorMessage('');
+      // set in store to render
+      eventsStore[event.id] = event;
+      // callback (closes the reply form)
+      props.onDone?.call(this);
+    };
 
+    const onError = () => {
+      setLoading(false);
+      // set error message
+      setErrorMessage('Your comment was not published to relays. Try again.');
+    };
+
+    setLoading(true);
     console.log(JSON.stringify(event, null, 2));
-    setComment('');
-    eventsStore[event.id] = event;
 
-    props.onDone?.call(this);
+    if (preferencesStore.disablePublish) {
+      setTimeout(() => {
+        onSuccess();
+      }, 1500);
+    } else {
+      const sub = pool.publish(relays(), event);
+      // call callbacks and dispose
+      sub.on('ok', () => {
+        onSuccess();
+        sub.off('ok', onSuccess);
+      });
+      sub.on('failed', () => {
+        onError();
+        sub.off('failed', onError);
+      });
+    }
   };
 
   return <div class="ztr-reply-form">
     <textarea
+      disabled={loading()}
       value={comment()}
       placeholder='Add your comment...'
       autofocus={true}
       onChange={e => setComment(e.target.value)}
     />
     <div class="ztr-reply-controls">
-      <Show
-        when={loggedInUser()}
-        fallback={<>
-          <button class="ztr-reply-button" onClick={() => publish(usersStore.anonymous)}>Reply anonymously</button>
-          {window.nostr && <button class="ztr-reply-login-button" onClick={login}>Log-in</button>}
-        </>}
-      >
-        <div class="ztr-comment-info-picture">
-          <img src={loggedInUser()!.imgUrl || defaultPicture} />
-        </div>
-        <button class="ztr-reply-button" onClick={() => publish(loggedInUser()!)}>Reply as {loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}</button>
-      </Show>
+      {preferencesStore.disablePublish && <span class="ztr-reply-error">Publishing is disabled</span>}
+      {errorMessage() && <span class="ztr-reply-error">{errorMessage()}</span>}
+
+      <div class="ztr-comment-info-picture">
+        <img src={loggedInUser()?.imgUrl || defaultPicture} />
+      </div>
+
+      <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser() || usersStore.anonymous)}>
+        {loading() && <svg class="ztr-spinner" viewBox="0 0 50 50">
+          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+        </svg>}
+        Reply{loading() ? 'ing' : ''}
+        {loggedInUser() ? ` as ${loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}` : ' anonymously'}
+      </button>
+
+      {!loggedInUser() && window.nostr && <button class="ztr-reply-login-button" onClick={login}>Log-in</button>}
     </div>
   </div>;
 };

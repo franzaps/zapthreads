@@ -1,5 +1,6 @@
 :root {
   --ztr-font: -apple-system, "BlinkMacSystemFont", "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --ztr-font-size: 16px;
   --ztr-text-color: #2B2B2B;
   --ztr-textarea-color: #2B2B2B;
   --ztr-icon-color: #656565;
@@ -12,8 +13,8 @@
 
 #ztr-root {
   font-family: var(--ztr-font);
-  font-size: 16px;
-  color: var(--ztr-text-color, #2B2B2B);
+  font-size: var(--ztr-font-size);
+  color: var(--ztr-text-color);
   line-height: 19px;
   border: 1px solid transparent; /* Removes margin collapse */
 }
@@ -184,6 +185,19 @@ ul.ztr-comment-actions li span {
   resize: none;
 }
 
+.ztr-reply-form:disabled {
+  opacity: 65%;
+  user-select: none;
+}
+
+.ztr-reply-error {
+  font-weight: bold;
+  font-size: 0.85rem;
+  margin-right: 1rem;
+  user-select: none;
+  cursor: default;
+}
+
 .ztr-reply-controls {
   display: flex;
   align-items: center;
@@ -195,8 +209,8 @@ ul.ztr-comment-actions li span {
 }
 
 .ztr-reply-controls .ztr-comment-info-picture img {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
 }
 
 .ztr-reply-controls button {
@@ -219,9 +233,50 @@ ul.ztr-comment-actions li span {
 .ztr-reply-button {
   color: var(--ztr-text-color);
   background-color: var(--ztr-background-color);
+  display: flex;
+  align-items: center;
 }
 
+.ztr-spinner {
+  width: var(--ztr-font-size);
+  height: var(--ztr-font-size);
+  margin-right: 1rem;
+  animation: rotate 4s linear infinite;
+}
 
+.ztr-reply-button:disabled {
+  opacity: 65%;
+  pointer-events: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ztr-spinner .path {
+  stroke: var(--ztr-text-color);
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
+}
 
 /* new */
 
@@ -236,4 +291,3 @@ ul.ztr-comment-actions li span {
 .ztr-comment-new .ztr-comment-actions {
   font-size: 1.1rem;
 }
-

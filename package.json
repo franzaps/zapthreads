@@ -3,9 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "description": "Threaded web comments on Nostr",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "main": "./dist/zapthreads.umd.cjs",
   "module": "./dist/zapthreads.cjs",
   "exports": {

@@ -19,6 +19,7 @@ export default function ZapThreads(props: ZapThreadsProps) {
   // Store preferences
   preferencesStore.disableLikes = props.disableLikes || false;
   preferencesStore.disableZaps = props.disableZaps || false;
+  preferencesStore.disablePublish = props.disablePublish || false;
 
   const [filter, setFilter] = createSignal<Filter>();
   const pubkey = () => props.pubkey;
@@ -50,9 +51,7 @@ export default function ZapThreads(props: ZapThreadsProps) {
         }
       });
 
-      onCleanup(() => {
-        sub?.unsub();
-      });
+      onCleanup(() => sub?.unsub());
     } catch (e) {
       // TODO properly handle error
       console.log(e);
@@ -100,6 +99,7 @@ type ZapThreadsProps = {
   relays: string[];
   disableLikes?: boolean,
   disableZaps?: boolean,
+  disablePublish?: boolean,
   pubkey: string,
 };
 
@@ -108,6 +108,7 @@ customElement('zap-threads', {
   anchor: "",
   'disable-likes': "",
   'disable-zaps': "",
+  'disable-publish': "",
   'pubkey': "",
 }, (props) => {
   const relays = props.relays === "" ? [] : props.relays.split(",");
@@ -118,5 +119,6 @@ customElement('zap-threads', {
     pubkey={props.pubkey}
     disableLikes={props['disable-likes'] === "true"}
     disableZaps={props['disable-zaps'] === "true"}
+    disablePublish={props['disable-publish'] === "true"}
   />;
 });
