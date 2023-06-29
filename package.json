@@ -3,6 +3,10 @@
   "type": "module",
   "version": "0.0.1",
   "description": "Threaded web comments on Nostr",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fr4nzap/zapthreads.git"
+  },
   "files": ["dist"],
   "main": "./dist/zapthreads.umd.cjs",
   "module": "./dist/zapthreads.cjs",
@@ -14,7 +18,8 @@
   },
   "scripts": {
     "dev": "vite --config vite-app.config.js",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "jest"
   },
   "license": "public domain",
   "devDependencies": {
