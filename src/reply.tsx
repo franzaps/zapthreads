@@ -43,7 +43,14 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         timestamp: 0,
         loggedIn: true,
         npub: npubEncode(_pubkey),
-        signEvent: async (event) => window.nostr!.signEvent(event),
+        signEvent: async function (event) {
+          const extensionPubkey = await window.nostr!.getPublicKey();
+          if (pubkey() !== extensionPubkey) {
+            logout();
+            throw `Pubkey mismatch: ${pubkey()} !== ${extensionPubkey}`;
+          }
+          return window.nostr!.signEvent(event);
+        },
       };
 
       if (!usersStore[_pubkey].name) {
