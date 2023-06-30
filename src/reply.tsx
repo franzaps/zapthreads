@@ -1,7 +1,7 @@
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
 import { Show, createEffect, createSignal, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { EventSigner, User, eventsStore, usersStore, preferencesStore, ZapThreadsContext } from "./util/stores";
+import { EventSigner, pool, User, usersStore, ZapThreadsContext } from "./util/stores";
 import { randomCount, svgWidth } from "./util/ui";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
 import { decode, npubEncode } from "./nostr-tools/nip19";
@@ -16,7 +16,7 @@ declare global {
 }
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { pool, relays, filter, pubkey } = useContext(ZapThreadsContext)!;
+  const { relays, filter, pubkey, eventsStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -201,6 +201,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 };
 
 export const RootComment = () => {
+  const { preferencesStore } = useContext(ZapThreadsContext)!;
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
       <ul class="ztr-comment-actions">

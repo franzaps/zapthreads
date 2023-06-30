@@ -1,11 +1,12 @@
-import { Accessor, Index, Show, createEffect, createSignal, onCleanup } from "solid-js";
+import { Accessor, Index, Show, createEffect, createSignal, onCleanup, useContext } from "solid-js";
 import { defaultPicture, parseContent, randomCount, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
-import { preferencesStore, usersStore } from "./util/stores";
+import { ZapThreadsContext, usersStore } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
+  const { preferencesStore } = useContext(ZapThreadsContext)!;
   return <div class="ztr-thread">
     <Index each={sortByDate(props.nestedEvents())}>
       {

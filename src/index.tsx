@@ -4,17 +4,20 @@ import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { encodedEntityToFilter, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
-import { ZapThreadsContext, eventsStore, preferencesStore } from "./util/stores";
+import { ZapThreadsContext, pool } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
 import { Filter } from "./nostr-tools/filter";
-import { SimplePool } from "./nostr-tools/pool";
 import { Event } from "./nostr-tools/event";
+import { createMutable } from "solid-js/store";
 
 export default function ZapThreads(props: ZapThreadsProps) {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
     throw "Only NIP-19 naddr, note and nevent encoded entities and URLs are supported";
   }
+
+  const eventsStore = createMutable<{ [key: string]: Event<1>; }>({});
+  const preferencesStore = createMutable<{ [key: string]: any; }>({});
 
   // Store preferences
   preferencesStore.disableLikes = props.disableLikes || false;
@@ -23,8 +26,6 @@ export default function ZapThreads(props: ZapThreadsProps) {
 
   const [filter, setFilter] = createSignal<Filter>();
   const pubkey = () => props.pubkey;
-
-  const pool = new SimplePool();
   const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io", "wss://eden.nostr.land"];
 
   onMount(async () => {
@@ -50,7 +51,9 @@ export default function ZapThreads(props: ZapThreadsProps) {
         }
       });
 
-      onCleanup(() => sub?.unsub());
+      onCleanup(() => {
+        return sub?.unsub();
+      });
     } catch (e) {
       // TODO properly handle error
       console.log(e);
@@ -80,11 +83,15 @@ export default function ZapThreads(props: ZapThreadsProps) {
     }
   });
 
+  const commentsLength = () => Object.keys(eventsStore).length;
+
   return <div id="ztr-root">
     <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ pool, relays, filter, pubkey }}>
+    <ZapThreadsContext.Provider value={{ relays, filter, pubkey, eventsStore, preferencesStore }}>
       <RootComment />
-      <h2 id="ztr-title">{Object.keys(eventsStore).length} comments</h2>
+      <h2 id="ztr-title">
+        {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
+      </h2>
       <Show when={!preferencesStore.disableZaps}>
         <h3 id="ztr-subtitle">2397 sats</h3>
       </Show>
@@ -111,7 +118,6 @@ customElement('zap-threads', {
   'pubkey': "",
 }, (props) => {
   const relays = props.relays === "" ? [] : props.relays.split(",");
-
   return <ZapThreads
     anchor={props.anchor}
     relays={relays}
