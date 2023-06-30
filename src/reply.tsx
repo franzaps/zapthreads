@@ -21,54 +21,84 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal('');
+  const [finalPubkey, setFinalPubkey] = createSignal<string | undefined>();
 
-  createEffect(() => {
-    if (pubkey() && !usersStore[pubkey()!]?.loggedIn) {
-      logout(); // log out any previous session
-      login();
+  // Sessions
+
+  const login = async () => {
+    if (!finalPubkey()) {
+      setFinalPubkey(await window.nostr!.getPublicKey());
     }
-    if (!pubkey() && loggedInUser()) {
-      logout();
+
+    const pk = finalPubkey()!;
+    usersStore[pk] ||= {
+      timestamp: 0,
+      npub: npubEncode(pk),
+    };
+
+    usersStore[pk].signEvent = async (event) => {
+      const extPubkey = await window.nostr!.getPublicKey();
+      if (finalPubkey() && finalPubkey() !== extPubkey) {
+        // If zapthreads was passed a different pubkey then
+        // set the correct one and re-login
+        setFinalPubkey(extPubkey);
+        login();
+        // Throw an error and wait for the user to re attempt
+        throw `Pubkey mismatch: ${finalPubkey()} !== ${extPubkey}`;
+      }
+      return window.nostr!.signEvent(event);
+    };
+    usersStore[pk].loggedIn = true;
+
+    if (!usersStore[pk].name) {
+      const result = await pool.list(relays(), [{
+        kinds: [0],
+        authors: [pk]
+      }]);
+      updateMetadata(result);
     }
-  });
+  };
+
+  const logout = () => {
+    if (loggedInUser()) {
+      loggedInUser()!.loggedIn = false;
+    }
+  };
 
   const loggedInUser = () => {
     return Object.values(usersStore).find(u => u.loggedIn === true);
   };
 
-  const login = async () => {
-    const _pubkey = pubkey() || await window.nostr!.getPublicKey();
-    if (_pubkey) {
-      usersStore[_pubkey] = {
-        timestamp: 0,
-        loggedIn: true,
-        npub: npubEncode(_pubkey),
-        signEvent: async function (event) {
-          const extensionPubkey = await window.nostr!.getPublicKey();
-          if (pubkey() !== extensionPubkey) {
-            throw `Pubkey mismatch: ${pubkey()} !== ${extensionPubkey}`;
-          }
-          return window.nostr!.signEvent(event);
-        },
-      };
+  createEffect(() => setFinalPubkey(pubkey()));
 
-      if (!usersStore[_pubkey].name) {
-        const result = await pool.list(relays(), [{
-          kinds: [0],
-          authors: [_pubkey]
-        }]);
-        updateMetadata(result);
-      }
-    } else {
-      alert('Access was denied');
+  createEffect(async () => {
+    if (finalPubkey() && !usersStore[finalPubkey()!]?.loggedIn) {
+      logout(); // just in case, log out
+      login();
     }
+    // if pubkey becomes falsey again, log out
+    if (!finalPubkey()) {
+      logout();
+    }
+  });
+
+  // Publishing
+
+  const onSuccess = (event: Event<1>) => {
+    setLoading(false);
+    // reset comment & error message
+    setComment('');
+    setErrorMessage('');
+    // set in store to render
+    eventsStore[event.id] = event;
+    // callback (closes the reply form)
+    props.onDone?.call(this);
   };
 
-  const logout = () => {
-    const user = loggedInUser();
-    if (user) {
-      user.loggedIn = false;
-    }
+  const onError = () => {
+    setLoading(false);
+    // set error message
+    setErrorMessage('Your comment was not published to relays. Try again.');
   };
 
   const publish = async (user: User) => {
@@ -81,7 +111,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       };
     }
 
-    if (!user.signEvent) return;
+    if (!user.signEvent) {
+      console.log('User has no signer!');
+      return;
+    }
 
     const content = comment().trim();
     if (!content) return;
@@ -107,45 +140,34 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     }
 
     const id = getEventHash(unsignedEvent);
-    const signature = await user.signEvent(unsignedEvent);
 
-    const event: Event<1> = { id, ...unsignedEvent, ...signature };
+    // Attempt to sign the event
+    try {
+      const signature = await user.signEvent(unsignedEvent);
 
-    const onSuccess = () => {
-      setLoading(false);
-      // reset comment & error message
-      setComment('');
-      setErrorMessage('');
-      // set in store to render
-      eventsStore[event.id] = event;
-      // callback (closes the reply form)
-      props.onDone?.call(this);
-    };
+      const event: Event<1> = { id, ...unsignedEvent, ...signature };
 
-    const onError = () => {
-      setLoading(false);
-      // set error message
-      setErrorMessage('Your comment was not published to relays. Try again.');
-    };
+      setLoading(true);
+      console.log(JSON.stringify(event, null, 2));
 
-    setLoading(true);
-    console.log(JSON.stringify(event, null, 2));
-
-    if (preferencesStore.disablePublish) {
-      setTimeout(() => {
-        onSuccess();
-      }, 1500);
-    } else {
-      const sub = pool.publish(relays(), event);
-      // call callbacks and dispose
-      sub.on('ok', () => {
-        onSuccess();
-        sub.off('ok', onSuccess);
-      });
-      sub.on('failed', () => {
-        onError();
-        sub.off('failed', onError);
-      });
+      if (preferencesStore.disablePublish) {
+        setTimeout(() => {
+          onSuccess(event);
+        }, 1500);
+      } else {
+        const sub = pool.publish(relays(), event);
+        // call callbacks and dispose
+        sub.on('ok', () => {
+          onSuccess(event);
+          sub.off('ok', onSuccess);
+        });
+        sub.on('failed', () => {
+          onError();
+          sub.off('failed', onError);
+        });
+      }
+    } catch (e) {
+      onError();
     }
   };
 
@@ -173,7 +195,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         {loggedInUser() ? ` as ${loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}` : ' anonymously'}
       </button>
 
-      {!loggedInUser() && window.nostr && <button class="ztr-reply-login-button" onClick={login}>Log-in</button>}
+      {!loggedInUser() && window.nostr && <button class="ztr-reply-login-button" onClick={login}>Log in</button>}
     </div>
   </div>;
 };

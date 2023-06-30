@@ -21,6 +21,7 @@ const highlightEvent = "nevent1qqsprhvdfau2ezh6mjpess9g5v6g9c657j99jke04s3hc7xrv
 
 const relays = ["wss://relay.damus.io", "wss://eden.nostr.land"];
 const defaultPubkey = "726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11";
+const altPubkey = "afd563434a737334d69db899e4a32fe38d73a182bb6d1e91d83a2c4c4e04737c";
 
 render(() => {
   
