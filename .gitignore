@@ -1,5 +1,6 @@
 **/node_modules
 **/build
+**/dist
 **/.vscode
 **/*.d.ts
 **/*.d.ts.map

@@ -7,7 +7,7 @@ export default defineConfig({
     solidPlugin(),
   ],
   build: {
-    minify: true,
+    minify: 'terser',
     lib: {
       entry: './src/index.tsx',
       name: 'ZapThreads',
