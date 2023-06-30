@@ -27,7 +27,6 @@ const altPubkey = "afd563434a737334d69db899e4a32fe38d73a182bb6d1e91d83a2c4c4e047
 render(() => {
   
   const [pubkey, setPubkey] = createSignal(defaultPubkey);
-  const [addr, setAddr] = createSignal(gigiArticle);
 
   return <>
     <h1>Super Blog</h1>
@@ -35,11 +34,6 @@ render(() => {
     <button onClick={() => pubkey() ? setPubkey('') : setPubkey(defaultPubkey)}>{pubkey() ? 'Log out' : 'Log in'}</button>
     <p>
       {pubkey() && <span>Logged in as {pubkey()}</span>}
-    </p>
-
-    <button onClick={() => addr() == tonyArticle ? setAddr(gigiArticle) : setAddr(tonyArticle)}>{'Toggle'}</button>
-    <p>
-      {addr()}
     </p>
 
     <p>
