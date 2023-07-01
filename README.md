@@ -15,8 +15,9 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [x] URL
    - [x] [note, nevent](https://github.com/fr4nzap/zapthreads/issues/7)
  - [x] Comment author metadata
- - [x] NIP-07 login
+ - [x] Login
    - [x] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
+   - [ ] Proper relay selection (NIP-05, nprofile, NIP-65)
  - [x] Add comments to anchor and reply to other comments
    - [x] [Publish and sync with relays](https://github.com/fr4nzap/zapthreads/issues/3)
    - [ ] [Creation of base anchors if none](https://github.com/fr4nzap/zapthreads/issues/10)
@@ -29,8 +30,8 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [ ] Write
    - [ ] Splits
  - [ ] Sort by top, replies, zaps, oldest
- - [ ] [Add metadata menu](https://github.com/fr4nzap/zapthreads/issues/11)
- - [ ] Proper relay selection (NIP-05, nprofile, NIP-65)
+ - [ ] Thread show/hide toggle
+ - [ ] [Nostr metadata menu](https://github.com/fr4nzap/zapthreads/issues/11)
  - [x] CSS themes (and dark theme)
    - [ ] Autodetect color mode
  - [ ] i18n, language support
