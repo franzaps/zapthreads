@@ -19,16 +19,17 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [x] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
  - [x] Add comments to anchor and reply to other comments
    - [x] [Publish and sync with relays](https://github.com/fr4nzap/zapthreads/issues/3)
-   - [ ] Creation of base anchors if none
+   - [ ] [Creation of base anchors if none](https://github.com/fr4nzap/zapthreads/issues/10)
  - [x] Rich text support
    - [x] Markdown
    - [x] [Parse nostr links and references](https://github.com/fr4nzap/zapthreads/issues/5)
- - [ ] Zaps and likes (for both naddr/anchor and comments)
+ - [ ] Zaps and likes
    - [x] [Ability to disable](https://github.com/fr4nzap/zapthreads/issues/4)
-   - [ ] Read (NIP-45?)
+   - [ ] [Read](https://github.com/fr4nzap/zapthreads/issues/9)
    - [ ] Write
    - [ ] Splits
  - [ ] Sort by top, replies, zaps, oldest
+ - [ ] [Add metadata menu](https://github.com/fr4nzap/zapthreads/issues/11)
  - [ ] Proper relay selection (NIP-05, nprofile, NIP-65)
  - [x] CSS themes (and dark theme)
    - [ ] Autodetect color mode
@@ -52,15 +53,12 @@ It's currently ~46kb minified/gzipped with base styles and assets (versus nocomm
 
 ## Usage
 
-`npm add zapthreads` (SOON™️)
+```bash
+pnpm add zapthreads
+```
 
 ```html
 import "zapthreads";
-// or
-<script src="path/to/zapthreads.umd.cjs"></script>
-<link rel="stylesheet" href="/path/to/style.css">
-
-// ...
 
 <zap-threads anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz" />
 ```
