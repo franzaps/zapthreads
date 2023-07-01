@@ -240,7 +240,7 @@ ul.ztr-comment-actions li span {
 .ztr-spinner {
   width: var(--ztr-font-size);
   height: var(--ztr-font-size);
-  margin-right: 1rem;
+  margin: 0 15px 0 15px;
   animation: rotate 4s linear infinite;
 }
 

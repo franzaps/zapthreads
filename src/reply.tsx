@@ -5,6 +5,7 @@ import { EventSigner, pool, User, usersStore, ZapThreadsContext } from "./util/s
 import { randomCount, svgWidth } from "./util/ui";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
 import { decode, npubEncode } from "./nostr-tools/nip19";
+import { createAutofocus } from "@solid-primitives/autofocus";
 
 declare global {
   interface Window {
@@ -151,18 +152,19 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       console.log(JSON.stringify(event, null, 2));
 
       if (preferencesStore.disablePublish) {
-        setTimeout(() => {
-          onSuccess(event);
-        }, 1500);
+        // Simulate publishing
+        setTimeout(() => onSuccess(event), 1500);
       } else {
         const sub = pool.publish(relays(), event);
         // call callbacks and dispose
-        sub.on('ok', () => {
+        // TODO need to summarize relay callbacks in one result
+        sub.on('ok', (relay: string) => {
           onSuccess(event);
           sub.off('ok', onSuccess);
         });
-        sub.on('failed', () => {
-          onError();
+        sub.on('failed', (relay: string) => {
+          // onError();
+          setLoading(false);
           sub.off('failed', onError);
         });
       }
@@ -171,27 +173,38 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     }
   };
 
+  // Only autofocus if 
+  const autofocus = props.replyTo !== undefined;
+  let ref!: HTMLTextAreaElement;
+  createAutofocus(() => {
+    return autofocus ? ref : undefined;
+  });
+
   return <div class="ztr-reply-form">
     <textarea
       disabled={loading()}
       value={comment()}
       placeholder='Add your comment...'
-      autofocus={true}
+      autofocus={autofocus}
+      ref={ref}
       onChange={e => setComment(e.target.value)}
     />
     <div class="ztr-reply-controls">
       {preferencesStore.disablePublish && <span class="ztr-reply-error">Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">{errorMessage()}</span>}
 
-      <div class="ztr-comment-info-picture">
-        <img src={loggedInUser()?.imgUrl || defaultPicture} />
-      </div>
+      <Show when={!loading()} fallback={
+        <svg width={16} height={16} class="ztr-spinner" viewBox="0 0 50 50">
+          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+        </svg>
+      }>
+        <div class="ztr-comment-info-picture">
+          <img src={loggedInUser()?.imgUrl || defaultPicture} />
+        </div>
+      </Show>
 
       <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser() || usersStore.anonymous)}>
-        {loading() && <svg width={16} height={16} class="ztr-spinner" viewBox="0 0 50 50">
-          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
-        </svg>}
-        Reply{loading() ? 'ing' : ''}
+        Reply
         {loggedInUser() ? ` as ${loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}` : ' anonymously'}
       </button>
 
