@@ -27,6 +27,7 @@ export default function ZapThreads(props: ZapThreadsProps) {
   const [filter, setFilter] = createSignal<Filter>();
   const pubkey = () => props.pubkey;
   const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io", "wss://eden.nostr.land"];
+  const closeOnEose = () => props.closeOnEose;
 
   onMount(async () => {
     try {
@@ -48,6 +49,12 @@ export default function ZapThreads(props: ZapThreadsProps) {
       sub.on('event', e => {
         if (e.content) {
           eventsStore[e.id] = e;
+        }
+      });
+
+      sub.on('eose', () => {
+        if (closeOnEose()) {
+          sub?.unsub();
         }
       });
 
@@ -107,6 +114,7 @@ type ZapThreadsProps = {
   disableZaps?: boolean,
   disablePublish?: boolean,
   pubkey: string,
+  closeOnEose: boolean;
 };
 
 customElement('zap-threads', {
@@ -116,6 +124,7 @@ customElement('zap-threads', {
   'disable-zaps': "",
   'disable-publish': "",
   'pubkey': "",
+  'close-on-eose': "",
 }, (props) => {
   const relays = props.relays === "" ? [] : props.relays.split(",");
   return <ZapThreads
@@ -125,5 +134,6 @@ customElement('zap-threads', {
     disableLikes={props['disable-likes'] === "true"}
     disableZaps={props['disable-zaps'] === "true"}
     disablePublish={props['disable-publish'] === "true"}
+    closeOnEose={props['close-on-eose'] === "true"}
   />;
 });
