@@ -190,7 +190,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
       <Show when={!loading()} fallback={
-        <svg width={16} height={16} class="ztr-spinner" viewBox="0 0 50 50">
+        <svg class="ztr-spinner" viewBox="0 0 50 50">
           <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
         </svg>
       }>

@@ -29,9 +29,6 @@ const ZapThreads = (props: ZapThreadsProps) => {
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes || ""),
   });
 
-  console.log(preferencesStore.urlPrefixes);
-
-
   const [filter, setFilter] = createSignal<Filter>();
 
   onMount(async () => {

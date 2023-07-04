@@ -15,7 +15,6 @@
   font-family: var(--ztr-font);
   font-size: var(--ztr-font-size);
   color: var(--ztr-text-color);
-  line-height: 19px;
   border: 1px solid transparent; /* Removes margin collapse */
 }
 
@@ -32,20 +31,13 @@
 
 .ztr-comment {
   position: relative;
-  margin: 0rem;
-  padding: 0rem;
+  margin: 0;
+  padding: 0;
   background-color: var(--ztr-background-color, rgba(0, 0, 0, 0.03));
 }
 
-.ztr-comment-text {
-  line-break: loose;
-  word-break: break-word;
+.ztr-comment-body {
   padding: 1rem;
-}
-
-.ztr-comment-text pre {
-  white-space: pre-wrap;
-  white-space: -moz-pre-wrap;
 }
 
 .ztr-comment:first-child {
@@ -103,13 +95,20 @@ ul.ztr-comment-info-items li a {
   object-fit: cover;
 }
 
-.ztr-comment-body {
+.ztr-comment-text {
   margin-top: -1rem;
   padding: 0 0 0 4rem;
   line-height: 1.5rem;
+  line-break: loose;
+  word-break: break-word;
 }
 
-.ztr-comment-body a {
+.ztr-comment-text pre {
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap;
+}
+
+.ztr-comment-text a {
   color: var(--ztr-link-color);
 }
 
@@ -140,7 +139,7 @@ ul.ztr-comment-actions li {
 
 ul.ztr-comment-actions li a {
   cursor: pointer;
-  padding: 0 0.25rem 0 0;
+  padding: 0.25rem 0.25rem 0 0;
 }
 
 ul.ztr-comment-actions li span {
@@ -166,7 +165,7 @@ ul.ztr-comment-actions li span {
 }
 
 .ztr-reply-form {
-  padding-right: 0.5rem;
+  padding: 0 0.5rem 0 4rem;
 }
 
 .ztr-reply-form textarea {
@@ -209,15 +208,6 @@ ul.ztr-comment-actions li span {
   color: rgb(202, 23, 23);
 }
 
-.ztr-reply-controls .ztr-comment-info-picture {
-  width: 3rem;
-}
-
-.ztr-reply-controls .ztr-comment-info-picture img {
-  width: 30px;
-  height: 30px;
-}
-
 .ztr-reply-controls button {
   font-family: var(--ztr-font);
   appearance: none;
@@ -243,9 +233,9 @@ ul.ztr-comment-actions li span {
 }
 
 .ztr-spinner {
-  width: var(--ztr-font-size);
-  height: var(--ztr-font-size);
-  margin: 0 15px 0 15px;
+  width: 24px;
+  height: 24px;
+  padding: 16px 20px;
   animation: rotate 4s linear infinite;
 }
 
@@ -287,6 +277,7 @@ ul.ztr-comment-actions li span {
 
 .ztr-comment-new .ztr-reply-form {
   margin-top: 0.5rem;
+  padding: 0;
 }
 
 .ztr-comment-new .ztr-comment-body {
