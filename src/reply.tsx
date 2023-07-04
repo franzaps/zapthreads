@@ -1,5 +1,5 @@
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
-import { Show, createEffect, createSignal, useContext } from "solid-js";
+import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
 import { EventSigner, pool, User, usersStore, ZapThreadsContext } from "./util/stores";
 import { randomCount, svgWidth } from "./util/ui";
@@ -17,39 +17,37 @@ declare global {
 }
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, filter, pubkey, eventsStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, filter, pubkey, eventsStore, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal('');
-  const [finalPubkey, setFinalPubkey] = createSignal<string | undefined>();
 
   // Sessions
 
-  const login = async () => {
-    if (!finalPubkey()) {
-      setFinalPubkey(await window.nostr!.getPublicKey());
+  const login = async (loginType: 'internal' | 'external') => {
+    let pk: string;
+    if (pubkey() && loginType == 'external') {
+      pk = pubkey()!;
+    } else {
+      pk = await window.nostr!.getPublicKey();
     }
 
-    const pk = finalPubkey()!;
     usersStore[pk] ||= {
       timestamp: 0,
       npub: npubEncode(pk),
     };
 
     usersStore[pk].signEvent = async (event) => {
-      const extPubkey = await window.nostr!.getPublicKey();
-      if (finalPubkey() && finalPubkey() !== extPubkey) {
-        // If zapthreads was passed a different pubkey then
-        // set the correct one and re-login
-        setFinalPubkey(extPubkey);
-        login();
-        // Throw an error and wait for the user to re attempt
-        throw `Pubkey mismatch: ${finalPubkey()} !== ${extPubkey}`;
+      const extensionPubkey = await window.nostr!.getPublicKey();
+      if (loggedInUser()!.npub !== npubEncode(extensionPubkey)) {
+        // If zapthreads was passed a different pubkey then throw
+        setErrorMessage('Pubkey mismatch');
+        throw `Pubkey mismatch: ${loggedInUser()!.npub} !== ${npubEncode(extensionPubkey)}`;
       }
       return window.nostr!.signEvent(event);
     };
-    usersStore[pk].loggedIn = true;
+    signersStore[loginType] = pk;
 
     if (!usersStore[pk].name) {
       const result = await pool.list(relays(), [{
@@ -60,28 +58,30 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     }
   };
 
-  const logout = () => {
-    if (loggedInUser()) {
-      loggedInUser()!.loggedIn = false;
-    }
-  };
-
   const loggedInUser = () => {
-    return Object.values(usersStore).find(u => u.loggedIn === true);
+    const pk = signersStore.external || signersStore.internal;
+    if (pk) {
+      return usersStore[pk];
+    }
   };
 
-  createEffect(() => setFinalPubkey(pubkey()));
-
-  createEffect(async () => {
-    if (finalPubkey() && !usersStore[finalPubkey()!]?.loggedIn) {
-      logout(); // just in case, log out
-      login();
-    }
-    // if pubkey becomes falsey again, log out
-    if (!finalPubkey()) {
-      logout();
+  // Auto login when external pubkey supplied
+  createEffect(() => {
+    if (pubkey() && !signersStore.external) {
+      login('external');
     }
   });
+
+  // Log out when external pubkey is absent
+  createEffect(on(pubkey, (pubkey) => {
+    if (!pubkey && signersStore.external) {
+      signersStore.external = undefined;
+      signersStore.internal = undefined;
+
+      // reset error message
+      setErrorMessage('');
+    }
+  }, { defer: true }));
 
   // Publishing
 
@@ -99,7 +99,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   const onError = () => {
     setLoading(false);
     // set error message
-    setErrorMessage('Your comment was not published to relays. Try again.');
+    setErrorMessage('Your comment was not published');
   };
 
   const publish = async (user: User) => {
@@ -143,33 +143,29 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     const id = getEventHash(unsignedEvent);
 
     // Attempt to sign the event
-    try {
-      const signature = await user.signEvent(unsignedEvent);
+    const signature = await user.signEvent(unsignedEvent);
 
-      const event: Event<1> = { id, ...unsignedEvent, ...signature };
+    const event: Event<1> = { id, ...unsignedEvent, ...signature };
 
-      setLoading(true);
-      console.log(JSON.stringify(event, null, 2));
+    setLoading(true);
+    console.log(JSON.stringify(event, null, 2));
 
-      if (preferencesStore.disablePublish) {
-        // Simulate publishing
-        setTimeout(() => onSuccess(event), 1500);
-      } else {
-        const sub = pool.publish(relays(), event);
-        // call callbacks and dispose
-        // TODO need to summarize relay callbacks in one result
-        sub.on('ok', (relay: string) => {
-          onSuccess(event);
-          sub.off('ok', onSuccess);
-        });
-        sub.on('failed', (relay: string) => {
-          // onError();
-          setLoading(false);
-          sub.off('failed', onError);
-        });
-      }
-    } catch (e) {
-      onError();
+    if (preferencesStore.disablePublish) {
+      // Simulate publishing
+      setTimeout(() => onSuccess(event), 1500);
+    } else {
+      const sub = pool.publish(relays(), event);
+      // call callbacks and dispose
+      // TODO need to summarize relay callbacks in one result
+      sub.on('ok', (relay: string) => {
+        onSuccess(event);
+        sub.off('ok', onSuccess);
+      });
+      sub.on('failed', (relay: string) => {
+        // onError();
+        setLoading(false);
+        sub.off('failed', onError);
+      });
     }
   };
 
@@ -190,8 +186,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       onChange={e => setComment(e.target.value)}
     />
     <div class="ztr-reply-controls">
-      {preferencesStore.disablePublish && <span class="ztr-reply-error">Publishing is disabled</span>}
-      {errorMessage() && <span class="ztr-reply-error">{errorMessage()}</span>}
+      {preferencesStore.disablePublish && <span>Publishing is disabled</span>}
+      {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
       <Show when={!loading()} fallback={
         <svg width={16} height={16} class="ztr-spinner" viewBox="0 0 50 50">
@@ -208,7 +204,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         {loggedInUser() ? ` as ${loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}` : ' anonymously'}
       </button>
 
-      {!loggedInUser() && window.nostr && <button class="ztr-reply-login-button" onClick={login}>Log in</button>}
+      {!loggedInUser() && window.nostr && <button class="ztr-reply-login-button" onClick={() => login('internal')}>Log in</button>}
     </div>
   </div>;
 };

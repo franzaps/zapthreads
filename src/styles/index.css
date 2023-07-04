@@ -190,7 +190,13 @@ ul.ztr-comment-actions li span {
   user-select: none;
 }
 
-.ztr-reply-error {
+.ztr-reply-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ztr-reply-controls span {
   font-weight: bold;
   font-size: 0.85rem;
   margin-right: 1rem;
@@ -198,10 +204,8 @@ ul.ztr-comment-actions li span {
   cursor: default;
 }
 
-.ztr-reply-controls {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+.ztr-reply-error {
+  color: rgb(202, 23, 23);
 }
 
 .ztr-reply-controls .ztr-comment-info-picture {

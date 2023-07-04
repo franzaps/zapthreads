@@ -4,20 +4,21 @@ import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { encodedEntityToFilter, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
-import { ZapThreadsContext, pool } from "./util/stores";
+import { EventsStore, PreferencesStore, SignersStore, ZapThreadsContext, pool } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
 import { Filter } from "./nostr-tools/filter";
 import { Event } from "./nostr-tools/event";
 import { createMutable } from "solid-js/store";
 
-export default function ZapThreads(props: ZapThreadsProps) {
+const ZapThreads = (props: ZapThreadsProps) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
     throw "Only NIP-19 naddr, note and nevent encoded entities and URLs are supported";
   }
 
-  const eventsStore = createMutable<{ [key: string]: Event<1>; }>({});
-  const preferencesStore = createMutable<{ [key: string]: any; }>({});
+  const eventsStore = createMutable<EventsStore>({});
+  const signersStore = createMutable<SignersStore>({});
+  const preferencesStore = createMutable<PreferencesStore>({});
 
   // Store preferences
   preferencesStore.disableLikes = props.disableLikes || false;
@@ -26,7 +27,7 @@ export default function ZapThreads(props: ZapThreadsProps) {
 
   const [filter, setFilter] = createSignal<Filter>();
   const pubkey = () => props.pubkey;
-  const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io", "wss://eden.nostr.land"];
+  const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io"];
   const closeOnEose = () => props.closeOnEose;
 
   onMount(async () => {
@@ -94,7 +95,7 @@ export default function ZapThreads(props: ZapThreadsProps) {
 
   return <div id="ztr-root">
     <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ relays, filter, pubkey, eventsStore, preferencesStore }}>
+    <ZapThreadsContext.Provider value={{ relays, filter, pubkey, eventsStore, signersStore, preferencesStore }}>
       <RootComment />
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
@@ -106,6 +107,8 @@ export default function ZapThreads(props: ZapThreadsProps) {
     </ZapThreadsContext.Provider>
   </div>;
 };
+
+export default ZapThreads;
 
 type ZapThreadsProps = {
   anchor: string,

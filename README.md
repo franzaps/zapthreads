@@ -67,7 +67,7 @@ import "zapthreads";
 Arguments:
 
  - (required) `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
- - (optional) `pubkey`: Pubkey (in hex format) to log in the user as 
+ - (optional) `pubkey`: Pubkey (in hex format) to log in the user as (only works with NIP-07!)
  - (optional) `relays`: comma separated list of preferred relays (defaults to `["wss://relay.damus.io", "wss://eden.nostr.land"]`)
  - (optional) `disableLikes`: defaults to `false`
  - (optional) `disableZaps`: defaults to `false`
