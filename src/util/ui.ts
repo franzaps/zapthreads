@@ -1,11 +1,10 @@
-import { micromark } from "micromark";
-import { gfmAutolinkLiteral, gfmAutolinkLiteralHtml } from "micromark-extension-gfm-autolink-literal";
 import { Event } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
 import { usersStore } from "./stores";
-import { AddressPointer, decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
+import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
+import nmd from "nano-markdown";
 
 // Misc profile helpers
 
@@ -43,12 +42,17 @@ export const tagFor = (filter: Filter): string[] => {
   }
 };
 
-export const parseContent = (e: Event): string => {
+const URL_REGEX = /https?:\/\/\S+/g;
+const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
+export const parseContent = (e: Event): string => {
   let content = e.content;
 
+  // replace http(s) links
+  content = content.replaceAll(URL_REGEX, '[$&]($&)');
+
   // NIP-08 => NIP-27 + Markdown
-  content = content.replace(/\#\[([0-9])\]/g, (match, capture) => {
+  content = content.replace(NIP_08_REGEX, (match, capture) => {
     switch (e.tags[capture][0]) {
       case "e":
         return 'nostr:' + noteEncode(e.tags[capture][1]);
@@ -71,10 +75,7 @@ export const parseContent = (e: Event): string => {
   });
 
   // Markdown => HTML
-  return micromark(content, {
-    extensions: [gfmAutolinkLiteral],
-    htmlExtensions: [gfmAutolinkLiteralHtml]
-  });
+  return nmd(content);
 };
 
 export const shortenEncodedId = (encoded: string) => {

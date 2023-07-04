@@ -50,7 +50,7 @@ Lightweight and extremely customizable. Available as web component and embeddabl
    - [ ] Vue
    - [ ] Svelte
 
-It's currently ~46kb minified/gzipped with base styles and assets (versus nocomment's ~244kb).
+It's currently ~32kb minified/gzipped with base styles and assets (versus nocomment's ~244kb).
 
 ## Usage
 
