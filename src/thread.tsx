@@ -16,7 +16,7 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
           return <div class="ztr-comment">
             <div class="ztr-comment-text">
               <CommentInfo event={event} />
-              <div class="ztr-comment-body" innerHTML={parseContent(event())}>
+              <div class="ztr-comment-body" innerHTML={parseContent(event(), preferencesStore)}>
               </div>
               <ul class="ztr-comment-actions">
                 <Show when={!preferencesStore.disableZaps}>

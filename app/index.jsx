@@ -44,6 +44,6 @@ render(() => {
     {/* solid component */}
     {/* <ZapThreads anchor={tonyArticle} relays={['wss://relay.damus.io']} disableZaps={false} disableLikes={true} disablePublish={true} pubkey={pubkey()} /> */}
     {/* web component */}
-    <zap-threads anchor={gigiArticle} relays={['wss://relay.damus.io'].join(',')} disable-zaps="true" disable-publish="true" pubkey={pubkey()} />
+    <zap-threads anchor={gigiArticle} relays={['wss://relay.damus.io'].join(',')} disable-zaps={"true"} disable-publish="true" pubkey={pubkey()} />
   </>
 }, root);

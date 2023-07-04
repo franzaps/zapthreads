@@ -2,7 +2,7 @@ import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { encodedEntityToFilter, updateMetadata } from "./util/ui";
+import { encodedEntityToFilter, parseUrlPrefixes, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
 import { EventsStore, PreferencesStore, SignersStore, ZapThreadsContext, pool } from "./util/stores";
 import { Thread } from "./thread";
@@ -16,19 +16,23 @@ const ZapThreads = (props: ZapThreadsProps) => {
     throw "Only NIP-19 naddr, note and nevent encoded entities and URLs are supported";
   }
 
-  const eventsStore = createMutable<EventsStore>({});
-  const signersStore = createMutable<SignersStore>({});
-  const preferencesStore = createMutable<PreferencesStore>({});
-
-  // Store preferences
-  preferencesStore.disableLikes = props.disableLikes || false;
-  preferencesStore.disableZaps = props.disableZaps || false;
-  preferencesStore.disablePublish = props.disablePublish || false;
-
-  const [filter, setFilter] = createSignal<Filter>();
   const pubkey = () => props.pubkey;
   const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io"];
   const closeOnEose = () => props.closeOnEose;
+
+  const eventsStore = createMutable<EventsStore>({});
+  const signersStore = createMutable<SignersStore>({});
+  const preferencesStore = createMutable<PreferencesStore>({
+    disableLikes: props.disableLikes || false,
+    disableZaps: props.disableZaps || false,
+    disablePublish: props.disablePublish || false,
+    urlPrefixes: parseUrlPrefixes(props.urlPrefixes || ""),
+  });
+
+  console.log(preferencesStore.urlPrefixes);
+
+
+  const [filter, setFilter] = createSignal<Filter>();
 
   onMount(async () => {
     try {
@@ -112,12 +116,13 @@ export default ZapThreads;
 
 type ZapThreadsProps = {
   anchor: string,
+  pubkey: string,
   relays: string[];
+  closeOnEose: boolean;
   disableLikes?: boolean,
   disableZaps?: boolean,
   disablePublish?: boolean,
-  pubkey: string,
-  closeOnEose: boolean;
+  urlPrefixes?: string,
 };
 
 customElement('zap-threads', {
@@ -128,15 +133,17 @@ customElement('zap-threads', {
   'disable-publish': "",
   'pubkey': "",
   'close-on-eose': "",
+  'url-prefixes': ""
 }, (props) => {
   const relays = props.relays === "" ? [] : props.relays.split(",");
   return <ZapThreads
     anchor={props.anchor}
-    relays={relays}
     pubkey={props.pubkey}
-    disableLikes={props['disable-likes'] === "true"}
-    disableZaps={props['disable-zaps'] === "true"}
-    disablePublish={props['disable-publish'] === "true"}
-    closeOnEose={props['close-on-eose'] === "true"}
+    relays={relays}
+    closeOnEose={!!props['close-on-eose']}
+    disableLikes={!!props['disable-likes']}
+    disableZaps={!!props['disable-zaps']}
+    disablePublish={!!props['disable-publish']}
+    urlPrefixes={props['url-prefixes']}
   />;
 });

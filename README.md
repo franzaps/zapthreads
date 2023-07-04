@@ -67,11 +67,13 @@ import "zapthreads";
 Arguments:
 
  - (required) `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
- - (optional) `pubkey`: Pubkey (in hex format) to log in the user as (only works with NIP-07!)
- - (optional) `relays`: comma separated list of preferred relays (defaults to `["wss://relay.damus.io", "wss://eden.nostr.land"]`)
- - (optional) `disableLikes`: defaults to `false`
- - (optional) `disableZaps`: defaults to `false`
- - (optional) `disablePublish`: defaults to `false`
+ - `pubkey`: Pubkey (in hex format) to log in the user as (only works with NIP-07!)
+ - `relays`: comma separated list of preferred relays (defaults to `["wss://relay.damus.io", "wss://eden.nostr.land"]`)
+ - `disableLikes`: defaults to `false`
+ - `disableZaps`: defaults to `false`
+ - `disablePublish`: defaults to `false`
+ - `closeOnEose`: defaults to `false`
+ - `urlPrefixes`: defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/` (`https://` is automatically prepended)
 
 ```html
 <zap-threads 
@@ -87,7 +89,7 @@ As Solid component:
 ```js
 import ZapThreads from 'zapthreads';
 
-<ZapThreads anchor={anchor} relays={relays} />
+<ZapThreads anchor={anchor} relays={relays} closeOnEose={true} />
 ```
 
 ## Customize

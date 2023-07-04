@@ -32,4 +32,13 @@ export type SignersStore = {
   [key in "internal" | "external"]?: string;
 };
 
-export type PreferencesStore = { [key in 'disableLikes' | 'disableZaps' | 'disablePublish']?: any; };
+
+type PreferenceKeys =
+  'disableLikes' |
+  'disableZaps' |
+  'disablePublish'
+  ;
+
+export type UrlPrefixesKeys = 'naddr' | 'nevent' | 'note' | 'npub' | 'nprofile' | 'tag';
+
+export type PreferencesStore = { [key in PreferenceKeys]?: any; } & { 'urlPrefixes': { [key in UrlPrefixesKeys]?: string; }; };

@@ -106,6 +106,7 @@ ul.ztr-comment-info-items li a {
 .ztr-comment-body {
   margin-top: -1rem;
   padding: 0 0 0 4rem;
+  line-height: 1.5rem;
 }
 
 .ztr-comment-body a {

@@ -1,6 +1,6 @@
-import { Event } from "../nostr-tools/event";
+import { Event, UnsignedEvent } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { usersStore } from "./stores";
+import { PreferencesStore, UrlPrefixesKeys, usersStore } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
@@ -45,13 +45,13 @@ export const tagFor = (filter: Filter): string[] => {
 const URL_REGEX = /https?:\/\/\S+/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
-export const parseContent = (e: Event): string => {
+export const parseContent = (e: UnsignedEvent, p: PreferencesStore): string => {
   let content = e.content;
 
   // replace http(s) links
   content = content.replaceAll(URL_REGEX, '[$&]($&)');
 
-  // NIP-08 => NIP-27 + Markdown
+  // NIP-08 => NIP-27
   content = content.replace(NIP_08_REGEX, (match, capture) => {
     switch (e.tags[capture][0]) {
       case "e":
@@ -61,9 +61,7 @@ export const parseContent = (e: Event): string => {
         return 'nostr:' + naddrEncode({ identifier, pubkey, kind: parseInt(kind) });
       case "p":
         const _pubkey = e.tags[capture][1];
-        const npub = npubEncode(_pubkey);
-        const text = usersStore[_pubkey]?.name || shortenEncodedId(npub);
-        return `[@${text}](https://nostr.com/${npub})`;
+        return 'nostr:' + npubEncode(_pubkey);
       default:
         return match;
     }
@@ -71,11 +69,51 @@ export const parseContent = (e: Event): string => {
 
   // NIP-27 => Markdown
   content = replaceAll(content, ({ decoded, value }) => {
-    return `[@${shortenEncodedId(value)}](https://nostr.com/${value})`;
+    switch (decoded.type) {
+      case 'nprofile':
+        const text1 = usersStore[decoded.data.pubkey]?.name || shortenEncodedId(value);
+        return `[@${text1}](${p.urlPrefixes.nprofile}${value})`;
+      case 'npub':
+        const text2 = usersStore[decoded.data]?.name || shortenEncodedId(value);
+        return `[@${text2}](${p.urlPrefixes.npub}${value})`;
+      case 'note':
+        return `[@${shortenEncodedId(value)}](${p.urlPrefixes.note}${value})`;
+      case 'naddr':
+        return `[@${shortenEncodedId(value)}](${p.urlPrefixes.naddr}${value})`;
+      case 'nevent':
+        return `[@${shortenEncodedId(value)}](${p.urlPrefixes.nevent}${value})`;
+      default: return value;
+    }
   });
+
+  const hashtags = [...e.tags].filter(t => t[0] === 't');
+  for (const hashtag of hashtags) {
+    if (hashtag.length > 1) {
+      content = content.replaceAll(`#${hashtag[1]}`, `[#${hashtag[1]}](${p.urlPrefixes.tag}${hashtag[1]})`);
+    }
+  }
 
   // Markdown => HTML
   return nmd(content);
+};
+
+export const parseUrlPrefixes = (value: string) => {
+  const result: { [key in UrlPrefixesKeys]: string; } = {
+    naddr: 'https://habla.news/a/',
+    npub: 'https://habla.news/p/',
+    nprofile: 'https://habla.news/p/',
+    nevent: 'https://habla.news/e/',
+    note: 'https://habla.news/n/',
+    tag: 'https://habla.news/t/'
+  };
+
+  for (const pair of value.split(',')) {
+    const [key, value] = pair.split(':');
+    if (value) {
+      result[key as UrlPrefixesKeys] = `https://${value}`;
+    }
+  }
+  return result;
 };
 
 export const shortenEncodedId = (encoded: string) => {
