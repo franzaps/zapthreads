@@ -96,6 +96,10 @@ ul.ztr-comment-info-items li a {
   cursor: pointer;
 }
 
+.ztr-comment-info-dots svg {
+  fill: var(--ztr-icon-color);
+}
+
 .ztr-comment-info-picture img {
   width: 40px;
   height: 40px;
@@ -248,7 +252,7 @@ ul.ztr-comment-actions li span {
 }
 
 .ztr-info-pane pre {
-  font-size: 0.7em;
+  font-size: 0.8em;
 }
 
 .ztr-spinner {
