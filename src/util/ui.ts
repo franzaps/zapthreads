@@ -97,15 +97,9 @@ export const parseContent = (e: UnsignedEvent, p: PreferencesStore): string => {
   return nmd(content);
 };
 
-export const parseUrlPrefixes = (value: string) => {
-  const result: { [key in UrlPrefixesKeys]: string; } = {
-    naddr: 'https://habla.news/a/',
-    npub: 'https://habla.news/p/',
-    nprofile: 'https://habla.news/p/',
-    nevent: 'https://habla.news/e/',
-    note: 'https://habla.news/n/',
-    tag: 'https://habla.news/t/'
-  };
+export const parseUrlPrefixes = (value?: string) => {
+  value ||= "naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/";
+  const result: { [key in UrlPrefixesKeys]?: string; } = {};
 
   for (const pair of value.split(',')) {
     const [key, value] = pair.split(':');

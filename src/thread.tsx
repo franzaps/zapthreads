@@ -1,4 +1,4 @@
-import { Accessor, Index, Show, createEffect, createSignal, onCleanup, useContext } from "solid-js";
+import { Accessor, Index, Show, Signal, createEffect, createSignal, onCleanup, useContext } from "solid-js";
 import { defaultPicture, parseContent, randomCount, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
@@ -12,10 +12,12 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
       {
         (event) => {
           const [isOpen, setOpen] = createSignal(false);
+          const infoSignal = createSignal(false);
+          const [showInfo, setShowInfo] = infoSignal;
 
           return <div class="ztr-comment">
             <div class="ztr-comment-body">
-              <CommentInfo event={event} />
+              <CommentInfo event={event} infoSignal={infoSignal} />
               <div class="ztr-comment-text" innerHTML={parseContent(event(), preferencesStore)}>
               </div>
               <ul class="ztr-comment-actions">
@@ -42,6 +44,11 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
                   <span onClick={() => setOpen(!isOpen())}>{isOpen() ? 'Cancel' : 'Reply'}</span>
                 </li>
               </ul>
+              {showInfo() &&
+                <div class="ztr-info-pane">
+                  <pre>{JSON.stringify(event(), ['id', 'created_at', 'pubkey', 'tags'], 2)}</pre>
+                  <button onClick={() => setShowInfo(false)}>Hide info</button>
+                </div>}
               {isOpen() &&
                 <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
@@ -55,11 +62,13 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   </div>;
 };
 
-export const CommentInfo = (props: { event: Accessor<NestedNote>; }) => {
+export const CommentInfo = (props: { event: Accessor<NestedNote>; infoSignal: Signal<boolean>; }) => {
+  const { preferencesStore } = useContext(ZapThreadsContext)!;
   const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
 
   const pubkey = () => props.event().pubkey;
   const npub = () => npubEncode(pubkey());
+  const [showInfo, setShowInfo] = props.infoSignal;
 
   createEffect(() => {
     usersStore[pubkey()] ||= { timestamp: 0, npub: npub() };
@@ -81,16 +90,28 @@ export const CommentInfo = (props: { event: Accessor<NestedNote>; }) => {
 
   onCleanup(() => clearInterval(timer));
 
+  const total = () => totalChildren(props.event());
+  const separatorSvg = () => <svg class="ztr-comment-info-separator" xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 16 16">
+    <circle cx="6" cy="6" r="6" />
+  </svg>;
+
   return <div class="ztr-comment-info">
     <div class="ztr-comment-info-picture">
       <img width={svgWidth} height={svgWidth} src={profilePicture()} onerror={() => setProfilePicture(defaultPicture)} />
     </div>
     <ul class="ztr-comment-info-items">
-      <li class="ztr-comment-info-item ztr-comment-info-author">
-        <a href={'https://nostr.com/' + npub()} target="_blank" >{usersStore[pubkey()]?.name || shortenEncodedId(npub())}</a>
+      <li class="ztr-comment-info-author">
+        <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{usersStore[pubkey()]?.name || shortenEncodedId(npub())}</a>
       </li>
-      <li class="ztr-comment-info-item ztr-comment-info-time">{createdTimeAgo()}</li>
-      <li class="ztr-comment-info-item ztr-comment-info-replies">{totalChildren(props.event()) == 1 ? '1 reply' : `${totalChildren(props.event())} replies`}</li>
+      <li>{createdTimeAgo()}</li>
+      {total() > 0 && <>
+        <li>{separatorSvg()}</li>
+        <li>{total() == 1 ? '1 reply' : `${total()} replies`}</li></>}
+      <li><a class="ztr-comment-info-dots" onClick={() => setShowInfo(!showInfo())}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -3 16 16">
+          <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+        </svg>
+      </a></li>
     </ul>
   </div>;
 };

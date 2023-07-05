@@ -26,7 +26,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
     disableLikes: props.disableLikes || false,
     disableZaps: props.disableZaps || false,
     disablePublish: props.disablePublish || false,
-    urlPrefixes: parseUrlPrefixes(props.urlPrefixes || ""),
+    urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
 
   const [filter, setFilter] = createSignal<Filter>();
