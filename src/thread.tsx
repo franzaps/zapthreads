@@ -6,7 +6,7 @@ import { ZapThreadsContext, usersStore } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
-  const { preferencesStore } = useContext(ZapThreadsContext)!;
+  const { preferencesStore, filter } = useContext(ZapThreadsContext)!;
   return <div class="ztr-thread">
     <Index each={sortByDate(props.nestedEvents())}>
       {
@@ -18,7 +18,7 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
           return <div class="ztr-comment">
             <div class="ztr-comment-body">
               <CommentInfo event={event} infoSignal={infoSignal} />
-              <div class="ztr-comment-text" innerHTML={parseContent(event(), preferencesStore)}>
+              <div class="ztr-comment-text" innerHTML={parseContent(event(), preferencesStore, filter())}>
               </div>
               <ul class="ztr-comment-actions">
                 <Show when={!preferencesStore.disableZaps}>

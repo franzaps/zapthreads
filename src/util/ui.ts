@@ -45,8 +45,9 @@ export const tagFor = (filter: Filter): string[] => {
 const URL_REGEX = /https?:\/\/\S+/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
-export const parseContent = (e: UnsignedEvent, p: PreferencesStore): string => {
+export const parseContent = (e: UnsignedEvent, prefs?: PreferencesStore, filter?: Filter): string => {
   let content = e.content;
+  const p = prefs || { urlPrefixes: parseUrlPrefixes('') };
 
   // replace http(s) links
   content = content.replaceAll(URL_REGEX, '[$&]($&)');
@@ -79,6 +80,8 @@ export const parseContent = (e: UnsignedEvent, p: PreferencesStore): string => {
       case 'note':
         return `[@${shortenEncodedId(value)}](${p.urlPrefixes.note}${value})`;
       case 'naddr':
+        const same = filter?.toString() === encodedEntityToFilter(value).toString();
+        if (same) return '';
         return `[@${shortenEncodedId(value)}](${p.urlPrefixes.naddr}${value})`;
       case 'nevent':
         return `[@${shortenEncodedId(value)}](${p.urlPrefixes.nevent}${value})`;
@@ -94,7 +97,7 @@ export const parseContent = (e: UnsignedEvent, p: PreferencesStore): string => {
   }
 
   // Markdown => HTML
-  return nmd(content);
+  return nmd(content.trim());
 };
 
 export const parseUrlPrefixes = (value?: string) => {
