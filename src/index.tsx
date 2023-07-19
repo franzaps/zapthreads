@@ -1,4 +1,4 @@
-import { Show, createEffect, createMemo, onCleanup, onMount } from "solid-js";
+import { Show, createEffect, createMemo, onCleanup } from "solid-js";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
@@ -29,21 +29,24 @@ const ZapThreads = (props: ZapThreadsProps) => {
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
 
-  onMount(async () => {
-    try {
-      if (props.anchor.startsWith('http')) {
-        const eventsForUrl = await pool.list(relays(), [
-          {
-            '#r': [props.anchor],
-            kinds: [1]
-          }
-        ]);
-        const eventIdsForUrl = eventsForUrl.map((e) => e.id);
-        preferencesStore.filter = { "#e": eventIdsForUrl };
-      } else {
-        preferencesStore.filter = encodedEntityToFilter(props.anchor);
-      }
+  createEffect(async () => {
+    if (props.anchor.startsWith('http')) {
+      const eventsForUrl = await pool.list(relays(), [
+        {
+          '#r': [props.anchor],
+          kinds: [1]
+        }
+      ]);
+      const eventIdsForUrl = eventsForUrl.map((e) => e.id);
+      preferencesStore.filter = { "#e": eventIdsForUrl };
 
+    } else {
+      preferencesStore.filter = encodedEntityToFilter(props.anchor);
+    }
+  });
+
+  createEffect(async () => {
+    try {
       const sub = pool.sub(relays(), [{ ...preferencesStore.filter, kinds: [1] }]);
 
       sub.on('event', e => {
@@ -59,7 +62,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
       });
 
       onCleanup(() => {
-        return sub?.unsub();
+        sub?.unsub();
       });
     } catch (e) {
       // TODO properly handle error
