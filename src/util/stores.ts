@@ -19,7 +19,7 @@ export const pool = new SimplePool();
 
 export const ZapThreadsContext = createContext<{
   relays: Accessor<string[]>,
-  filter: Accessor<Filter | undefined>;
+  anchor: Accessor<string>,
   pubkey: Accessor<string | undefined>;
   eventsStore: EventsStore;
   signersStore: SignersStore;
@@ -41,4 +41,6 @@ type PreferenceKeys =
 
 export type UrlPrefixesKeys = 'naddr' | 'nevent' | 'note' | 'npub' | 'nprofile' | 'tag';
 
-export type PreferencesStore = { [key in PreferenceKeys]?: any; } & { 'urlPrefixes': { [key in UrlPrefixesKeys]?: string; }; };
+export type PreferencesStore = { [key in PreferenceKeys]?: boolean } &
+{ urlPrefixes: { [key in UrlPrefixesKeys]?: string }; } &
+{ filter?: Filter; };

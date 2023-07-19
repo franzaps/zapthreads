@@ -17,7 +17,7 @@ declare global {
 }
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, filter, pubkey, eventsStore, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, anchor, pubkey, eventsStore, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -120,16 +120,45 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     const content = comment().trim();
     if (!content) return;
 
+    const signingPubkey = decode(user.npub!).data.toString();
+
+    // Ensure root
+    let rootTag = tagFor(preferencesStore.filter!);
+
+    if (rootTag.length === 0) {
+      const url = anchor();
+      const unsignedRootEvent: UnsignedEvent<1> = {
+        pubkey: signingPubkey,
+        created_at: Math.round(Date.now() / 1000),
+        kind: 1,
+        tags: [['r', url]],
+        content: `Comments on ${url} (added by zapthreads) ↴`
+      };
+      const rootEvent: Event<1> = {
+        id: getEventHash(unsignedRootEvent),
+        ...unsignedRootEvent,
+        ...await user.signEvent(unsignedRootEvent)
+      };
+
+      // Publish, store filter and get updated rootTag
+      if (preferencesStore.disablePublish === false) {
+        pool.publish(relays(), rootEvent);
+      } else {
+        console.log('Publishing root event disabled', rootEvent);
+      }
+      preferencesStore.filter = { "#e": [rootEvent.id] };
+      rootTag = tagFor(preferencesStore.filter!);
+    }
+
     const unsignedEvent: UnsignedEvent<1> = {
       kind: 1,
       created_at: Math.round(Date.now() / 1000),
       content: content,
-      pubkey: decode(user.npub!).data.toString(),
+      pubkey: signingPubkey,
       tags: []
     };
 
-    // Set root
-    unsignedEvent.tags.push(tagFor(filter()!));
+    unsignedEvent.tags.push(rootTag);
 
     // Set reply
     if (props.replyTo) {

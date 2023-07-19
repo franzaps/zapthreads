@@ -35,19 +35,21 @@ export const encodedEntityToFilter = (entity: string): Filter => {
 };
 
 export const tagFor = (filter: Filter): string[] => {
-  if (filter["#e"]) {
+  if (filter["#a"]) {
+    return ["a", filter["#a"][0], "", "root"];
+  }
+  if (filter["#e"] && filter["#e"].length > 0) {
     return ["e", filter["#e"][0], "", "root"];
   } else {
-    return ["a", filter["#a"][0], "", "root"];
+    return [];
   }
 };
 
 const URL_REGEX = /https?:\/\/\S+/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
-export const parseContent = (e: UnsignedEvent, prefs?: PreferencesStore, filter?: Filter): string => {
+export const parseContent = (e: UnsignedEvent, anchor?: string, prefs?: PreferencesStore): string => {
   let content = e.content;
-  const p = prefs || { urlPrefixes: parseUrlPrefixes('') };
 
   // replace http(s) links
   content = content.replaceAll(URL_REGEX, '[$&]($&)');
@@ -73,18 +75,18 @@ export const parseContent = (e: UnsignedEvent, prefs?: PreferencesStore, filter?
     switch (decoded.type) {
       case 'nprofile':
         const text1 = usersStore[decoded.data.pubkey]?.name || shortenEncodedId(value);
-        return `[@${text1}](${p.urlPrefixes.nprofile}${value})`;
+        return `[@${text1}](${prefs!.urlPrefixes.nprofile}${value})`;
       case 'npub':
         const text2 = usersStore[decoded.data]?.name || shortenEncodedId(value);
-        return `[@${text2}](${p.urlPrefixes.npub}${value})`;
+        return `[@${text2}](${prefs!.urlPrefixes.npub}${value})`;
       case 'note':
-        return `[@${shortenEncodedId(value)}](${p.urlPrefixes.note}${value})`;
+        return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.note}${value})`;
       case 'naddr':
-        const same = filter?.toString() === encodedEntityToFilter(value).toString();
+        const same = value === anchor;
         if (same) return '';
-        return `[@${shortenEncodedId(value)}](${p.urlPrefixes.naddr}${value})`;
+        return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.naddr}${value})`;
       case 'nevent':
-        return `[@${shortenEncodedId(value)}](${p.urlPrefixes.nevent}${value})`;
+        return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.nevent}${value})`;
       default: return value;
     }
   });
@@ -92,7 +94,7 @@ export const parseContent = (e: UnsignedEvent, prefs?: PreferencesStore, filter?
   const hashtags = [...e.tags].filter(t => t[0] === 't');
   for (const hashtag of hashtags) {
     if (hashtag.length > 1) {
-      content = content.replaceAll(`#${hashtag[1]}`, `[#${hashtag[1]}](${p.urlPrefixes.tag}${hashtag[1]})`);
+      content = content.replaceAll(`#${hashtag[1]}`, `[#${hashtag[1]}](${prefs!.urlPrefixes.tag}${hashtag[1]})`);
     }
   }
 

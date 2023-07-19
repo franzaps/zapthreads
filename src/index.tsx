@@ -1,4 +1,4 @@
-import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { Show, createEffect, createMemo, onCleanup, onMount } from "solid-js";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
@@ -7,7 +7,6 @@ import { nest } from "./util/nest";
 import { EventsStore, PreferencesStore, SignersStore, ZapThreadsContext, pool } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
-import { Filter } from "./nostr-tools/filter";
 import { Event } from "./nostr-tools/event";
 import { createMutable } from "solid-js/store";
 
@@ -17,6 +16,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
   }
 
   const pubkey = () => props.pubkey;
+  const anchor = () => props.anchor;
   const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io"];
   const closeOnEose = () => props.closeOnEose;
 
@@ -29,8 +29,6 @@ const ZapThreads = (props: ZapThreadsProps) => {
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
 
-  const [filter, setFilter] = createSignal<Filter>();
-
   onMount(async () => {
     try {
       if (props.anchor.startsWith('http')) {
@@ -41,12 +39,12 @@ const ZapThreads = (props: ZapThreadsProps) => {
           }
         ]);
         const eventIdsForUrl = eventsForUrl.map((e) => e.id);
-        setFilter({ "#e": eventIdsForUrl });
+        preferencesStore.filter = { "#e": eventIdsForUrl };
       } else {
-        setFilter(encodedEntityToFilter(props.anchor));
+        preferencesStore.filter = encodedEntityToFilter(props.anchor);
       }
 
-      const sub = pool.sub(relays(), [{ ...filter(), kinds: [1] }]);
+      const sub = pool.sub(relays(), [{ ...preferencesStore.filter, kinds: [1] }]);
 
       sub.on('event', e => {
         if (e.content) {
@@ -96,7 +94,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
 
   return <div id="ztr-root">
     <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ relays, filter, pubkey, eventsStore, signersStore, preferencesStore }}>
+    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, eventsStore, signersStore, preferencesStore }}>
       <RootComment />
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
