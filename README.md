@@ -2,7 +2,12 @@
 
 A threaded web commenting system built on Nostr. Inspired by [stacker.news](https://stacker.news) and [NoComment](https://github.com/fiatjaf/nocomment).
 
-![](https://cdn.nostr.build/i/a7a8646a1ed2e29e59addc2856813ed5bc717ea6d68a3b933c7966e4a3e10c35.jpg)
+## Goals
+
+ - Implant Nostr on all the different corners of the web
+ - Make Disqus obsolete
+
+![](https://cdn.nostr.build/i/db1295c70ca0a47c3fcd3cba4f01b9ac194dc981462decae07d8fbd410d468ec.jpg)
 
 ## Features
 
@@ -13,9 +18,10 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
    - Light/dark modes
    - Full CSS control via `shadowRoot` style
    - Multiple languages (coming soon)
- - Lightweight (~35kb minified+gzipped with base styles and assets)
-   - For comparison, nocomment is ~244kb
- - Available as web component, works everywhere
+ - Lightweight on clients and relays
+   - ~35kb minified+gzipped with base styles and assets (nocomment is ~244kb)
+   - Local storage caching
+ - Available as web component or embeddable script
 
 ## Roadmap
 
@@ -26,6 +32,8 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
    - Proper relay selection (NIP-05, nprofile, NIP-65)
    - Ability to remote sign
    - World class onboarding for new users
+ - Migration tools
+   - Easily migrate from Disqus, Facebook comments, Wordpress, etc
  - [Much more](https://github.com/fr4nzap/zapthreads/issues)
 
 ## Usage
