@@ -2,66 +2,46 @@
 
 A threaded web commenting system built on Nostr. Inspired by [stacker.news](https://stacker.news) and [NoComment](https://github.com/fiatjaf/nocomment).
 
-![](https://nostr.build/i/0c9c2fbd41a9f6a8b0095bfbbae7562c8ed316f8cc5188de044fb453dbd2b1f5.jpg)
+![](https://cdn.nostr.build/i/a03024c8ce022f1207196b6efeaec7738e036463da5982795e6fc7b182dbaeb2.png)
 
-_(Zaps and likes count are fake random numbers at the moment)_
+## Features
 
-## Features (and goals)
+ - Works on a variety of root events: `note`, `nevent`, `naddr`, URLs
+ - Markdown support and nostr reference handling
+ - Extremely versatile and customizable
+   - Enable/disable many features via attributes
+   - Light/dark modes
+   - Full CSS control via `shadowRoot` style
+   - Multiple languages (coming soon)
+ - Lightweight (~35kb minified+gzipped with base styles and assets)
+   - For comparison, nocomment is ~244kb
+ - Available as web component, works everywhere
 
-Lightweight and extremely customizable. Available as web component and embeddable script.
+## Roadmap
 
- - [x] Threaded comments
-   - [x] naddr
-   - [x] URL
-   - [x] [note, nevent](https://github.com/fr4nzap/zapthreads/issues/7)
- - [x] Comment author metadata
- - [x] Login
-   - [x] [Share NIP-07 session with host](https://github.com/fr4nzap/zapthreads/issues/2)
-   - [ ] Proper relay selection (NIP-05, nprofile, NIP-65)
- - [x] Add comments to anchor and reply to other comments
-   - [x] [Publish and sync with relays](https://github.com/fr4nzap/zapthreads/issues/3)
-   - [ ] [Creation of base anchors if none](https://github.com/fr4nzap/zapthreads/issues/10)
- - [x] Rich text support
-   - [x] Markdown
-   - [x] [Parse nostr links and references](https://github.com/fr4nzap/zapthreads/issues/5)
- - [ ] Zaps and likes
-   - [x] [Ability to disable](https://github.com/fr4nzap/zapthreads/issues/4)
-   - [ ] [Read](https://github.com/fr4nzap/zapthreads/issues/9)
-   - [ ] Write
-   - [ ] Splits
- - [ ] Sort by top, replies, zaps, oldest
- - [ ] Thread show/hide toggle
- - [ ] [Nostr metadata menu](https://github.com/fr4nzap/zapthreads/issues/11)
- - [x] CSS themes (and dark theme)
-   - [ ] Autodetect color mode
- - [ ] i18n, language support
-   - [ ] Autodetect
-   - [ ] Inherit from host
- - [x] Optimized build
-   - [x] [Tree-shaking](https://github.com/fr4nzap/zapthreads/issues/6)
- - [x] Allow to customize most elements
-   - [x] Full CSS control via `shadowRoot` style
-   - [ ] Better/more props (color mode, language)
- - [ ] Available as multiple libraries
-   - [x] Web component (custom element)
-   - [x] Embeddable script
-   - [x] Solid
-   - [ ] [React](https://github.com/fr4nzap/zapthreads/issues/1)
-   - [ ] Vue
-   - [ ] Svelte
-
-It's currently ~32kb minified/gzipped with base styles and assets (versus nocomment's ~244kb).
+ - Likes and zaps
+   - Ability to like and zap comments
+   - Prisms, zap splits with host
+ - Signers
+   - Proper relay selection (NIP-05, nprofile, NIP-65)
+   - Ability to remote sign
+   - World class onboarding for new users
+ - [Much more](https://github.com/fr4nzap/zapthreads/issues)
 
 ## Usage
 
 ```bash
+npm install zapthreads
+// or
+yarn add zapthreads
+// or
 pnpm add zapthreads
 ```
 
 ```html
 import "zapthreads";
 
-<zap-threads anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz" />
+<zap-threads anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz" ... />
 ```
 
 Arguments:
