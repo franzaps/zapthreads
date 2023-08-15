@@ -1,8 +1,9 @@
-import { Accessor, createContext } from "solid-js";
-import { createMutable } from "solid-js/store";
+import { Accessor, Signal, createContext, createSignal } from "solid-js";
+import { createStore } from "solid-js/store";
 import { UnsignedEvent, Event } from "../nostr-tools/event";
 import { SimplePool } from "../nostr-tools/pool";
 import { Filter } from "../nostr-tools/filter";
+import { makePersisted } from "@solid-primitives/storage";
 
 export type EventSigner = (event: UnsignedEvent<1>) => Promise<{ sig: string; }>;
 export type User = {
@@ -14,19 +15,20 @@ export type User = {
 };
 
 // Global data (for now)
-export const usersStore = createMutable<{ [key: string]: User; }>({});
+export const [usersStore, setUsersStore] = makePersisted(createStore<{ [key: string]: User; }>({}));
+export const [eventsStore, setEventsStore] = makePersisted(createStore<EventsStore>({}));
 export const pool = new SimplePool();
 
 export const ZapThreadsContext = createContext<{
   relays: Accessor<string[]>,
   anchor: Accessor<string>,
   pubkey: Accessor<string | undefined>;
-  eventsStore: EventsStore;
   signersStore: SignersStore;
   preferencesStore: PreferencesStore;
 }>();
 
-export type EventsStore = { [key: string]: Event<1>; };
+export type ExtendedEvent = Event & { likes?: number, zaps?: number; };
+export type EventsStore = { [key: string]: ExtendedEvent; };
 
 export type SignersStore = {
   [key in "internal" | "external"]?: string;
@@ -44,3 +46,26 @@ export type UrlPrefixesKeys = 'naddr' | 'nevent' | 'note' | 'npub' | 'nprofile' 
 export type PreferencesStore = { [key in PreferenceKeys]?: boolean } &
 { urlPrefixes: { [key in UrlPrefixesKeys]?: string }; } &
 { filter?: Filter; };
+
+// helpers
+
+function createStoredSignal<T>(
+  key: string,
+  defaultValue: T,
+  storage = localStorage
+): Signal<T> {
+
+  const initialValue = storage.getItem(key)
+    ? JSON.parse(storage.getItem(key)!) as T
+    : defaultValue;
+
+  const [value, setValue] = createSignal<T>(initialValue);
+
+  const setValueAndStore = ((arg) => {
+    const v = setValue(arg);
+    storage.setItem(key, JSON.stringify(v));
+    return v;
+  }) as typeof setValue;
+
+  return [value, setValueAndStore];
+}

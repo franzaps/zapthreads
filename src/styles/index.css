@@ -125,6 +125,11 @@ ul.ztr-comment-info-items li a {
 
 .ztr-comment-text a {
   color: var(--ztr-link-color);
+  text-decoration: none;
+}
+
+.ztr-comment-text a:hover {
+  text-decoration: underline;
 }
 
 .ztr-comment-replies {

@@ -2,13 +2,13 @@ import { Show, createEffect, createMemo, onCleanup } from "solid-js";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { encodedEntityToFilter, parseUrlPrefixes, updateMetadata } from "./util/ui";
+import { encodedEntityToFilter, filteredEventsFor, parseUrlPrefixes, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
-import { EventsStore, PreferencesStore, SignersStore, ZapThreadsContext, pool } from "./util/stores";
+import { PreferencesStore, SignersStore, ZapThreadsContext, eventsStore, pool, setEventsStore } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
 import { Event } from "./nostr-tools/event";
-import { createMutable } from "solid-js/store";
+import { createMutable, createStore, produce, unwrap } from "solid-js/store";
 
 const ZapThreads = (props: ZapThreadsProps) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -20,7 +20,6 @@ const ZapThreads = (props: ZapThreadsProps) => {
   const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io"];
   const closeOnEose = () => props.closeOnEose;
 
-  const eventsStore = createMutable<EventsStore>({});
   const signersStore = createMutable<SignersStore>({});
   const preferencesStore = createMutable<PreferencesStore>({
     disableLikes: props.disableLikes || false,
@@ -28,6 +27,10 @@ const ZapThreads = (props: ZapThreadsProps) => {
     disablePublish: props.disablePublish || false,
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
+
+  const events = () => {
+    return filteredEventsFor(unwrap(eventsStore), preferencesStore).filter(e => e.kind == 1);
+  };
 
   createEffect(async () => {
     if (props.anchor.startsWith('http')) {
@@ -46,12 +49,39 @@ const ZapThreads = (props: ZapThreadsProps) => {
   });
 
   createEffect(async () => {
+    const kinds = [1];
+    if (preferencesStore.disableLikes === false) {
+      kinds.push(7);
+    }
+    if (preferencesStore.disableZaps === false) {
+      kinds.push(9735);
+    }
+
+    const filter = preferencesStore.filter;
+    if (!filter) {
+      return;
+    }
+
     try {
-      const sub = pool.sub(relays(), [{ ...preferencesStore.filter, kinds: [1] }]);
+      // All events have a created_at timestamp, find the latest to query since that time
+      // (`events` below includes ALL kinds previously fetched for this filter)
+      const events = filteredEventsFor(unwrap(eventsStore), preferencesStore);
+      const createdAts = events.map(e => e.created_at);
+      const since = createdAts.length > 0 ? Math.max(...createdAts) + 1 : undefined;
+
+      const sub = pool.sub(relays(), [{ ...preferencesStore.filter, kinds, since: since }]);
 
       sub.on('event', e => {
-        if (e.content) {
-          eventsStore[e.id] = e;
+        switch (e.kind) {
+          case 1:
+            setEventsStore(
+              produce(s => s[e.id] = { ...e, ...{ likes: 0, zaps: 0 } })
+            );
+            break;
+          case 7:
+          case 9735:
+            setEventsStore(produce(s => s[e.id] = { ...e }));
+            break;
         }
       });
 
@@ -71,9 +101,9 @@ const ZapThreads = (props: ZapThreadsProps) => {
   });
 
   const scheduledDebounce = createScheduled(fn => debounce(fn, 16));
-  const debouncedEvents = createMemo((e: Event<1>[] = []) => {
-    if (scheduledDebounce() && Object.keys(eventsStore).length > 0) {
-      return Object.values(eventsStore);
+  const debouncedEvents = createMemo((e: Event[] = []) => {
+    if (scheduledDebounce() && Object.values(eventsStore).length > 0) {
+      return events();
     }
     return e;
   });
@@ -84,7 +114,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
   // Get all author pubkeys from known events when event loading has somewhat settled
   createEffect(async () => {
     if (profilesDebounce() && Object.keys(eventsStore).length > 0) {
-      const authorPubkeys = Object.values(eventsStore).map(e => e.pubkey);
+      const authorPubkeys = events().map(e => e.pubkey);
       const result = await pool.list(relays(), [{
         kinds: [0],
         authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
@@ -93,18 +123,18 @@ const ZapThreads = (props: ZapThreadsProps) => {
     }
   });
 
-  const commentsLength = () => Object.keys(eventsStore).length;
+  const commentsLength = () => debouncedEvents().length;
 
   return <div id="ztr-root">
     <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, eventsStore, signersStore, preferencesStore }}>
+    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, signersStore, preferencesStore }}>
       <RootComment />
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
       </h2>
-      <Show when={!preferencesStore.disableZaps}>
-        <h3 id="ztr-subtitle">2397 sats</h3>
-      </Show>
+      {/* <Show when={!preferencesStore.disableZaps}>
+        <h3 id="ztr-subtitle">Z sats</h3>
+      </Show> */}
       <Thread nestedEvents={nestedEvents} />
     </ZapThreadsContext.Provider>
   </div>;

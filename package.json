@@ -42,6 +42,8 @@
     "@scure/base": "1.1.1",
     "@solid-primitives/autofocus": "^0.0.107",
     "@solid-primitives/scheduled": "^1.3.2",
+    "@solid-primitives/storage": "^2.1.0",
+    "light-bolt11-decoder": "^3.0.0",
     "nano-markdown": "^1.2.2",
     "solid-element": "^1.7.1",
     "solid-js": "^1.7.6"

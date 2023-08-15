@@ -1,10 +1,11 @@
 import { Event, UnsignedEvent } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { PreferencesStore, UrlPrefixesKeys, usersStore } from "./stores";
+import { EventsStore, ExtendedEvent, PreferencesStore, UrlPrefixesKeys, setUsersStore, usersStore } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
+import { produce } from "solid-js/store";
 
 // Misc profile helpers
 
@@ -14,12 +15,14 @@ export const updateMetadata = (result: Event<0>[]): void => {
   result.forEach(e => {
     const payload = JSON.parse(e.content);
     if (usersStore[e.pubkey].timestamp < e.created_at!) {
-      usersStore[e.pubkey] = {
-        ...usersStore[e.pubkey],
-        timestamp: e.created_at!,
-        imgUrl: payload.image || payload.picture,
-        name: payload.displayName || payload.display_name || payload.name,
-      };
+      setUsersStore(
+        produce(s => s[e.pubkey] = {
+          ...usersStore[e.pubkey],
+          timestamp: e.created_at!,
+          imgUrl: payload.image || payload.picture,
+          name: payload.displayName || payload.display_name || payload.name,
+        })
+      );
     }
   });
 };
@@ -120,7 +123,6 @@ export const shortenEncodedId = (encoded: string) => {
 };
 
 export const svgWidth = 20;
-export const randomCount = () => Math.floor(Math.random() * 42);
 
 export const defaultPicture = 'data:image/svg+xml;utf-8,<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><circle cx="512" cy="512" r="512" fill="%23333" fill-rule="evenodd" /></svg>';
 
@@ -146,6 +148,17 @@ export const timeAgo = (timestamp: number): string => {
     return day + year;
   }
   return '';
+};
+
+export const filteredEventsFor = (eventsStore: EventsStore, preferencesStore: PreferencesStore): ExtendedEvent[] => {
+  return Object.values(eventsStore).filter(e => {
+    // TODO make it work with "#e"
+    const aTag = e.tags.find(t => t[0] == 'a');
+    if (aTag && preferencesStore.filter) {
+      return aTag[1] === [...preferencesStore.filter['#a']][0];
+    }
+    return false;
+  });
 };
 
 // extensions
