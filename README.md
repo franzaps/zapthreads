@@ -2,7 +2,7 @@
 
 A threaded web commenting system built on Nostr. Inspired by [stacker.news](https://stacker.news) and [NoComment](https://github.com/fiatjaf/nocomment).
 
-![](https://cdn.nostr.build/i/a03024c8ce022f1207196b6efeaec7738e036463da5982795e6fc7b182dbaeb2.png)
+![](https://cdn.nostr.build/i/a7a8646a1ed2e29e59addc2856813ed5bc717ea6d68a3b933c7966e4a3e10c35.jpg)
 
 ## Features
 
