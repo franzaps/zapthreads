@@ -1,6 +1,6 @@
-import { Event, UnsignedEvent } from "../nostr-tools/event";
+import { Event } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { EventsStore, ExtendedEvent, PreferencesStore, UrlPrefixesKeys, setUsersStore, usersStore } from "./stores";
+import { PreferencesStore, StoredEvent, UrlPrefixesKeys, setUsersStore, usersStore } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
@@ -51,7 +51,7 @@ export const tagFor = (filter: Filter): string[] => {
 const URL_REGEX = /https?:\/\/\S+/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
-export const parseContent = (e: UnsignedEvent, anchor?: string, prefs?: PreferencesStore): string => {
+export const parseContent = (e: StoredEvent, anchor?: string, prefs?: PreferencesStore): string => {
   let content = e.content;
 
   // replace http(s) links
@@ -148,17 +148,6 @@ export const timeAgo = (timestamp: number): string => {
     return day + year;
   }
   return '';
-};
-
-export const filteredEventsFor = (eventsStore: EventsStore, preferencesStore: PreferencesStore): ExtendedEvent[] => {
-  return Object.values(eventsStore).filter(e => {
-    // TODO make it work with "#e"
-    const aTag = e.tags.find(t => t[0] == 'a');
-    if (aTag && preferencesStore.filter) {
-      return aTag[1] === [...preferencesStore.filter['#a']][0];
-    }
-    return false;
-  });
 };
 
 // extensions

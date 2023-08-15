@@ -1,9 +1,10 @@
-import { Event } from "../nostr-tools/event";
 import { parse } from "../nostr-tools/nip10";
+import { StoredEvent } from "./stores";
 
-export type NestedNote = Event & { rootId?: string, replyId?: string, children: NestedNote[]; };
+export type NestedNote = StoredEventWithId & { rootId?: string, replyId?: string, children: NestedNote[]; };
+export type StoredEventWithId = StoredEvent & { id: string; };
 
-export function nest(events: Event[], anchorIds?: string[]): NestedNote[] {
+export function nest(events: StoredEventWithId[], anchorIds?: string[]): NestedNote[] {
   const nestedEvents = events.map(e => {
     let rootId: string | undefined;
     let replyId: string | undefined;

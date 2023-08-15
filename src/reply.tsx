@@ -1,12 +1,12 @@
-import { defaultPicture, filteredEventsFor, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
+import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
 import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { EventSigner, eventsStore, ExtendedEvent, pool, setUsersStore, User, usersStore, ZapThreadsContext } from "./util/stores";
+import { EventSigner, pool, setUsersStore, User, usersStore, ZapThreadsContext } from "./util/stores";
 import { svgWidth } from "./util/ui";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
 import { decode, npubEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
-import { produce, unwrap } from "solid-js/store";
+import { produce } from "solid-js/store";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
 
 declare global {
@@ -19,7 +19,7 @@ declare global {
 }
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, anchor, pubkey, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, anchor, pubkey, eventsStore, setEventsStore, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -88,13 +88,22 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
   // Publishing
 
-  const onSuccess = (event: ExtendedEvent) => {
+  const onSuccess = (event: Event) => {
     setLoading(false);
     // reset comment & error message
     setComment('');
     setErrorMessage('');
     // set in store to render
-    eventsStore[event.id] = event;
+    // find root and get note ID from there
+    const rootTag = event.tags.findLast(t => t[3] === 'root')!;
+    const id = rootTag[1];
+
+    // TODO FIX
+    // setEventsStore(produce((s) => {
+    //   s[id] ||= [];
+    // });
+
+    // eventsStore[id][event.id] = event;
     // callback (closes the reply form)
     props.onDone?.call(this);
   };
@@ -152,6 +161,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       } else {
         console.log('Publishing root event disabled', rootEvent);
       }
+      // Update filter to own rootEvent
       preferencesStore.filter = { "#e": [rootEvent.id] };
       rootTag = tagFor(preferencesStore.filter!);
     }
@@ -180,7 +190,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     // Attempt to sign the event
     const signature = await user.signEvent(unsignedEvent);
 
-    const event: ExtendedEvent = { id, ...unsignedEvent, ...signature, likes: 0, zaps: 0 };
+    const event: Event = { id, ...unsignedEvent, ...signature };
 
     setLoading(true);
     console.log(JSON.stringify(event, null, 2));
@@ -245,11 +255,11 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 };
 
 export const RootComment = () => {
-  const { preferencesStore } = useContext(ZapThreadsContext)!;
+  const { preferencesStore, eventsStore } = useContext(ZapThreadsContext)!;
 
   const zapsCount = () => {
-    const zaps = filteredEventsFor(eventsStore, preferencesStore).filter(e => e.kind === 9735);
-    return zaps.reduce((acc, e) => {
+    const zapEvents = Object.values(eventsStore[9735]);
+    return zapEvents.reduce((acc, e) => {
       const invoiceTag = e.tags.find(t => t[0] === "bolt11");
       if (invoiceTag) {
         const decoded = bolt11Decode(invoiceTag[1]);
@@ -261,7 +271,7 @@ export const RootComment = () => {
   };
 
   const likesCount = () => {
-    return filteredEventsFor(eventsStore, preferencesStore).filter(e => e.kind == 7).length;
+    return Object.values(eventsStore[7]).length;
   };
 
   return <div class="ztr-comment-new">

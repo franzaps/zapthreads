@@ -1,14 +1,14 @@
-import { Show, createEffect, createMemo, onCleanup } from "solid-js";
+import { createEffect, createMemo, onCleanup } from "solid-js";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { encodedEntityToFilter, filteredEventsFor, parseUrlPrefixes, updateMetadata } from "./util/ui";
-import { nest } from "./util/nest";
-import { PreferencesStore, SignersStore, ZapThreadsContext, eventsStore, pool, setEventsStore } from "./util/stores";
+import { encodedEntityToFilter, parseUrlPrefixes, updateMetadata } from "./util/ui";
+import { StoredEventWithId, nest } from "./util/nest";
+import { EventsStore, PreferencesStore, SignersStore, StoredEvent, ZapThreadsContext, pool } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
-import { Event } from "./nostr-tools/event";
 import { createMutable, createStore, produce, unwrap } from "solid-js/store";
+import { makePersisted } from "@solid-primitives/storage";
 
 const ZapThreads = (props: ZapThreadsProps) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -20,6 +20,13 @@ const ZapThreads = (props: ZapThreadsProps) => {
   const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io"];
   const closeOnEose = () => props.closeOnEose;
 
+  const _eventsStore = createStore<EventsStore>({
+    1: {},
+    7: {},
+    9735: {},
+    version: 1
+  });
+  const [eventsStore, setEventsStore] = makePersisted(_eventsStore, { name: anchor() });
   const signersStore = createMutable<SignersStore>({});
   const preferencesStore = createMutable<PreferencesStore>({
     disableLikes: props.disableLikes || false,
@@ -28,9 +35,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
 
-  const events = () => {
-    return filteredEventsFor(unwrap(eventsStore), preferencesStore).filter(e => e.kind == 1);
-  };
+  const events = () => Object.values(unwrap(eventsStore)[1]);
 
   createEffect(async () => {
     if (props.anchor.startsWith('http')) {
@@ -42,7 +47,6 @@ const ZapThreads = (props: ZapThreadsProps) => {
       ]);
       const eventIdsForUrl = eventsForUrl.map((e) => e.id);
       preferencesStore.filter = { "#e": eventIdsForUrl };
-
     } else {
       preferencesStore.filter = encodedEntityToFilter(props.anchor);
     }
@@ -57,31 +61,28 @@ const ZapThreads = (props: ZapThreadsProps) => {
       kinds.push(9735);
     }
 
-    const filter = preferencesStore.filter;
-    if (!filter) {
+    if (!preferencesStore.filter) {
       return;
     }
 
     try {
       // All events have a created_at timestamp, find the latest to query since that time
-      // (`events` below includes ALL kinds previously fetched for this filter)
-      const events = filteredEventsFor(unwrap(eventsStore), preferencesStore);
-      const createdAts = events.map(e => e.created_at);
+      const createdAts = events().map(e => e.created_at);
       const since = createdAts.length > 0 ? Math.max(...createdAts) + 1 : undefined;
 
       const sub = pool.sub(relays(), [{ ...preferencesStore.filter, kinds, since: since }]);
 
       sub.on('event', e => {
-        switch (e.kind) {
-          case 1:
-            setEventsStore(
-              produce(s => s[e.id] = { ...e, ...{ likes: 0, zaps: 0 } })
-            );
-            break;
-          case 7:
-          case 9735:
-            setEventsStore(produce(s => s[e.id] = { ...e }));
-            break;
+        // TODO verify signature
+        const storedEvent: StoredEvent = {
+          content: e.content,
+          created_at: e.created_at,
+          pubkey: e.pubkey,
+          tags: e.tags
+        };
+        if (e.kind === 1 || e.kind === 7 || e.kind === 9735) {
+          const kind: keyof EventsStore = e.kind;
+          setEventsStore(produce(s => s[kind][e.id] = storedEvent));
         }
       });
 
@@ -101,9 +102,10 @@ const ZapThreads = (props: ZapThreadsProps) => {
   });
 
   const scheduledDebounce = createScheduled(fn => debounce(fn, 16));
-  const debouncedEvents = createMemo((e: Event[] = []) => {
-    if (scheduledDebounce() && Object.values(eventsStore).length > 0) {
-      return events();
+  const debouncedEvents = createMemo((e: StoredEventWithId[] = []) => {
+    if (scheduledDebounce() && Object.values(eventsStore[1]).length > 0) {
+      const events = unwrap(eventsStore)[1];
+      return Object.keys(events).map(k => ({ id: k, ...events[k] }));
     }
     return e;
   });
@@ -127,7 +129,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
 
   return <div id="ztr-root">
     <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, signersStore, preferencesStore }}>
+    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, eventsStore, setEventsStore, signersStore, preferencesStore }}>
       <RootComment />
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}

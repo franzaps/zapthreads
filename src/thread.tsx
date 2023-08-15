@@ -2,7 +2,7 @@ import { Accessor, Index, Show, Signal, createEffect, createSignal, onCleanup, u
 import { defaultPicture, parseContent, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
-import { ZapThreadsContext, eventsStore, setUsersStore, usersStore } from "./util/stores";
+import { ZapThreadsContext, setUsersStore, usersStore } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
 import { produce } from "solid-js/store";
 
@@ -15,7 +15,7 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
           const [isOpen, setOpen] = createSignal(false);
           const infoSignal = createSignal(false);
           const [showInfo, setShowInfo] = infoSignal;
-          const extendedEvent = eventsStore[event().id];
+          // const extendedEvent = eventsStore[event().id];
 
           return <div class="ztr-comment">
             <div class="ztr-comment-body">
