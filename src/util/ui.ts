@@ -1,6 +1,6 @@
-import { Event } from "../nostr-tools/event";
+import { Event, UnsignedEvent } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { PreferencesStore, StoredEvent, UrlPrefixesKeys, setUsersStore, usersStore } from "./stores";
+import { PreferencesStore, NoteEvent, UrlPrefixesKeys, setUsersStore, usersStore } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
@@ -51,7 +51,7 @@ export const tagFor = (filter: Filter): string[] => {
 const URL_REGEX = /https?:\/\/\S+/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
-export const parseContent = (e: StoredEvent, anchor?: string, prefs?: PreferencesStore): string => {
+export const parseContent = (e: UnsignedEvent, anchor?: string, prefs?: PreferencesStore): string => {
   let content = e.content;
 
   // replace http(s) links

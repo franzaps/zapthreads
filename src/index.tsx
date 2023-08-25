@@ -1,14 +1,17 @@
-import { createEffect, createMemo, onCleanup } from "solid-js";
+import { createEffect, createMemo, on, onCleanup } from "solid-js";
 import { createScheduled, debounce } from "@solid-primitives/scheduled";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { encodedEntityToFilter, parseUrlPrefixes, updateMetadata } from "./util/ui";
-import { StoredEventWithId, nest } from "./util/nest";
-import { EventsStore, PreferencesStore, SignersStore, StoredEvent, ZapThreadsContext, pool } from "./util/stores";
+import { nest } from "./util/nest";
+import { PreferencesStore, SignersStore, NoteEvent, ZapThreadsContext, db, pool, StoredEvent } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
-import { createMutable, createStore, produce, unwrap } from "solid-js/store";
-import { makePersisted } from "@solid-primitives/storage";
+import { createMutable } from "solid-js/store";
+import { createDexieArrayQuery } from "solid-dexie";
+import { Sub } from "./nostr-tools/relay";
+import batchedFunction from 'batched-function';
+import { decode as bolt11Decode } from "light-bolt11-decoder";
 
 const ZapThreads = (props: ZapThreadsProps) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -17,16 +20,9 @@ const ZapThreads = (props: ZapThreadsProps) => {
 
   const pubkey = () => props.pubkey;
   const anchor = () => props.anchor;
-  const relays = () => props.relays.length > 0 ? props.relays : ["wss://relay.damus.io"];
+  const relays = () => props.relays.length > 0 ? props.relays.map(r => new URL(r).toString()) : ["wss://relay.damus.io"];
   const closeOnEose = () => props.closeOnEose;
 
-  const _eventsStore = createStore<EventsStore>({
-    1: {},
-    7: {},
-    9735: {},
-    version: 1
-  });
-  const [eventsStore, setEventsStore] = makePersisted(_eventsStore, { name: anchor() });
   const signersStore = createMutable<SignersStore>({});
   const preferencesStore = createMutable<PreferencesStore>({
     disableLikes: props.disableLikes || false,
@@ -35,24 +31,35 @@ const ZapThreads = (props: ZapThreadsProps) => {
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
 
-  const events = () => Object.values(unwrap(eventsStore)[1]);
+  let sub: Sub | null;
 
-  createEffect(async () => {
-    if (props.anchor.startsWith('http')) {
+  // Only update when anchor or relay props change
+  createEffect(on([anchor, relays], async () => {
+    if (anchor().startsWith('http')) {
       const eventsForUrl = await pool.list(relays(), [
-        {
-          '#r': [props.anchor],
-          kinds: [1]
-        }
+        { '#r': [anchor()], kinds: [1] }
       ]);
       const eventIdsForUrl = eventsForUrl.map((e) => e.id);
       preferencesStore.filter = { "#e": eventIdsForUrl };
     } else {
-      preferencesStore.filter = encodedEntityToFilter(props.anchor);
+      preferencesStore.filter = encodedEntityToFilter(anchor());
     }
-  });
+  }));
 
-  createEffect(async () => {
+  const filter = () => preferencesStore.filter;
+
+  createEffect(on([filter, relays], async () => {
+    if (!filter()) return;
+
+    // Ensure clean subs
+    sub?.unsub();
+    sub = null;
+    onCleanup(() => {
+      console.log('unsub!');
+      sub?.unsub();
+      sub = null;
+    });
+
     const kinds = [1];
     if (preferencesStore.disableLikes === false) {
       kinds.push(7);
@@ -61,75 +68,130 @@ const ZapThreads = (props: ZapThreadsProps) => {
       kinds.push(9735);
     }
 
-    if (!preferencesStore.filter) {
-      return;
-    }
-
     try {
-      // All events have a created_at timestamp, find the latest to query since that time
-      const createdAts = events().map(e => e.created_at);
-      const since = createdAts.length > 0 ? Math.max(...createdAts) + 1 : undefined;
+      // Calculate relay/anchor pairs with different supplied relays and current anchor
+      const urlAnchorPairs = relays().map(r => [r, anchor()]);
+      const result = await db.relays.where('[url+anchor]').anyOf(urlAnchorPairs).toArray();
+      const relaysLatest = result.map(t => t.latest);
 
-      const sub = pool.sub(relays(), [{ ...preferencesStore.filter, kinds, since: since }]);
+      // TODO Do not use the common minimum, pass each relay's latest as its since
+      // (but we need to stop using this pool)
+      const since = relaysLatest.length > 0 ? Math.min(...relaysLatest) : 0;
 
-      sub.on('event', e => {
-        // TODO verify signature
-        const storedEvent: StoredEvent = {
-          content: e.content,
-          created_at: e.created_at,
-          pubkey: e.pubkey,
-          tags: e.tags
-        };
-        if (e.kind === 1 || e.kind === 7 || e.kind === 9735) {
-          const kind: keyof EventsStore = e.kind;
-          setEventsStore(produce(s => s[kind][e.id] = storedEvent));
+      // console.log('opening sub with', JSON.stringify(filter()));
+
+      sub = pool.sub(relays(), [{ ...filter(), kinds, since: since }]);
+
+      const batched = batchedFunction(async (evs: StoredEvent[]) => {
+        await db.events.bulkPut(evs);
+        await calculateRelayLatest(evs);
+      }, { delay: 200 });
+
+      sub.on('event', async (e) => {
+        if (e.kind === 1) {
+          batched({
+            id: e.id,
+            kind: e.kind,
+            content: e.content,
+            created_at: e.created_at,
+            pubkey: e.pubkey,
+            tags: e.tags,
+            anchor: anchor()
+          });
+        } else if (e.kind === 7) {
+          batched({
+            id: e.id,
+            kind: 7,
+            pubkey: e.pubkey,
+            created_at: e.created_at,
+            anchor: anchor()
+          });
+        } else if (e.kind === 9735) {
+          const invoiceTag = e.tags.find(t => t[0] === "bolt11");
+          if (invoiceTag) {
+            const decoded = bolt11Decode(invoiceTag[1]);
+            const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
+
+            batched({
+              id: e.id,
+              kind: 9735,
+              pubkey: e.pubkey,
+              created_at: e.created_at,
+              amount: Number(amount.value) / 1000,
+              anchor: anchor()
+            });
+          }
         }
       });
 
-      sub.on('eose', () => {
+      sub.on('eose', async () => {
+        const authorPubkeys = events.map(e => e.pubkey);
+        const result = await pool.list(relays(), [{
+          kinds: [0],
+          authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
+        }]);
+        updateMetadata(result);
+
         if (closeOnEose()) {
           sub?.unsub();
+          pool.close(relays());
         }
-      });
-
-      onCleanup(() => {
-        sub?.unsub();
       });
     } catch (e) {
       // TODO properly handle error
       console.log(e);
     }
+  }));
+
+  const calculateRelayLatest = async (evs: StoredEvent[]) => {
+    // Calculate latest created_at to be used as `since` on subsequent relay requests
+    if (evs.length > 0) {
+      const anchor = evs[0].anchor;
+      const obj: { [url: string]: number; } = {};
+      for (const e of events) {
+        const relaysForEvent = pool.seenOn(e.id);
+        for (const url of relaysForEvent) {
+          if (e.created_at > (obj[url] || 0)) {
+            obj[url] = e.created_at;
+          }
+        }
+      }
+
+      const relays = await db.relays.where('anchor').equals(anchor).toArray();
+      for (const url in obj) {
+        const relay = relays.find(r => r.url === url);
+        if (relay) {
+          if (obj[url] > relay.latest) {
+            relay.latest = obj[url];
+            db.relays.put(relay);
+          }
+        } else {
+          db.relays.put({ url, anchor, latest: obj[url] });
+        }
+      }
+    }
+  };
+
+  ///
+
+  const events = createDexieArrayQuery(async () => {
+    return await db.events.where('[kind+anchor]').equals([1, anchor()]).toArray() as NoteEvent[];
   });
 
-  const scheduledDebounce = createScheduled(fn => debounce(fn, 16));
-  const debouncedEvents = createMemo((e: StoredEventWithId[] = []) => {
-    if (scheduledDebounce() && Object.values(eventsStore[1]).length > 0) {
-      const events = unwrap(eventsStore)[1];
-      return Object.keys(events).map(k => ({ id: k, ...events[k] }));
+  const scheduledDebounce = createScheduled(fn => debounce(fn, 160));
+  const debouncedEvents = createMemo((e: NoteEvent[] = []) => {
+    if (scheduledDebounce() && events.length > 0) {
+      return events;
     }
     return e;
   });
   const nestedEvents = () => nest(debouncedEvents());
 
-  const profilesDebounce = createScheduled(fn => debounce(fn, 700));
-
-  // Get all author pubkeys from known events when event loading has somewhat settled
-  createEffect(async () => {
-    if (profilesDebounce() && Object.keys(eventsStore).length > 0) {
-      const authorPubkeys = events().map(e => e.pubkey);
-      const result = await pool.list(relays(), [{
-        kinds: [0],
-        authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
-      }]);
-      updateMetadata(result);
-    }
-  });
-
   const commentsLength = () => debouncedEvents().length;
 
   return <div id="ztr-root">
     <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, eventsStore, setEventsStore, signersStore, preferencesStore }}>
+    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, signersStore, preferencesStore }}>
       <RootComment />
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}

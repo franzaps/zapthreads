@@ -1,13 +1,13 @@
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
 import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { EventSigner, pool, setUsersStore, User, usersStore, ZapThreadsContext } from "./util/stores";
+import { db, EventSigner, pool, setUsersStore, User, usersStore, ZapEvent, ZapThreadsContext } from "./util/stores";
 import { svgWidth } from "./util/ui";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
 import { decode, npubEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
 import { produce } from "solid-js/store";
-import { decode as bolt11Decode } from "light-bolt11-decoder";
+import { createDexieArrayQuery, createDexieSignalQuery } from "solid-dexie";
 
 declare global {
   interface Window {
@@ -19,7 +19,7 @@ declare global {
 }
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, anchor, pubkey, eventsStore, setEventsStore, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, anchor, pubkey, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -199,18 +199,13 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       // Simulate publishing
       setTimeout(() => onSuccess(event), 1500);
     } else {
-      const sub = pool.publish(relays(), event);
-      // call callbacks and dispose
-      // TODO need to summarize relay callbacks in one result
-      sub.on('ok', (relay: string) => {
+      try {
+        await pool.publish(relays(), event);
         onSuccess(event);
-        sub.off('ok', onSuccess);
-      });
-      sub.on('failed', (relay: string) => {
+      } catch (e) {
         // onError();
         setLoading(false);
-        sub.off('failed', onError);
-      });
+      }
     }
   };
 
@@ -255,24 +250,15 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 };
 
 export const RootComment = () => {
-  const { preferencesStore, eventsStore } = useContext(ZapThreadsContext)!;
+  const { preferencesStore, anchor } = useContext(ZapThreadsContext)!;
+
+  const zapEvents = createDexieArrayQuery(() => db.events.where('[kind+anchor]').equals([9735, anchor()]).toArray() as Promise<ZapEvent[]>);
 
   const zapsCount = () => {
-    const zapEvents = Object.values(eventsStore[9735]);
-    return zapEvents.reduce((acc, e) => {
-      const invoiceTag = e.tags.find(t => t[0] === "bolt11");
-      if (invoiceTag) {
-        const decoded = bolt11Decode(invoiceTag[1]);
-        const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
-        return acc + (Number(amount.value) / 1000);
-      }
-      return acc;
-    }, 0);
+    return zapEvents.reduce((acc, e) => acc + e.amount, 0);
   };
 
-  const likesCount = () => {
-    return Object.values(eventsStore[7]).length;
-  };
+  const likesCount = createDexieSignalQuery(() => db.events.where('[kind+anchor]').equals([7, anchor()]).count());
 
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
@@ -282,7 +268,7 @@ export const RootComment = () => {
             <a>
               <svg width={svgWidth} height={svgWidth} viewBox="0 -16 180 180" xmlns="http://www.w3.org/2000/svg"><path d="M60.732 29.7C41.107 29.7 22 39.7 22 67.41c0 27.29 45.274 67.29 74 94.89 28.744-27.6 74-67.6 74-94.89 0-27.71-19.092-37.71-38.695-37.71C116 29.7 104.325 41.575 96 54.066 87.638 41.516 76 29.7 60.732 29.7z" /></svg>
             </a>
-            <span>{likesCount()} likes</span>
+            <span>{likesCount()?.toString()} likes</span>
           </li>
         </Show>
         <Show when={!preferencesStore.disableZaps}>

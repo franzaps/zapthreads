@@ -1,24 +1,25 @@
 import { nest } from "./nest";
+import { NoteEvent } from "./stores";
 
 describe("NestedNote", () => {
 
   describe("nest", () => {
     it('nests events from marked tags without anchor', async () => {
-      const nestedEvents = nest(rawEvents);
+      const nestedEvents = nest(rawEvents.map(e => e) as NoteEvent[]);
       expect(nestedEvents[0].content).toEqual("a");
       expect(nestedEvents[0].children[0].content).toEqual("b");
       expect(nestedEvents[0].children[0].children[0].content).toEqual("c");
     });
 
     it('nests events from marked tags with anchor', async () => {
-      const nestedEvents = nest(rawEvents, ['abc123']);
+      const nestedEvents = nest(rawEvents as NoteEvent[], ['abc123']);
       // abc123 is the anchor so it does not show up
       expect(nestedEvents[0].content).toEqual("b");
       expect(nestedEvents[0].children[0].content).toEqual("c");
     });
 
     it('nests events from positional tags', async () => {
-      const nestedEvents = nest(gigiEvents, [gigiAnchorId]);
+      const nestedEvents = nest(gigiEvents as NoteEvent[], [gigiAnchorId]);
 
       expect(nestedEvents[1].children[0].content).toMatch("Unfortunately");
       expect(nestedEvents[1].children[0].children[0].content).toEqual("we early ");
@@ -35,7 +36,6 @@ const rawEvents = [
     "content": "a",
     "tags": [["p", "123456"]],
     "kind": 1,
-    "sig": "069874040bac26a219777fc0"
   },
   {
     "created_at": 1,
@@ -48,7 +48,6 @@ const rawEvents = [
       ["e", "f1e2d3", "", "mention"]
     ],
     "kind": 1,
-    "sig": "069874040bac26a219777fc0"
   },
   {
     "created_at": 2,
@@ -61,7 +60,6 @@ const rawEvents = [
       ["e", "abc123", "", "root"]
     ],
     "kind": 1,
-    "sig": "069874040bac26a219777fc0"
   },
 ];
 
