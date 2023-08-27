@@ -1,30 +1,31 @@
 import { Event, UnsignedEvent } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { PreferencesStore, NoteEvent, UrlPrefixesKeys, setUsersStore, usersStore } from "./stores";
+import { PreferencesStore, StoredProfile, UrlPrefixesKeys, db } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
-import { produce } from "solid-js/store";
 
 // Misc profile helpers
 
-export const updateMetadata = (result: Event<0>[]): void => {
-  // For each metadata event, check if it was created later
-  // and merge interesting properties into usersStore entry
+export const updateMetadata = async (result: Event<0>[]): Promise<void> => {
+  const profileData: { [x: string]: any; } = {};
   result.forEach(e => {
     const payload = JSON.parse(e.content);
-    if (usersStore[e.pubkey].timestamp < e.created_at!) {
-      setUsersStore(
-        produce(s => s[e.pubkey] = {
-          ...usersStore[e.pubkey],
-          timestamp: e.created_at!,
-          imgUrl: payload.image || payload.picture,
-          name: payload.displayName || payload.display_name || payload.name,
-        })
-      );
-    }
+    profileData[e.pubkey] = {
+      timestamp: e.created_at!,
+      imgUrl: payload.image || payload.picture,
+      name: payload.displayName || payload.display_name || payload.name,
+    };
   });
+
+  const profiles = await db.profiles.bulkGet(Object.keys(profileData));
+  const updatedProfiles = profiles.map(profile => {
+    if (profile && profile.timestamp < profileData[profile.pubkey].timestamp) {
+      return { pubkey: profile.pubkey, ...profileData[profile.pubkey] };
+    }
+  }).filter(e => e);
+  await db.profiles.bulkPut(updatedProfiles);
 };
 
 export const encodedEntityToFilter = (entity: string): Filter => {
@@ -32,7 +33,9 @@ export const encodedEntityToFilter = (entity: string): Filter => {
   switch (decoded.type) {
     case 'nevent': return { "#e": [decoded.data.id] };
     case 'note': return { "#e": [decoded.data] };
-    case 'naddr': return { "#a": [`${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`] };
+    case 'naddr': return {
+      "#a": [`${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`]
+    };
     default: return {};
   }
 };
@@ -51,7 +54,7 @@ export const tagFor = (filter: Filter): string[] => {
 const URL_REGEX = /https?:\/\/\S+/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
-export const parseContent = (e: UnsignedEvent, anchor?: string, prefs?: PreferencesStore): string => {
+export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
   let content = e.content;
 
   // replace http(s) links
@@ -77,10 +80,12 @@ export const parseContent = (e: UnsignedEvent, anchor?: string, prefs?: Preferen
   content = replaceAll(content, ({ decoded, value }) => {
     switch (decoded.type) {
       case 'nprofile':
-        const text1 = usersStore[decoded.data.pubkey]?.name || shortenEncodedId(value);
+        let p1 = profiles.find(p => p.pubkey === decoded.data.pubkey);
+        const text1 = p1?.name || shortenEncodedId(value);
         return `[@${text1}](${prefs!.urlPrefixes.nprofile}${value})`;
       case 'npub':
-        const text2 = usersStore[decoded.data]?.name || shortenEncodedId(value);
+        let p2 = profiles.find(p => p.pubkey === decoded.data);
+        const text2 = p2?.name || shortenEncodedId(value);
         return `[@${text2}](${prefs!.urlPrefixes.npub}${value})`;
       case 'note':
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.note}${value})`;
@@ -97,7 +102,8 @@ export const parseContent = (e: UnsignedEvent, anchor?: string, prefs?: Preferen
   const hashtags = [...e.tags].filter(t => t[0] === 't');
   for (const hashtag of hashtags) {
     if (hashtag.length > 1) {
-      content = content.replaceAll(`#${hashtag[1]}`, `[#${hashtag[1]}](${prefs!.urlPrefixes.tag}${hashtag[1]})`);
+      content = content.replaceAll(`#${hashtag[1]}`,
+        `[#${hashtag[1]}](${prefs!.urlPrefixes.tag}${hashtag[1]})`);
     }
   }
 
@@ -106,7 +112,12 @@ export const parseContent = (e: UnsignedEvent, anchor?: string, prefs?: Preferen
 };
 
 export const parseUrlPrefixes = (value?: string) => {
-  value ||= "naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/";
+  value ||= ["naddr:habla.news/a/",
+    "npub:habla.news/p/",
+    "nprofile:habla.news/p/",
+    "nevent:habla.news/e/",
+    "note:habla.news/n/",
+    "tag:habla.news/t/"].join(',');
   const result: { [key in UrlPrefixesKeys]?: string; } = {};
 
   for (const pair of value.split(',')) {

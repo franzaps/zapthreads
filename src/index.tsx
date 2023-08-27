@@ -4,7 +4,7 @@ import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { encodedEntityToFilter, parseUrlPrefixes, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
-import { PreferencesStore, SignersStore, NoteEvent, ZapThreadsContext, db, pool, StoredEvent } from "./util/stores";
+import { PreferencesStore, SignersStore, NoteEvent, ZapThreadsContext, db, pool, StoredEvent, StoredProfile } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
 import { createMutable } from "solid-js/store";
@@ -125,12 +125,14 @@ const ZapThreads = (props: ZapThreadsProps) => {
       });
 
       sub.on('eose', async () => {
-        const authorPubkeys = events.map(e => e.pubkey);
-        const result = await pool.list(relays(), [{
-          kinds: [0],
-          authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
-        }]);
-        updateMetadata(result);
+        setTimeout(async () => {
+          const authorPubkeys = events.map(e => e.pubkey);
+          const result = await pool.list(relays(), [{
+            kinds: [0],
+            authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
+          }]);
+          updateMetadata(result);
+        }, 200);
 
         if (closeOnEose()) {
           sub?.unsub();

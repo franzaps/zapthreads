@@ -1,13 +1,18 @@
-import { Accessor, Index, Show, Signal, createEffect, createSignal, onCleanup, useContext } from "solid-js";
+import { Accessor, Index, Signal, createEffect, createSignal, onCleanup, useContext } from "solid-js";
 import { defaultPicture, parseContent, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
-import { ZapThreadsContext, setUsersStore, usersStore } from "./util/stores";
+import { StoredProfile, ZapThreadsContext, db } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
-import { produce } from "solid-js/store";
+import { createDexieArrayQuery } from "solid-dexie";
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   const { anchor, preferencesStore } = useContext(ZapThreadsContext)!;
+
+  const profiles = createDexieArrayQuery(async () => {
+    return await db.profiles.toArray();
+  });
+
   return <div class="ztr-thread">
     <Index each={sortByDate(props.nestedEvents())}>
       {
@@ -15,12 +20,11 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
           const [isOpen, setOpen] = createSignal(false);
           const infoSignal = createSignal(false);
           const [showInfo, setShowInfo] = infoSignal;
-          // const extendedEvent = eventsStore[event().id];
 
           return <div class="ztr-comment">
             <div class="ztr-comment-body">
               <CommentInfo event={event} infoSignal={infoSignal} />
-              <div class="ztr-comment-text" innerHTML={parseContent(event(), anchor(), preferencesStore)}>
+              <div class="ztr-comment-text" innerHTML={parseContent(event(), profiles, anchor(), preferencesStore)}>
               </div>
               <ul class="ztr-comment-actions">
                 {/* <Show when={!preferencesStore.disableZaps}>
@@ -66,20 +70,21 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
 
 export const CommentInfo = (props: { event: Accessor<NestedNote>; infoSignal: Signal<boolean>; }) => {
   const { preferencesStore } = useContext(ZapThreadsContext)!;
+  const [profile, setProfile] = createSignal<StoredProfile>();
   const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
 
   const pubkey = () => props.event().pubkey;
   const npub = () => npubEncode(pubkey());
   const [showInfo, setShowInfo] = props.infoSignal;
 
-  createEffect(() => {
-    if (!usersStore[pubkey()]) {
-      setUsersStore(
-        produce(s => s[pubkey()] = { timestamp: 0, npub: npub() })
-      );
+  createEffect(async () => {
+    let profile = await db.profiles.get(pubkey());
+    if (!profile) {
+      profile = { pubkey: pubkey(), timestamp: 0, npub: npub() };
+      await db.profiles.put(profile);
     }
-    const imgUrl = usersStore[pubkey()]?.imgUrl;
-    setProfilePicture(imgUrl || defaultPicture);
+    setProfile(profile);
+    setProfilePicture(profile.imgUrl || defaultPicture);
   });
 
   // Update createdAt every minute
@@ -107,7 +112,7 @@ export const CommentInfo = (props: { event: Accessor<NestedNote>; infoSignal: Si
     </div>
     <ul class="ztr-comment-info-items">
       <li class="ztr-comment-info-author">
-        <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{usersStore[pubkey()]?.name || shortenEncodedId(npub())}</a>
+        <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{profile()?.name || shortenEncodedId(npub())}</a>
       </li>
       <li>{createdTimeAgo()}</li>
       {total() > 0 && <>

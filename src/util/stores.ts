@@ -5,17 +5,7 @@ import { SimplePool } from "../nostr-tools/pool";
 import { Filter } from "../nostr-tools/filter";
 import Dexie, { Table } from "dexie";
 
-export type EventSigner = (event: UnsignedEvent<1>) => Promise<{ sig: string; }>;
-export type User = {
-  timestamp: number,
-  npub?: string,
-  name?: string,
-  imgUrl?: string;
-  signEvent?: EventSigner;
-};
-
 // Global data (for now)
-export const [usersStore, setUsersStore] = createStore<{ [key: string]: User; }>();
 export const pool = new SimplePool();
 
 export const ZapThreadsContext = createContext<{
@@ -50,14 +40,38 @@ export type ZapEvent = BaseEvent & {
 
 export type StoredEvent = (NoteEvent | LikeEvent | ZapEvent) & { anchor: string; };
 
+export type StoredProfile = {
+  pubkey: string,
+  timestamp: number,
+  npub?: string,
+  name?: string,
+  imgUrl?: string;
+};
+
 export type StoredRelay = {
   url: string;
   anchor: string;
   latest: number;
 };
 
+// Signing
+
+declare global {
+  interface Window {
+    nostr?: {
+      getPublicKey(): Promise<string>;
+      signEvent: SignEvent;
+    };
+  }
+}
+
 export type SignersStore = {
-  [key in "internal" | "external"]?: string;
+  [key in "anonymous" | "internal" | "external"]?: EventSigner;
+};
+export type SignEvent = (event: UnsignedEvent<1>) => Promise<{ sig: string; }>;
+export type EventSigner = {
+  pk: string,
+  signEvent?: SignEvent;
 };
 
 type PreferenceKeys =
@@ -75,6 +89,7 @@ export type PreferencesStore = { [key in PreferenceKeys]?: boolean } & {
 
 export class ZTDatabase extends Dexie {
   events!: Table<StoredEvent>;
+  profiles!: Table<StoredProfile>;
   relays!: Table<StoredRelay>;
 
   constructor() {
@@ -83,7 +98,7 @@ export class ZTDatabase extends Dexie {
     this.version(1).stores({
       events: '&id,anchor,[kind+anchor]',
       relays: '[url+anchor],url,anchor',
-      profiles: ''
+      profiles: 'pubkey'
     });
   }
 }

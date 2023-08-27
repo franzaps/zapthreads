@@ -1,28 +1,19 @@
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
 import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { db, EventSigner, pool, setUsersStore, User, usersStore, ZapEvent, ZapThreadsContext } from "./util/stores";
+import { db, EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
 import { svgWidth } from "./util/ui";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
-import { decode, npubEncode } from "./nostr-tools/nip19";
+import { npubEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
-import { produce } from "solid-js/store";
 import { createDexieArrayQuery, createDexieSignalQuery } from "solid-dexie";
-
-declare global {
-  interface Window {
-    nostr?: {
-      getPublicKey(): Promise<string>;
-      signEvent: EventSigner;
-    };
-  }
-}
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const { relays, anchor, pubkey, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+  const [loggedInUser, setLoggedInUser] = createSignal<StoredProfile>();
   const [errorMessage, setErrorMessage] = createSignal('');
 
   // Sessions
@@ -35,36 +26,36 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       pk = await window.nostr!.getPublicKey();
     }
 
-    setUsersStore(
-      produce(s => {
-        s[pk] ||= { timestamp: 0, npub: npubEncode(pk) };
-        s[pk].signEvent = async (event) => {
-          const extensionPubkey = await window.nostr!.getPublicKey();
-          if (loggedInUser()!.npub !== npubEncode(extensionPubkey)) {
-            // If zapthreads was passed a different pubkey then throw
-            setErrorMessage('Pubkey mismatch');
-            throw `Pubkey mismatch: ${loggedInUser()!.npub} !== ${npubEncode(extensionPubkey)}`;
-          }
-          return window.nostr!.signEvent(event);
-        };
-      })
-    );
+    const profile = await db.profiles.get(pk);
+    if (!profile) {
+      await db.profiles.add({ pubkey: pk, timestamp: 0, npub: npubEncode(pk) });
+    }
 
-    signersStore[loginType] = pk;
+    signersStore[loginType] = {
+      pk,
+      signEvent: async (event) => {
+        const extensionPubkey = await window.nostr!.getPublicKey();
+        const loggedInPubkey = loggedInUser()!.pubkey;
+        if (loggedInPubkey !== extensionPubkey) {
+          // If zapthreads was passed a different pubkey then throw
+          setErrorMessage('Pubkey mismatch');
+          throw `Pubkey mismatch: ${loggedInPubkey} !== ${extensionPubkey}`;
+        }
+        return window.nostr!.signEvent(event);
+      }
+    };
 
-    if (!usersStore[pk].name) {
+    const signer = signersStore.external || signersStore.internal;
+    if (signer?.pk) {
+      setLoggedInUser(await db.profiles.get(signer.pk));
+    }
+
+    if (!profile?.name) {
       const result = await pool.list(relays(), [{
         kinds: [0],
         authors: [pk]
       }]);
       updateMetadata(result);
-    }
-  };
-
-  const loggedInUser = () => {
-    const pk = signersStore.external || signersStore.internal;
-    if (pk) {
-      return usersStore[pk];
     }
   };
 
@@ -114,20 +105,18 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setErrorMessage('Your comment was not published');
   };
 
-  const publish = async (user: User) => {
-    if (!user && !usersStore.anonymous) {
+  const publish = async (signingPubkey?: string) => {
+    let signer: EventSigner | undefined;
+    if (!signingPubkey && !signersStore.anonymous) {
       const sk = generatePrivateKey();
-      setUsersStore(
-        produce(s => s.anonymous = {
-          timestamp: 0,
-          npub: npubEncode(getPublicKey(sk)),
-          signEvent: async (event) => ({ sig: getSignature(event, sk) }),
-        })
-      );
-      user = usersStore.anonymous;
+      signer = signersStore.anonymous = {
+        pk: getPublicKey(sk),
+        signEvent: async (event) => ({ sig: getSignature(event, sk) }),
+      };
+      signingPubkey = signer.pk;
     }
 
-    if (!user.signEvent) {
+    if (!signer?.signEvent) {
       console.log('User has no signer!');
       return;
     }
@@ -135,15 +124,13 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     const content = comment().trim();
     if (!content) return;
 
-    const signingPubkey = decode(user.npub!).data.toString();
-
     // Ensure root
     let rootTag = tagFor(preferencesStore.filter!);
 
     if (rootTag.length === 0) {
       const url = anchor();
       const unsignedRootEvent: UnsignedEvent<1> = {
-        pubkey: signingPubkey,
+        pubkey: signingPubkey!,
         created_at: Math.round(Date.now() / 1000),
         kind: 1,
         tags: [['r', url]],
@@ -152,7 +139,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       const rootEvent: Event<1> = {
         id: getEventHash(unsignedRootEvent),
         ...unsignedRootEvent,
-        ...await user.signEvent(unsignedRootEvent)
+        ...await signer.signEvent(unsignedRootEvent)
       };
 
       // Publish, store filter and get updated rootTag
@@ -170,7 +157,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       kind: 1,
       created_at: Math.round(Date.now() / 1000),
       content: content,
-      pubkey: signingPubkey,
+      pubkey: signingPubkey!,
       tags: []
     };
 
@@ -188,7 +175,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     const id = getEventHash(unsignedEvent);
 
     // Attempt to sign the event
-    const signature = await user.signEvent(unsignedEvent);
+    const signature = await signer.signEvent(unsignedEvent);
 
     const event: Event = { id, ...unsignedEvent, ...signature };
 
@@ -239,7 +226,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         </div>
       </Show>
 
-      <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser() || usersStore.anonymous)}>
+      <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser()?.pubkey)}>
         Reply
         {loggedInUser() ? ` as ${loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}` : ' anonymously'}
       </button>
