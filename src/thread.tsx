@@ -2,16 +2,14 @@ import { Accessor, Index, Signal, createEffect, createSignal, onCleanup, useCont
 import { defaultPicture, parseContent, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
-import { StoredProfile, ZapThreadsContext, db } from "./util/stores";
+import { StoredProfile, ZapThreadsContext } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
-import { createDexieArrayQuery } from "solid-dexie";
+import { watchAll } from "./util/db";
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   const { anchor, preferencesStore } = useContext(ZapThreadsContext)!;
 
-  const profiles = createDexieArrayQuery(async () => {
-    return await db.profiles.toArray();
-  });
+  const profiles = watchAll(() => ['profiles']);
 
   return <div class="ztr-thread">
     <Index each={sortByDate(props.nestedEvents())}>
@@ -22,9 +20,10 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
           const [showInfo, setShowInfo] = infoSignal;
 
           return <div class="ztr-comment">
+            <h1>{profiles().length}</h1>
             <div class="ztr-comment-body">
-              <CommentInfo event={event} infoSignal={infoSignal} />
-              <div class="ztr-comment-text" innerHTML={parseContent(event(), profiles, anchor(), preferencesStore)}>
+              <CommentInfo event={event} profiles={profiles()} infoSignal={infoSignal} />
+              <div class="ztr-comment-text" innerHTML={parseContent(event(), profiles(), anchor(), preferencesStore)}>
               </div>
               <ul class="ztr-comment-actions">
                 {/* <Show when={!preferencesStore.disableZaps}>
@@ -68,23 +67,17 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   </div>;
 };
 
-export const CommentInfo = (props: { event: Accessor<NestedNote>; infoSignal: Signal<boolean>; }) => {
+const CommentInfo = (props: { event: Accessor<NestedNote>, profiles: StoredProfile[], infoSignal: Signal<boolean>; }) => {
   const { preferencesStore } = useContext(ZapThreadsContext)!;
-  const [profile, setProfile] = createSignal<StoredProfile>();
   const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
 
   const pubkey = () => props.event().pubkey;
   const npub = () => npubEncode(pubkey());
   const [showInfo, setShowInfo] = props.infoSignal;
+  const profile = () => props.profiles.find(p => p.pubkey === pubkey());
 
   createEffect(async () => {
-    let profile = await db.profiles.get(pubkey());
-    if (!profile) {
-      profile = { pubkey: pubkey(), timestamp: 0, npub: npub() };
-      await db.profiles.put(profile);
-    }
-    setProfile(profile);
-    setProfilePicture(profile.imgUrl || defaultPicture);
+    setProfilePicture(profile()?.imgUrl || defaultPicture);
   });
 
   // Update createdAt every minute

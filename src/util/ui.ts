@@ -1,10 +1,11 @@
 import { Event, UnsignedEvent } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { PreferencesStore, StoredProfile, UrlPrefixesKeys, db } from "./stores";
+import { PreferencesStore, StoredProfile, UrlPrefixesKeys } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
+import { findAll, save } from "./db";
 
 // Misc profile helpers
 
@@ -19,13 +20,22 @@ export const updateMetadata = async (result: Event<0>[]): Promise<void> => {
     };
   });
 
-  const profiles = await db.profiles.bulkGet(Object.keys(profileData));
-  const updatedProfiles = profiles.map(profile => {
+  const profiles = await findAll('profiles');
+
+  const updatedProfiles = Object.keys(profileData).map(pubkey => {
+    const profile = profiles.find(p => p?.pubkey === pubkey);
+    if (!profile) {
+      return { pubkey, ...profileData[pubkey] };
+    }
     if (profile && profile.timestamp < profileData[profile.pubkey].timestamp) {
       return { pubkey: profile.pubkey, ...profileData[profile.pubkey] };
     }
   }).filter(e => e);
-  await db.profiles.bulkPut(updatedProfiles);
+  console.log('saving profiles', updatedProfiles.length);
+
+  for (const p of updatedProfiles) {
+    save('profiles', p);
+  }
 };
 
 export const encodedEntityToFilter = (entity: string): Filter => {

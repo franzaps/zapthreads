@@ -19,7 +19,7 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
    - Full CSS control via `shadowRoot` style
    - Multiple languages (coming soon)
  - Lightweight on clients and relays
-   - ~35kb minified+gzipped with base styles and assets (nocomment is ~244kb)
+   - ~33kb minified/compressed with base styles and assets (nocomment is ~244kb)
    - Local storage caching
  - Available as web component or embeddable script
 

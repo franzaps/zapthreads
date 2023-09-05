@@ -1,17 +1,15 @@
-import { createEffect, createMemo, on, onCleanup } from "solid-js";
-import { createScheduled, debounce } from "@solid-primitives/scheduled";
+import { createEffect, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { encodedEntityToFilter, parseUrlPrefixes, updateMetadata } from "./util/ui";
 import { nest } from "./util/nest";
-import { PreferencesStore, SignersStore, NoteEvent, ZapThreadsContext, db, pool, StoredEvent, StoredProfile } from "./util/stores";
+import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent } from "./util/stores";
 import { Thread } from "./thread";
 import { RootComment } from "./reply";
 import { createMutable } from "solid-js/store";
-import { createDexieArrayQuery } from "solid-dexie";
 import { Sub } from "./nostr-tools/relay";
-import batchedFunction from 'batched-function';
 import { decode as bolt11Decode } from "light-bolt11-decoder";
+import { findAll, save, watchAll } from "./util/db";
 
 const ZapThreads = (props: ZapThreadsProps) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -60,7 +58,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
       sub = null;
     });
 
-    const kinds = [1];
+    const kinds: StoredEvent['kind'][] = [1];
     if (preferencesStore.disableLikes === false) {
       kinds.push(7);
     }
@@ -71,7 +69,8 @@ const ZapThreads = (props: ZapThreadsProps) => {
     try {
       // Calculate relay/anchor pairs with different supplied relays and current anchor
       const urlAnchorPairs = relays().map(r => [r, anchor()]);
-      const result = await db.relays.where('[url+anchor]').anyOf(urlAnchorPairs).toArray();
+      const allRelays = await findAll('relays');
+      const result = allRelays.filter(r => urlAnchorPairs.includes([r.url, r.anchor]));
       const relaysLatest = result.map(t => t.latest);
 
       // TODO Do not use the common minimum, pass each relay's latest as its since
@@ -82,24 +81,21 @@ const ZapThreads = (props: ZapThreadsProps) => {
 
       sub = pool.sub(relays(), [{ ...filter(), kinds, since: since }]);
 
-      const batched = batchedFunction(async (evs: StoredEvent[]) => {
-        await db.events.bulkPut(evs);
-        await calculateRelayLatest(evs);
-      }, { delay: 200 });
-
       sub.on('event', async (e) => {
         if (e.kind === 1) {
-          batched({
-            id: e.id,
-            kind: e.kind,
-            content: e.content,
-            created_at: e.created_at,
-            pubkey: e.pubkey,
-            tags: e.tags,
-            anchor: anchor()
-          });
+          if (e.content.trim()) {
+            save('events', {
+              id: e.id,
+              kind: e.kind,
+              content: e.content,
+              created_at: e.created_at,
+              pubkey: e.pubkey,
+              tags: e.tags,
+              anchor: anchor()
+            });
+          }
         } else if (e.kind === 7) {
-          batched({
+          save('events', {
             id: e.id,
             kind: 7,
             pubkey: e.pubkey,
@@ -112,7 +108,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
             const decoded = bolt11Decode(invoiceTag[1]);
             const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
 
-            batched({
+            save('events', {
               id: e.id,
               kind: 9735,
               pubkey: e.pubkey,
@@ -125,8 +121,17 @@ const ZapThreads = (props: ZapThreadsProps) => {
       });
 
       sub.on('eose', async () => {
+        console.log('eose');
+
         setTimeout(async () => {
-          const authorPubkeys = events.map(e => e.pubkey);
+          if (sub) {
+            const allEvents = await findAll('events', { 'anchor': anchor() });
+            await calculateRelayLatest(allEvents);
+          } else {
+            console.log('no relay calculation, sub was null!');
+          }
+
+          const authorPubkeys = events().map(e => e.pubkey);
           const result = await pool.list(relays(), [{
             kinds: [0],
             authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
@@ -150,7 +155,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
     if (evs.length > 0) {
       const anchor = evs[0].anchor;
       const obj: { [url: string]: number; } = {};
-      for (const e of events) {
+      for (const e of events()) {
         const relaysForEvent = pool.seenOn(e.id);
         for (const url of relaysForEvent) {
           if (e.created_at > (obj[url] || 0)) {
@@ -159,37 +164,24 @@ const ZapThreads = (props: ZapThreadsProps) => {
         }
       }
 
-      const relays = await db.relays.where('anchor').equals(anchor).toArray();
+      const relays = (await findAll('relays')).filter(r => r.anchor === anchor);
       for (const url in obj) {
         const relay = relays.find(r => r.url === url);
         if (relay) {
           if (obj[url] > relay.latest) {
             relay.latest = obj[url];
-            db.relays.put(relay);
+            save('relays', relay);
           }
         } else {
-          db.relays.put({ url, anchor, latest: obj[url] });
+          save('relays', { url, anchor, latest: obj[url] });
         }
       }
     }
   };
 
-  ///
-
-  const events = createDexieArrayQuery(async () => {
-    return await db.events.where('[kind+anchor]').equals([1, anchor()]).toArray() as NoteEvent[];
-  });
-
-  const scheduledDebounce = createScheduled(fn => debounce(fn, 160));
-  const debouncedEvents = createMemo((e: NoteEvent[] = []) => {
-    if (scheduledDebounce() && events.length > 0) {
-      return events;
-    }
-    return e;
-  });
-  const nestedEvents = () => nest(debouncedEvents());
-
-  const commentsLength = () => debouncedEvents().length;
+  const events = watchAll(() => ['events', 'kind+anchor', [1, anchor()] as [1, string]]);
+  const nestedEvents = () => nest(events() as NoteEvent[]);
+  const commentsLength = () => events().length;
 
   return <div id="ztr-root">
     <style>{style}</style>

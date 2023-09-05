@@ -1,9 +1,7 @@
 import { Accessor, createContext } from "solid-js";
-import { createStore } from "solid-js/store";
 import { UnsignedEvent } from "../nostr-tools/event";
 import { SimplePool } from "../nostr-tools/pool";
 import { Filter } from "../nostr-tools/filter";
-import Dexie, { Table } from "dexie";
 
 // Global data (for now)
 export const pool = new SimplePool();
@@ -16,7 +14,7 @@ export const ZapThreadsContext = createContext<{
   preferencesStore: PreferencesStore;
 }>();
 
-type BaseEvent = {
+export type BaseEvent = {
   id: string;
   kind: 1 | 7 | 9735;
   created_at: number;
@@ -86,20 +84,3 @@ export type PreferencesStore = { [key in PreferenceKeys]?: boolean } & {
   urlPrefixes: { [key in UrlPrefixesKeys]?: string },
   filter?: Filter;
 };
-
-export class ZTDatabase extends Dexie {
-  events!: Table<StoredEvent>;
-  profiles!: Table<StoredProfile>;
-  relays!: Table<StoredRelay>;
-
-  constructor() {
-    super('zapthreads');
-
-    this.version(1).stores({
-      events: '&id,anchor,[kind+anchor]',
-      relays: '[url+anchor],url,anchor',
-      profiles: 'pubkey'
-    });
-  }
-}
-export const db = new ZTDatabase();

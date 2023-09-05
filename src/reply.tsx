@@ -1,12 +1,12 @@
 import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
 import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { db, EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
+import { EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
 import { svgWidth } from "./util/ui";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
 import { npubEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
-import { createDexieArrayQuery, createDexieSignalQuery } from "solid-dexie";
+import { find, save, watchAll } from "./util/db";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const { relays, anchor, pubkey, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
@@ -26,9 +26,9 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       pk = await window.nostr!.getPublicKey();
     }
 
-    const profile = await db.profiles.get(pk);
+    const profile = await find('profiles', pk);
     if (!profile) {
-      await db.profiles.add({ pubkey: pk, timestamp: 0, npub: npubEncode(pk) });
+      await save('profiles', { pubkey: pk, timestamp: 0, npub: npubEncode(pk) });
     }
 
     signersStore[loginType] = {
@@ -47,7 +47,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
     const signer = signersStore.external || signersStore.internal;
     if (signer?.pk) {
-      setLoggedInUser(await db.profiles.get(signer.pk));
+      setLoggedInUser(await find('profiles', signer.pk));
     }
 
     if (!profile?.name) {
@@ -239,13 +239,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 export const RootComment = () => {
   const { preferencesStore, anchor } = useContext(ZapThreadsContext)!;
 
-  const zapEvents = createDexieArrayQuery(() => db.events.where('[kind+anchor]').equals([9735, anchor()]).toArray() as Promise<ZapEvent[]>);
+  const zapEvents = watchAll(() => ['events', 'kind+anchor', [9735, anchor()] as [9735, string]]);
+  const zapCount = () => zapEvents()!.reduce((acc, e) => acc + (e as ZapEvent).amount, 0);
 
-  const zapsCount = () => {
-    return zapEvents.reduce((acc, e) => acc + e.amount, 0);
-  };
-
-  const likesCount = createDexieSignalQuery(() => db.events.where('[kind+anchor]').equals([7, anchor()]).count());
+  const likeEvents = watchAll(() => ['events', 'kind+anchor', [7, anchor()] as [7, string]]);
 
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
@@ -255,7 +252,7 @@ export const RootComment = () => {
             <a>
               <svg width={svgWidth} height={svgWidth} viewBox="0 -16 180 180" xmlns="http://www.w3.org/2000/svg"><path d="M60.732 29.7C41.107 29.7 22 39.7 22 67.41c0 27.29 45.274 67.29 74 94.89 28.744-27.6 74-67.6 74-94.89 0-27.71-19.092-37.71-38.695-37.71C116 29.7 104.325 41.575 96 54.066 87.638 41.516 76 29.7 60.732 29.7z" /></svg>
             </a>
-            <span>{likesCount()?.toString()} likes</span>
+            <span>{likeEvents()!.length} likes</span>
           </li>
         </Show>
         <Show when={!preferencesStore.disableZaps}>
@@ -263,7 +260,7 @@ export const RootComment = () => {
             <a>
               <svg width={svgWidth} height={svgWidth} viewBox="0 -2 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18,11.74a1,1,0,0,0-.52-.63L14.09,9.43,15,3.14a1,1,0,0,0-1.78-.75l-7,9a1,1,0,0,0-.17.87,1,1,0,0,0,.59.67l4.27,1.71L10,20.86a1,1,0,0,0,.63,1.07A.92.92,0,0,0,11,22a1,1,0,0,0,.83-.45l6-9A1,1,0,0,0,18,11.74Z"></path></svg>
             </a>
-            <span>{zapsCount()} sats</span>
+            <span>{zapCount()} sats</span>
           </li>
         </Show>
       </ul>
