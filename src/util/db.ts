@@ -11,7 +11,7 @@ const sigStore = createMutable<{ [key: string]: number; }>({});
 type S = StoreNames<ZapthreadsSchema>;
 
 export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["value"], IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(query: () => [Name] | [Name, IndexName, ZapthreadsSchema[Name]["indexes"][IndexName]]) => {
-  const get = createMemo(on([query], () => {
+  const get = createMemo(on(query, () => {
     const [type, index, value] = query();
 
     const fetchData = async (source: number) => {
@@ -23,21 +23,21 @@ export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["v
       return _db.getAll(type);
     };
 
-    const [resource] = createResource(() => sigStore[type], fetchData, {
+    const [resource, { mutate }] = createResource(() => sigStore[type], fetchData, {
       initialValue: [],
       storage: createDeepSignal
     });
+    findAll(type, index, value).then(mutate);
 
     return resource as InitializedResource<Value[]>;
   }));
   return () => get()();
 };
 
-export const findAll = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, query?: { [id in IndexName]: ZapthreadsSchema[Name]["indexes"][IndexName] }) => {
+export const findAll = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, index?: IndexName, query?: ZapthreadsSchema[Name]["indexes"][IndexName]) => {
   const _db = await db();
-  if (query) {
-    const index = Object.keys(query!)[0];
-    return _db.getAllFromIndex(type, index as IndexName, query![index as IndexName]);
+  if (index && query) {
+    return _db.getAllFromIndex(type, index, query);
   }
   return _db.getAll(type);
 };

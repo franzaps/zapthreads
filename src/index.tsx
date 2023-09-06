@@ -125,7 +125,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
 
         setTimeout(async () => {
           if (sub) {
-            const allEvents = await findAll('events', { 'anchor': anchor() });
+            const allEvents = await findAll('events', 'anchor', anchor());
             await calculateRelayLatest(allEvents);
           } else {
             console.log('no relay calculation, sub was null!');

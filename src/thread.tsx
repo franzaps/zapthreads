@@ -6,10 +6,10 @@ import { StoredProfile, ZapThreadsContext } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
 import { watchAll } from "./util/db";
 
+const profiles = watchAll(() => ['profiles']);
+
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   const { anchor, preferencesStore } = useContext(ZapThreadsContext)!;
-
-  const profiles = watchAll(() => ['profiles']);
 
   return <div class="ztr-thread">
     <Index each={sortByDate(props.nestedEvents())}>
@@ -20,7 +20,6 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
           const [showInfo, setShowInfo] = infoSignal;
 
           return <div class="ztr-comment">
-            <h1>{profiles().length}</h1>
             <div class="ztr-comment-body">
               <CommentInfo event={event} profiles={profiles()} infoSignal={infoSignal} />
               <div class="ztr-comment-text" innerHTML={parseContent(event(), profiles(), anchor(), preferencesStore)}>
