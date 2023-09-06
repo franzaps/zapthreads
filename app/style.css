@@ -7,6 +7,7 @@ body {
 
 .custom.solid-select-container {
     color: #fa7f25;
+    background: white;
   }
   .custom .solid-select-control {
     outline-color: #fca560;

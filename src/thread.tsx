@@ -4,6 +4,7 @@ import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
 import { StoredProfile, ZapThreadsContext } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
+import { createElementSize } from "@solid-primitives/resize-observer";
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
   const { anchor, preferencesStore, profiles } = useContext(ZapThreadsContext)!;
@@ -13,14 +14,28 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
       {
         (event) => {
           const [isOpen, setOpen] = createSignal(false);
+          const [isExpanded, setExpanded] = createSignal(false);
           const infoSignal = createSignal(false);
           const [showInfo, setShowInfo] = infoSignal;
+
+          const MAX_HEIGHT = 500;
+          const [target, setTarget] = createSignal<HTMLElement>();
+          const size = createElementSize(target);
 
           return <div class="ztr-comment">
             <div class="ztr-comment-body">
               <CommentInfo event={event} profiles={profiles()} infoSignal={infoSignal} />
-              <div class="ztr-comment-text" innerHTML={parseContent(event(), profiles(), anchor(), preferencesStore)}>
+              <div ref={setTarget} class="ztr-comment-text" style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}} innerHTML={parseContent(event(), profiles(), anchor(), preferencesStore)}>
               </div>
+
+              {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
+                <div class="ztr-comment-expand">
+                  <a style={{ 'height': `${svgWidth}px` }}>
+                    <svg width={svgWidth} height={svgWidth} viewBox="0 0 576 512"><path d="M168 80c-13.3 0-24 10.7-24 24V408c0 8.4-1.4 16.5-4.1 24H440c13.3 0 24-10.7 24-24V104c0-13.3-10.7-24-24-24H168zM72 480c-39.8 0-72-32.2-72-72V112C0 98.7 10.7 88 24 88s24 10.7 24 24V408c0 13.3 10.7 24 24 24s24-10.7 24-24V104c0-39.8 32.2-72 72-72H440c39.8 0 72 32.2 72 72V408c0 39.8-32.2 72-72 72H72zM176 136c0-13.3 10.7-24 24-24h96c13.3 0 24 10.7 24 24v80c0 13.3-10.7 24-24 24H200c-13.3 0-24-10.7-24-24V136zm200-24h32c13.3 0 24 10.7 24 24s-10.7 24-24 24H376c-13.3 0-24-10.7-24-24s10.7-24 24-24zm0 80h32c13.3 0 24 10.7 24 24s-10.7 24-24 24H376c-13.3 0-24-10.7-24-24s10.7-24 24-24zM200 272H408c13.3 0 24 10.7 24 24s-10.7 24-24 24H200c-13.3 0-24-10.7-24-24s10.7-24 24-24zm0 80H408c13.3 0 24 10.7 24 24s-10.7 24-24 24H200c-13.3 0-24-10.7-24-24s10.7-24 24-24z" /></svg>
+                  </a>
+                  <span onClick={() => setExpanded(true)}>Show full comment</span>
+                </div>}
+
               <ul class="ztr-comment-actions">
                 {/* <Show when={!preferencesStore.disableZaps}>
                   <li class="ztr-comment-action-zap">

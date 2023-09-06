@@ -116,6 +116,7 @@ ul.ztr-comment-info-items li a {
   line-height: 1.5rem;
   line-break: loose;
   word-break: break-word;
+  overflow: hidden;
 }
 
 .ztr-comment-text pre, .ztr-info-pane pre {
@@ -138,7 +139,17 @@ ul.ztr-comment-info-items li a {
 
 /* Styling the reply to comment form */
 
-ul.ztr-comment-actions {
+.ztr-comment-expand {
+  display: flex;
+  justify-content: center;
+}
+
+.ztr-comment-expand span {
+  margin: 1em 0 1em 0.35em;
+  cursor: pointer;
+}
+
+ul.ztr-comment-actions, .ztr-comment-expand {
   display: flex;
   align-items: center;
   list-style: none;
@@ -166,7 +177,7 @@ ul.ztr-comment-actions li span {
   padding: 0;
 }
 
-.ztr-comment-actions svg {
+.ztr-comment-actions svg, .ztr-comment-expand svg {
   fill: var(--ztr-icon-color);
 }
 
