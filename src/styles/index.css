@@ -213,7 +213,8 @@ ul.ztr-comment-actions li span {
   margin: 0.5rem 0;
   height: 4rem;
   border-radius: 4px;
-  resize: none;
+  min-height: 4rem;
+  resize: vertical;
 }
 
 .ztr-reply-form:disabled {
