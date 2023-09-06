@@ -1,40 +1,90 @@
-import { Event, UnsignedEvent } from "../nostr-tools/event";
+import { UnsignedEvent } from "../nostr-tools/event";
 import { NestedNote } from "./nest";
-import { PreferencesStore, StoredProfile, UrlPrefixesKeys } from "./stores";
+import { PreferencesStore, StoredProfile, UrlPrefixesKeys, pool } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
-import { findAll, save } from "./db";
+import { findAll, findAllKeys, save } from "./db";
 
 // Misc profile helpers
 
-export const updateMetadata = async (result: Event<0>[]): Promise<void> => {
-  const profileData: { [x: string]: any; } = {};
-  result.forEach(e => {
-    const payload = JSON.parse(e.content);
-    profileData[e.pubkey] = {
-      timestamp: e.created_at!,
-      imgUrl: payload.image || payload.picture,
-      name: payload.displayName || payload.display_name || payload.name,
-    };
-  });
+export const updateProfiles = async (pubkeys: string[], relays: string[], profiles: StoredProfile[]): Promise<void> => {
+  const now = +new Date;
+  const sixHours = 21600000;
 
-  const profiles = await findAll('profiles');
-
-  const updatedProfiles = Object.keys(profileData).map(pubkey => {
-    const profile = profiles.find(p => p?.pubkey === pubkey);
-    if (!profile) {
-      return { pubkey, ...profileData[pubkey] };
+  const pubkeysToUpdate = [...new Set(pubkeys)].filter(pubkey => {
+    const profile = profiles.find(p => p.pubkey === pubkey);
+    if (profile?.lastChecked && profile!.lastChecked > now - sixHours) {
+      // console.log(profile!.lastChecked, now - sixHours, profile!.lastChecked < now - sixHours);
+      return false;
+    } else {
+      // console.log('old or no lastchecked for', profile?.pubkey);
+      return true;
     }
-    if (profile && profile.timestamp < profileData[profile.pubkey].timestamp) {
-      return { pubkey: profile.pubkey, ...profileData[profile.pubkey] };
-    }
-  }).filter(e => e);
-  console.log('saving profiles', updatedProfiles.length);
+  }).filter(e => !!e);
 
-  for (const p of updatedProfiles) {
-    save('profiles', p);
+  if (pubkeysToUpdate.length === 0) {
+    return;
+  }
+
+  const updatedProfiles = await pool.list(relays, [{
+    kinds: [0],
+    authors: pubkeysToUpdate
+  }]);
+
+  for (const pubkey of pubkeysToUpdate) {
+    const e = updatedProfiles.find(u => u.pubkey === pubkey);
+    if (e) {
+      const payload = JSON.parse(e.content);
+      const pubkey = e.pubkey;
+      const updatedProfile = {
+        pubkey,
+        created_at: e.created_at,
+        imgUrl: payload.image || payload.picture,
+        name: payload.displayName || payload.display_name || payload.name,
+      };
+      const storedProfile = profiles.find(p => p.pubkey === pubkey);
+      if (!storedProfile || !storedProfile?.name || storedProfile!.created_at < updatedProfile.created_at) {
+        // console.log('saving profile');
+        save('profiles', { ...updatedProfile, lastChecked: now });
+      } else {
+        // console.log('only last checked', now);
+        save('profiles', { ...storedProfile, lastChecked: now });
+      }
+    } else {
+      // console.log('was not found', pubkey);
+      save('profiles', { pubkey, lastChecked: now, created_at: 0, npub: npubEncode(pubkey) });
+    }
+  }
+};
+
+// Calculate latest created_at to be used as `since` on subsequent relay requests
+export const calculateRelayLatest = async (anchor: string) => {
+  const eventsForAnchor = await findAll('events', 'anchor', anchor);
+
+  const obj: { [url: string]: number; } = {};
+
+  for (const e of eventsForAnchor) {
+    const relaysForEvent = pool.seenOn(e.id);
+    for (const relayUrl of relaysForEvent) {
+      if (e.created_at > (obj[relayUrl] || 0)) {
+        obj[relayUrl] = e.created_at;
+      }
+    }
+  }
+
+  const relays = await findAll('relays', 'anchor', anchor);
+  for (const url in obj) {
+    const relay = relays.find(r => r.url === url);
+    if (relay) {
+      if (obj[url] > relay.latest) {
+        relay.latest = obj[url];
+        save('relays', relay);
+      }
+    } else {
+      save('relays', { url, anchor, latest: obj[url] });
+    }
   }
 };
 

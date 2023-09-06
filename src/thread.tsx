@@ -4,12 +4,9 @@ import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
 import { StoredProfile, ZapThreadsContext } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
-import { watchAll } from "./util/db";
-
-const profiles = watchAll(() => ['profiles']);
 
 export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
-  const { anchor, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { anchor, preferencesStore, profiles } = useContext(ZapThreadsContext)!;
 
   return <div class="ztr-thread">
     <Index each={sortByDate(props.nestedEvents())}>

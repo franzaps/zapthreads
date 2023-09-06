@@ -1,4 +1,4 @@
-import { defaultPicture, shortenEncodedId, tagFor, updateMetadata } from "./util/ui";
+import { defaultPicture, shortenEncodedId, tagFor, updateProfiles } from "./util/ui";
 import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
 import { EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
@@ -9,7 +9,7 @@ import { createAutofocus } from "@solid-primitives/autofocus";
 import { find, save, watchAll } from "./util/db";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, anchor, pubkey, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, anchor, pubkey, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -28,7 +28,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
     const profile = await find('profiles', pk);
     if (!profile) {
-      await save('profiles', { pubkey: pk, timestamp: 0, npub: npubEncode(pk) });
+      await save('profiles', { pubkey: pk, lastChecked: 0, created_at: 0, npub: npubEncode(pk) });
     }
 
     signersStore[loginType] = {
@@ -50,13 +50,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       setLoggedInUser(await find('profiles', signer.pk));
     }
 
-    if (!profile?.name) {
-      const result = await pool.list(relays(), [{
-        kinds: [0],
-        authors: [pk]
-      }]);
-      updateMetadata(result);
-    }
+    updateProfiles([pk], relays(), profiles());
   };
 
   // Auto login when external pubkey supplied

@@ -14,8 +14,8 @@ export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["v
   const get = createMemo(on(query, () => {
     const [type, index, value] = query();
 
-    const fetchData = async (source: number) => {
-      console.log('fetching', type);
+    const fetchData = async () => {
+      // console.log('fetching', type);
       const _db = await db();
       if (index && value) {
         return await _db.getAllFromIndex(type, index, value) ?? [];
@@ -27,6 +27,7 @@ export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["v
       initialValue: [],
       storage: createDeepSignal
     });
+    // trigger initial value
     findAll(type, index, value).then(mutate);
 
     return resource as InitializedResource<Value[]>;
@@ -34,12 +35,20 @@ export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["v
   return () => get()();
 };
 
-export const findAll = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, index?: IndexName, query?: ZapthreadsSchema[Name]["indexes"][IndexName]) => {
+export const findAll = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, index?: IndexName, query?: ZapthreadsSchema[Name]["indexes"][IndexName] | IDBKeyRange) => {
   const _db = await db();
   if (index && query) {
     return _db.getAllFromIndex(type, index, query);
   }
   return _db.getAll(type);
+};
+
+export const findAllKeys = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, index?: IndexName, query?: ZapthreadsSchema[Name]["indexes"][IndexName] | IDBKeyRange) => {
+  const _db = await db();
+  if (index && query) {
+    return _db.getAllKeysFromIndex(type, index, query);
+  }
+  return _db.getAllKeys(type);
 };
 
 export const find = async <Name extends S>(type: Name, id: string) => {
@@ -55,7 +64,7 @@ export const save = async <Name extends S, R extends ZapthreadsSchema[Name]['val
     const tx = _db.transaction(type, 'readwrite');
     const result = await Promise.all([...models.map(e => tx.store.put(e)), tx.done]);
     if (result) {
-      console.log('signaling', type);
+      // console.log('signaling', type);
       sigStore[type] = +new Date;
     }
   }, { delay: 96 });
@@ -78,7 +87,7 @@ interface ZapthreadsSchema extends DBSchema {
   profiles: {
     key: string,
     value: StoredProfile;
-    indexes: { 'pubkey': string; };
+    indexes: { 'lastChecked': number; };
   };
 }
 
@@ -98,7 +107,7 @@ const db = async () => _db ||= await
       relays.createIndex('anchor', 'anchor');
 
       const profiles = db.createObjectStore('profiles', { keyPath: 'pubkey' });
-      profiles.createIndex('pubkey', 'pubkey');
+      profiles.createIndex('lastChecked', 'lastChecked');
     },
   });
 

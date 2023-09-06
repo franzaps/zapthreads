@@ -1,7 +1,7 @@
 import { createEffect, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { encodedEntityToFilter, parseUrlPrefixes, updateMetadata } from "./util/ui";
+import { calculateRelayLatest, encodedEntityToFilter, parseUrlPrefixes, updateProfiles } from "./util/ui";
 import { nest } from "./util/nest";
 import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent } from "./util/stores";
 import { Thread } from "./thread";
@@ -20,6 +20,8 @@ const ZapThreads = (props: ZapThreadsProps) => {
   const anchor = () => props.anchor;
   const relays = () => props.relays.length > 0 ? props.relays.map(r => new URL(r).toString()) : ["wss://relay.damus.io"];
   const closeOnEose = () => props.closeOnEose;
+
+  const profiles = watchAll(() => ['profiles']);
 
   const signersStore = createMutable<SignersStore>({});
   const preferencesStore = createMutable<PreferencesStore>({
@@ -67,17 +69,12 @@ const ZapThreads = (props: ZapThreadsProps) => {
     }
 
     try {
-      // Calculate relay/anchor pairs with different supplied relays and current anchor
-      const urlAnchorPairs = relays().map(r => [r, anchor()]);
-      const allRelays = await findAll('relays');
-      const result = allRelays.filter(r => urlAnchorPairs.includes([r.url, r.anchor]));
-      const relaysLatest = result.map(t => t.latest);
+      const relaysForAnchor = await findAll('relays', 'anchor', anchor());
+      const relaysLatest = relaysForAnchor.filter(r => relays().includes(r.url)).map(t => t.latest);
 
       // TODO Do not use the common minimum, pass each relay's latest as its since
       // (but we need to stop using this pool)
-      const since = relaysLatest.length > 0 ? Math.min(...relaysLatest) : 0;
-
-      // console.log('opening sub with', JSON.stringify(filter()));
+      const since = relaysLatest.length > 0 ? Math.min(...relaysLatest) + 1 : 0;
 
       sub = pool.sub(relays(), [{ ...filter(), kinds, since: since }]);
 
@@ -121,23 +118,16 @@ const ZapThreads = (props: ZapThreadsProps) => {
       });
 
       sub.on('eose', async () => {
-        console.log('eose');
+        const _anchor = anchor();
+        console.log('eose for', _anchor);
 
         setTimeout(async () => {
-          if (sub) {
-            const allEvents = await findAll('events', 'anchor', anchor());
-            await calculateRelayLatest(allEvents);
-          } else {
-            console.log('no relay calculation, sub was null!');
-          }
+          // Update profiles of current events
+          updateProfiles(events().map(e => e.pubkey), relays(), profiles());
 
-          const authorPubkeys = events().map(e => e.pubkey);
-          const result = await pool.list(relays(), [{
-            kinds: [0],
-            authors: [...new Set(authorPubkeys)] // Set makes pubkeys unique
-          }]);
-          updateMetadata(result);
-        }, 200);
+          // Calculate latest received events for each relay
+          calculateRelayLatest(_anchor);
+        }, 96); // same as batched throttle in db.ts
 
         if (closeOnEose()) {
           sub?.unsub();
@@ -150,42 +140,13 @@ const ZapThreads = (props: ZapThreadsProps) => {
     }
   }));
 
-  const calculateRelayLatest = async (evs: StoredEvent[]) => {
-    // Calculate latest created_at to be used as `since` on subsequent relay requests
-    if (evs.length > 0) {
-      const anchor = evs[0].anchor;
-      const obj: { [url: string]: number; } = {};
-      for (const e of events()) {
-        const relaysForEvent = pool.seenOn(e.id);
-        for (const url of relaysForEvent) {
-          if (e.created_at > (obj[url] || 0)) {
-            obj[url] = e.created_at;
-          }
-        }
-      }
-
-      const relays = (await findAll('relays')).filter(r => r.anchor === anchor);
-      for (const url in obj) {
-        const relay = relays.find(r => r.url === url);
-        if (relay) {
-          if (obj[url] > relay.latest) {
-            relay.latest = obj[url];
-            save('relays', relay);
-          }
-        } else {
-          save('relays', { url, anchor, latest: obj[url] });
-        }
-      }
-    }
-  };
-
   const events = watchAll(() => ['events', 'kind+anchor', [1, anchor()] as [1, string]]);
   const nestedEvents = () => nest(events() as NoteEvent[]);
   const commentsLength = () => events().length;
 
   return <div id="ztr-root">
     <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, signersStore, preferencesStore }}>
+    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, profiles, signersStore, preferencesStore }}>
       <RootComment />
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}

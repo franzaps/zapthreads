@@ -10,6 +10,7 @@ export const ZapThreadsContext = createContext<{
   relays: Accessor<string[]>,
   anchor: Accessor<string>,
   pubkey: Accessor<string | undefined>;
+  profiles: Accessor<StoredProfile[]>;
   signersStore: SignersStore;
   preferencesStore: PreferencesStore;
 }>();
@@ -40,7 +41,8 @@ export type StoredEvent = (NoteEvent | LikeEvent | ZapEvent) & { anchor: string;
 
 export type StoredProfile = {
   pubkey: string,
-  timestamp: number,
+  created_at: number,
+  lastChecked: number,
   npub?: string,
   name?: string,
   imgUrl?: string;
