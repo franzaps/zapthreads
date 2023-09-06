@@ -111,14 +111,27 @@ export const tagFor = (filter: Filter): string[] => {
   }
 };
 
-const URL_REGEX = /https?:\/\/\S+/g;
+const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
+const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
 
 export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
   let content = e.content;
 
-  // replace http(s) links
-  content = content.replaceAll(URL_REGEX, '[$&]($&)');
+  // replace http(s) links + images
+  content = content.replace(URL_REGEX, (matched) => {
+    if (matched.match(IMAGE_REGEX)) {
+      return `![image](${matched})`;
+    }
+    return `[${matched}](${matched})`;
+  });
+
+  // turn hashtags into links
+  const hashtags = [...new Set(e.tags)].filter(t => t[0] === 't');
+  if (hashtags.length > 1) {
+    const re = new RegExp(`\\B#((?:${hashtags.map(h => h[1]).join('|')}))`, 'g');
+    content = content.replaceAll(re, `[#$1](${prefs!.urlPrefixes.tag}$1)`);
+  }
 
   // NIP-08 => NIP-27
   content = content.replace(NIP_08_REGEX, (match, capture) => {
@@ -158,14 +171,6 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
       default: return value;
     }
   });
-
-  const hashtags = [...e.tags].filter(t => t[0] === 't');
-  for (const hashtag of hashtags) {
-    if (hashtag.length > 1) {
-      content = content.replaceAll(`#${hashtag[1]}`,
-        `[#${hashtag[1]}](${prefs!.urlPrefixes.tag}${hashtag[1]})`);
-    }
-  }
 
   // Markdown => HTML
   return nmd(content.trim());

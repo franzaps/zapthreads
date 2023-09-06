@@ -133,6 +133,10 @@ ul.ztr-comment-info-items li a {
   text-decoration: underline;
 }
 
+.ztr-comment-text img {
+  max-width: 100%;
+}
+
 .ztr-comment-replies {
   margin-left: 2em;
 }
