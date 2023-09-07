@@ -128,7 +128,7 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
 
   // turn hashtags into links
   const hashtags = [...new Set(e.tags)].filter(t => t[0] === 't');
-  if (hashtags.length > 1) {
+  if (hashtags.length > 0) {
     const re = new RegExp(`\\B#((?:${hashtags.map(h => h[1]).join('|')}))`, 'g');
     content = content.replaceAll(re, `[#$1](${prefs!.urlPrefixes.tag}$1)`);
   }
