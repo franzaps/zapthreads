@@ -29,7 +29,17 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
           return <div class="ztr-comment">
             <div class="ztr-comment-body">
               <CommentInfo event={event} profiles={profiles()} collapsedSignal={collapsedSignal} infoSignal={infoSignal} />
-              <div ref={setTarget} class="ztr-comment-text" style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}} innerHTML={parseContent(event(), profiles(), anchor(), preferencesStore)}>
+
+              {showInfo() &&
+                <div class="ztr-info-pane">
+                  <pre>{JSON.stringify(event(), ['id', 'created_at', 'pubkey'], 2)}</pre>
+                  <button onClick={() => setShowInfo(false)}>Hide info</button>
+                </div>}
+              <div
+                ref={setTarget}
+                class="ztr-comment-text"
+                style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
+                innerHTML={parseContent(event(), profiles(), anchor(), preferencesStore)}>
               </div>
 
               {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
@@ -60,11 +70,6 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
               </ul>
               {isOpen() &&
                 <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
-              {showInfo() &&
-                <div class="ztr-info-pane">
-                  <pre>{JSON.stringify(event(), ['id', 'created_at', 'pubkey', 'tags'], 2)}</pre>
-                  <button onClick={() => setShowInfo(false)}>Hide info</button>
-                </div>}
             </div>
             {!isThreadCollapsed() && <div class="ztr-comment-replies">
               <Thread nestedEvents={() => event().children} />
