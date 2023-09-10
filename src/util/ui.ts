@@ -5,7 +5,7 @@ import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip1
 import { Filter } from "../nostr-tools/filter";
 import { replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
-import { findAll, findAllKeys, save } from "./db";
+import { findAll, save } from "./db";
 
 // Misc profile helpers
 
@@ -199,7 +199,6 @@ export const shortenEncodedId = (encoded: string) => {
 };
 
 export const svgWidth = 20;
-
 export const defaultPicture = 'data:image/svg+xml;utf-8,<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><circle cx="512" cy="512" r="512" fill="%23333" fill-rule="evenodd" /></svg>';
 
 export const timeAgo = (timestamp: number): string => {

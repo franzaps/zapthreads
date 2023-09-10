@@ -50,6 +50,12 @@
   border-bottom-right-radius: 8px;
 }
 
+.ztr-comment-info-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .ztr-comment-info {
   display: flex;
   align-items: center;
@@ -72,9 +78,6 @@ ul.ztr-comment-info-items li {
   display: inline-block;
   text-align: center;
   cursor: default;
-}
-
-ul.ztr-comment-info-items li {
   padding-right: 0.75rem;
 }
 
@@ -82,6 +85,10 @@ ul.ztr-comment-info-items li a {
   color: var(--ztr-link-color, #2B2B2B);
   text-decoration: none;
   font-weight: 600;
+}
+
+.ztr-comment-info-items li svg {
+  fill: var(--ztr-icon-color);
 }
 
 .ztr-comment-info-separator {
@@ -149,6 +156,7 @@ ul.ztr-comment-info-items li a {
 }
 
 .ztr-comment-expand span {
+  font-size: 0.9rem;
   margin: 1em 0 1em 0.35em;
   cursor: pointer;
 }
@@ -159,7 +167,7 @@ ul.ztr-comment-actions, .ztr-comment-expand {
   list-style: none;
   margin: 0;
   padding: 0 0 0 4rem;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: 600;
   user-select: none;
 }
@@ -169,34 +177,40 @@ ul.ztr-comment-actions li {
   align-items: center;
   text-align: center;
   padding: 0 2rem 0 0;
-  cursor: default;
-}
-
-ul.ztr-comment-actions li a {
   cursor: pointer;
-  padding: 0.25rem 0.25rem 0 0;
 }
 
 ul.ztr-comment-actions li span {
-  padding: 0;
+  padding: 0.25rem 0.25rem 0 0.25rem;
+  color: var(--ztr-icon-color);
 }
 
 .ztr-comment-actions svg, .ztr-comment-expand svg {
   fill: var(--ztr-icon-color);
 }
 
-.ztr-comment-action-zap svg:hover {
-  fill: #ffd53d;
-  stroke: #b2ac68;
-  stroke-width: 1px;
+.ztr-comment-action-reply:hover svg {
+  fill: #544781;
 }
 
-.ztr-comment-action-like svg:hover {
-  fill: #e74c4c;
+.ztr-comment-action-reply:hover span {
+  color:#544781;
 }
 
-.ztr-comment-action-reply svg:hover {
-  fill: #b65bf3;
+.ztr-comment-action-zap:hover svg {
+  fill: #e4984d;
+}
+
+.ztr-comment-action-zap:hover span {
+  color:#e4984d;
+}
+
+.ztr-comment-action-like:hover svg {
+  fill: #e35428;
+}
+
+.ztr-comment-action-like:hover span {
+  color:#e35428;
 }
 
 .ztr-reply-form {
