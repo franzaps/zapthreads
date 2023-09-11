@@ -119,7 +119,6 @@ const ZapThreads = (props: ZapThreadsProps) => {
 
       sub.on('eose', async () => {
         const _anchor = anchor();
-        console.log('eose for', _anchor);
 
         setTimeout(async () => {
           // Update profiles of current events

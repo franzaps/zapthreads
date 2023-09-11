@@ -1,26 +1,44 @@
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    margin-left: 4rem;
-    line-height: 1.9rem;
-    max-width: 900px;
+  font-family: "Inter", sans-serif;
+  margin-left: 4rem;
+  line-height: 1.9rem;
+  max-width: 900px;
+  color: #333;
 }
 
+:root {
+  --ztr-link-color:  #92379c;
+}
+
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #e7e7e7;
+    background-color: black;
+  }
+  :root {
+    --ztr-link-color: #167bb9;
+  }
+}
+
+/* Dropdown styles */
+
 .custom.solid-select-container {
-    color: #fa7f25;
-    background: white;
-  }
-  .custom .solid-select-control {
-    outline-color: #fca560;
-    border-color: #fca560;
-  }
-  .custom .solid-select-placeholder {
-    color: #fca560;
-  }
-  .custom .solid-select-option:hover {
-    background-color: #fa7f25;
-    color: #fff;
-  }
-  .custom .solid-select-option[data-focused=true] {
-    background-color: #fca560;
-    color: #fff;
-  }
+  color: #fa7f25;
+  background: white;
+}
+.custom .solid-select-control {
+  outline-color: #fca560;
+  border-color: #fca560;
+}
+.custom .solid-select-placeholder {
+  color: #fca560;
+}
+.custom .solid-select-option:hover {
+  background-color: #fa7f25;
+  color: #fff;
+}
+.custom .solid-select-option[data-focused=true] {
+  background-color: #fca560;
+  color: #fff;
+}

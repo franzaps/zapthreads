@@ -2,11 +2,9 @@
 import { render } from 'solid-js/web';
 
 import './style.css';
-import '../src/styles/index.css';
 import '../src';
-import ZapThreads from '../src';
-import { shortenEncodedId } from "../src/util/ui"; 
-import { createSignal, createMemo, onCleanup } from 'solid-js';
+// import ZapThreads from '../src';
+import { createSignal, createEffect } from 'solid-js';
 import { Select } from "@thisbeyond/solid-select";
 import "@thisbeyond/solid-select/style.css";
 
