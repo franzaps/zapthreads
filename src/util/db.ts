@@ -58,8 +58,13 @@ export const find = async <Name extends S>(type: Name, id: string) => {
 
 const batchFns: { [key: string]: Function; } = {};
 
-export const save = async <Name extends S, R extends ZapthreadsSchema[Name]['value']>(type: Name, model: R) => {
+export const save = async <Name extends S, R extends ZapthreadsSchema[Name]['value']>(type: Name, model: R, options: { immediate: boolean; } = { immediate: false }) => {
   const _db = await db();
+  if (options.immediate) {
+    const result = _db.put(type, model);
+    sigStore[type] = +new Date;
+    return result;
+  }
   batchFns[type] ||= batchedFunction(async (models: R[]) => {
     const tx = _db.transaction(type, 'readwrite');
     const result = await Promise.all([...models.map(e => tx.store.put(e)), tx.done]);

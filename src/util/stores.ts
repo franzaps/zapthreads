@@ -66,7 +66,7 @@ declare global {
 }
 
 export type SignersStore = {
-  [key in "anonymous" | "internal" | "external"]?: EventSigner;
+  [key in "active" | "anonymous" | "internal" | "external"]?: EventSigner;
 };
 export type SignEvent = (event: UnsignedEvent<1>) => Promise<{ sig: string; }>;
 export type EventSigner = {

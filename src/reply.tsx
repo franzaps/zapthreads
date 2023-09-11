@@ -26,14 +26,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       pk = await window.nostr!.getPublicKey();
     }
 
-    const profile = await find('profiles', pk);
-    if (!profile) {
-      await save('profiles', { pubkey: pk, lastChecked: 0, created_at: 0, npub: npubEncode(pk) });
-    }
-
-    signersStore[loginType] = {
+    signersStore[loginType] ||= {
       pk,
       signEvent: async (event) => {
+        // We do this here in order to delay prompting the user as much as possible
         const extensionPubkey = await window.nostr!.getPublicKey();
         const loggedInPubkey = loggedInUser()!.pubkey;
         if (loggedInPubkey !== extensionPubkey) {
@@ -45,73 +41,78 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       }
     };
 
-    const signer = signersStore.external || signersStore.internal;
-    if (signer?.pk) {
-      setLoggedInUser(await find('profiles', signer.pk));
-    }
-
-    updateProfiles([pk], relays(), profiles());
+    signersStore.active = signersStore.external || signersStore.internal;
   };
 
   // Auto login when external pubkey supplied
-  createEffect(() => {
-    if (pubkey() && !signersStore.external) {
+  createEffect(on(pubkey, (pubkey) => {
+    if (pubkey) {
       login('external');
     }
-  });
+  }));
 
   // Log out when external pubkey is absent
   createEffect(on(pubkey, (pubkey) => {
-    if (!pubkey && signersStore.external) {
-      signersStore.external = undefined;
-      signersStore.internal = undefined;
-
+    if (!pubkey) {
+      signersStore.active = undefined;
       // reset error message
       setErrorMessage('');
     }
   }, { defer: true }));
 
+  // Logged in user is a computed property of the active signer
+  createEffect(async () => {
+    if (signersStore.active) {
+      const pk = signersStore.active.pk;
+      let profile = await find('profiles', signersStore.active.pk);
+      if (!profile) {
+        profile = { pubkey: pk, lastChecked: 0, created_at: 0, npub: npubEncode(pk) };
+        await save('profiles', profile);
+      }
+      setLoggedInUser(profile);
+      updateProfiles([pk], relays(), profiles());
+    } else {
+      setLoggedInUser();
+    }
+  });
+
   // Publishing
 
-  const onSuccess = (event: Event) => {
+  const onSuccess = async (event: Event) => {
     setLoading(false);
     // reset comment & error message
     setComment('');
     setErrorMessage('');
-    // set in store to render
-    // find root and get note ID from there
-    const rootTag = event.tags.findLast(t => t[3] === 'root')!;
-    const id = rootTag[1];
 
-    // TODO FIX
-    // setEventsStore(produce((s) => {
-    //   s[id] ||= [];
-    // });
+    await save('events', { ...event as Event<1>, anchor: anchor() }, { immediate: true });
 
-    // eventsStore[id][event.id] = event;
     // callback (closes the reply form)
     props.onDone?.call(this);
   };
 
-  const onError = () => {
+  const onError = (message?: string) => {
     setLoading(false);
     // set error message
-    setErrorMessage('Your comment was not published');
+    setErrorMessage(message ?? 'Your comment was not published');
   };
 
-  const publish = async (signingPubkey?: string) => {
+  const publish = async (profile?: StoredProfile) => {
     let signer: EventSigner | undefined;
-    if (!signingPubkey && !signersStore.anonymous) {
-      const sk = generatePrivateKey();
-      signer = signersStore.anonymous = {
-        pk: getPublicKey(sk),
-        signEvent: async (event) => ({ sig: getSignature(event, sk) }),
-      };
-      signingPubkey = signer.pk;
+    if (profile) {
+      signer = signersStore.external || signersStore.internal;
+    } else {
+      if (!signersStore.anonymous) {
+        const sk = generatePrivateKey();
+        signersStore.anonymous = {
+          pk: getPublicKey(sk),
+          signEvent: async (event) => ({ sig: getSignature(event, sk) }),
+        };
+      }
+      signer = signersStore.anonymous;
     }
 
     if (!signer?.signEvent) {
-      console.log('User has no signer!');
+      onError('User has no signer!');
       return;
     }
 
@@ -124,7 +125,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     if (rootTag.length === 0) {
       const url = anchor();
       const unsignedRootEvent: UnsignedEvent<1> = {
-        pubkey: signingPubkey!,
+        pubkey: signer.pk,
         created_at: Math.round(Date.now() / 1000),
         kind: 1,
         tags: [['r', url]],
@@ -151,7 +152,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       kind: 1,
       created_at: Math.round(Date.now() / 1000),
       content: content,
-      pubkey: signingPubkey!,
+      pubkey: signer.pk,
       tags: []
     };
 
@@ -181,11 +182,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       setTimeout(() => onSuccess(event), 1500);
     } else {
       try {
-        // TODO await all?
-        pool.publish(relays(), event);
+        await Promise.all(pool.publish(relays(), event));
         onSuccess(event);
       } catch (e) {
-        // onError();
+        onError();
         setLoading(false);
       }
     }
@@ -221,10 +221,15 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         </div>
       </Show>
 
-      <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser()?.pubkey)}>
-        Reply
-        {loggedInUser() ? ` as ${loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}` : ' anonymously'}
-      </button>
+      {loggedInUser() &&
+        <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser())}>
+          Reply as {loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}
+        </button>}
+
+      {!loggedInUser() &&
+        <button disabled={loading()} class="ztr-reply-button" onClick={() => publish()}>
+          Reply anonymously
+        </button>}
 
       {!loggedInUser() && window.nostr && <button class="ztr-reply-login-button" onClick={() => login('internal')}>Log in</button>}
     </div>
@@ -245,13 +250,13 @@ export const RootComment = () => {
         <Show when={!preferencesStore.disableLikes}>
           <li class="ztr-comment-action-like">
             {likeSvg()}
-            <span>{likeEvents()!.length}</span>
+            <span>{likeEvents()!.length} likes</span>
           </li>
         </Show>
         <Show when={!preferencesStore.disableZaps}>
           <li class="ztr-comment-action-zap">
             {lightningSvg()}
-            <span>{zapCount()}</span>
+            <span>{zapCount()} sats</span>
           </li>
         </Show>
       </ul>
