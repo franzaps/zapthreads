@@ -23,6 +23,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     if (pubkey() && loginType == 'external') {
       pk = pubkey()!;
     } else {
+      if (!window.nostr) {
+        onError('No NIP-07 extension!');
+        return;
+      }
       pk = await window.nostr!.getPublicKey();
     }
 
@@ -41,6 +45,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       }
     };
 
+    onError('');
     signersStore.active = signersStore.external || signersStore.internal;
   };
 
@@ -64,7 +69,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   createEffect(async () => {
     if (signersStore.active) {
       const pk = signersStore.active.pk;
-      let profile = await find('profiles', signersStore.active.pk);
+      let profile = profiles().find(p => p.pubkey === pk);
       if (!profile) {
         profile = { pubkey: pk, lastChecked: 0, created_at: 0, npub: npubEncode(pk) };
         await save('profiles', profile);
@@ -90,10 +95,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     props.onDone?.call(this);
   };
 
-  const onError = (message?: string) => {
+  const onError = (message: string) => {
     setLoading(false);
     // set error message
-    setErrorMessage(message ?? 'Your comment was not published');
+    setErrorMessage(message);
   };
 
   const publish = async (profile?: StoredProfile) => {
@@ -185,7 +190,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         await Promise.all(pool.publish(relays(), event));
         onSuccess(event);
       } catch (e) {
-        onError();
+        onError('Your comment was not published');
         setLoading(false);
       }
     }
@@ -231,7 +236,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
           Reply anonymously
         </button>}
 
-      {!loggedInUser() && window.nostr && <button class="ztr-reply-login-button" onClick={() => login('internal')}>Log in</button>}
+      {!loggedInUser() && <button class="ztr-reply-login-button" onClick={() => login('internal')}>Log in</button>}
     </div>
   </div>;
 };

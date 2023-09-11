@@ -47,7 +47,7 @@ render(() => {
     <button onClick={() => pubkey() ? setPubkey('') : setPubkey(defaultPubkey)}>{pubkey() ? 'Log out' : 'Log in'}</button>
     <hr/>
 
-    <Select class="custom" initialValue={options[0]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
+    <Select class="custom" initialValue={options[4]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
 
     <hr/>
     <p>
