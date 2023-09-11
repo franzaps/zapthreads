@@ -1,8 +1,8 @@
-import { Accessor, Index, Signal, createEffect, createSignal, onCleanup, useContext } from "solid-js";
+import { Index, createEffect, createMemo, createSignal, onCleanup, useContext } from "solid-js";
 import { defaultPicture, parseContent, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNote } from "./util/nest";
-import { StoredProfile, ZapThreadsContext } from "./util/stores";
+import { ZapThreadsContext } from "./util/stores";
 import { npubEncode } from "./nostr-tools/nip19";
 import { createElementSize } from "@solid-primitives/resize-observer";
 
@@ -15,25 +15,75 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
         (event) => {
           const [isOpen, setOpen] = createSignal(false);
           const [isExpanded, setExpanded] = createSignal(false);
-          const collapsedSignal = createSignal(false);
-          const [isThreadCollapsed] = collapsedSignal;
-          const infoSignal = createSignal(false);
-          const [showInfo, setShowInfo] = infoSignal;
+          const [isThreadCollapsed, setThreadCollapsed] = createSignal(false);
+          const [showInfo, setShowInfo] = createSignal(false);
 
           const MAX_HEIGHT = 500;
           const [target, setTarget] = createSignal<HTMLElement>();
           const size = createElementSize(target);
 
-          const total = () => totalChildren(event());
+          const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
+
+          const pubkey = () => event().pubkey;
+          const npub = () => npubEncode(pubkey());
+          const profile = () => profiles().find(p => p.pubkey === pubkey());
+
+          createEffect(async () => {
+            setProfilePicture(profile()?.imgUrl || defaultPicture);
+          });
+
+          // Update createdAt every minute
+          let timer: any;
+          const createdAt = () => timeAgo(event().created_at! * 1000);
+          const [createdTimeAgo, setCreatedTimeAgo] = createSignal<string>();
+
+          createEffect(() => {
+            setCreatedTimeAgo(createdAt());
+            timer = setInterval(() => {
+              setCreatedTimeAgo(createdAt());
+            }, 60 * 1000);
+          });
+
+          const total = createMemo(() => totalChildren(event()));
+
+          onCleanup(() => clearInterval(timer));
 
           return <div class="ztr-comment">
             <div class="ztr-comment-body">
-              <CommentInfo event={event} profiles={profiles()} collapsedSignal={collapsedSignal} infoSignal={infoSignal} />
+              <div class="ztr-comment-info-wrapper">
+                <div class="ztr-comment-info">
+                  <div class="ztr-comment-info-picture">
+                    <img width={svgWidth} height={svgWidth} src={profilePicture()} onerror={() => setProfilePicture(defaultPicture)} />
+                  </div>
+                  <ul class="ztr-comment-info-items">
+                    <li class="ztr-comment-info-author">
+                      <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{profile()?.name || shortenEncodedId(npub())}</a>
+                    </li>
+                    <li>{createdTimeAgo()}</li>
+                    {total() > 0 &&
+                      <>
+                        <li>{separatorSvg()}</li>
+                        <li>{total()} replies{isThreadCollapsed() ? ' (hidden)' : ''}</li>
+                      </>}
+                    <li>
+                      <a class="ztr-comment-info-dots" onClick={() => setShowInfo(!showInfo())}>
+                        {ellipsisSvg()}
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+                <ul class="ztr-comment-info-items">
+                  {total() > 0 && <li>
+                    <span onClick={() => setThreadCollapsed(!isThreadCollapsed())}>
+                      {isThreadCollapsed() ? rightArrow() : downArrow()}
+                    </span>
+                  </li>}
+                </ul>
+              </div>
 
               {showInfo() &&
                 <div class="ztr-info-pane">
                   <pre>{JSON.stringify(event(), ['id', 'created_at', 'pubkey'], 2)}</pre>
-                  <button onClick={() => setShowInfo(false)}>Hide info</button>
                 </div>}
               <div
                 ref={setTarget}
@@ -53,7 +103,7 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
               <ul class="ztr-comment-actions">
                 <li class="ztr-comment-action-reply" onClick={() => setOpen(!isOpen()) && setShowInfo(false)}>
                   {replySvg()}
-                  <span>{total()}</span>
+                  <span>{isOpen() ? 'Cancel' : 'Reply'}</span>
                 </li>
                 {/* <Show when={!preferencesStore.disableZaps}>
                   <li class="ztr-comment-action-zap">
@@ -78,61 +128,6 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
         }
       }
     </Index>
-  </div>;
-};
-
-const CommentInfo = (props: { event: Accessor<NestedNote>, profiles: StoredProfile[], collapsedSignal: Signal<boolean>, infoSignal: Signal<boolean>; }) => {
-  const { preferencesStore } = useContext(ZapThreadsContext)!;
-  const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
-
-  const pubkey = () => props.event().pubkey;
-  const npub = () => npubEncode(pubkey());
-  const [showInfo, setShowInfo] = props.infoSignal;
-  const [isThreadCollapsed, setThreadCollapsed] = props.collapsedSignal;
-  const profile = () => props.profiles.find(p => p.pubkey === pubkey());
-
-  createEffect(async () => {
-    setProfilePicture(profile()?.imgUrl || defaultPicture);
-  });
-
-  // Update createdAt every minute
-  let timer: any;
-  const createdAt = () => timeAgo(props.event().created_at! * 1000);
-  const [createdTimeAgo, setCreatedTimeAgo] = createSignal<string>();
-
-  createEffect(() => {
-    setCreatedTimeAgo(createdAt());
-    timer = setInterval(() => {
-      setCreatedTimeAgo(createdAt());
-    }, 60 * 1000);
-  });
-
-  onCleanup(() => clearInterval(timer));
-
-  return <div class="ztr-comment-info-wrapper">
-    <div class="ztr-comment-info">
-      <div class="ztr-comment-info-picture">
-        <img width={svgWidth} height={svgWidth} src={profilePicture()} onerror={() => setProfilePicture(defaultPicture)} />
-      </div>
-      <ul class="ztr-comment-info-items">
-        <li class="ztr-comment-info-author">
-          <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{profile()?.name || shortenEncodedId(npub())}</a>
-        </li>
-        <li>{createdTimeAgo()}</li>
-        <li>
-          <a class="ztr-comment-info-dots" onClick={() => setShowInfo(!showInfo())}>
-            {ellipsisSvg()}
-          </a>
-        </li>
-      </ul>
-    </div>
-    <ul class="ztr-comment-info-items">
-      {props.event().children.length > 0 && <li>
-        <span onClick={() => setThreadCollapsed(!isThreadCollapsed())}>
-          {isThreadCollapsed() ? rightArrow() : downArrow()}
-        </span>
-      </li>}
-    </ul>
   </div>;
 };
 
