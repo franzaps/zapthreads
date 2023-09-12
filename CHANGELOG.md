@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0
+
+### Bugfixes
+
+ - Fix Various render issues (markdown and regex)
+ - Fix NIP-07 eager load
+ - Fix bugs related to quick switching anchors
+
+### Features
+
+ - IndexedDB-based cache for events, profiles and relays
+ - Display likes and zaps for anchor
+ - Proper color mode
+ - Improve API
+ - Improve UX and icons
+ - Resizable textarea
+ - Trim and toggle expand long content
+
 ## 0.1.0
 
 ### Bugfixes
