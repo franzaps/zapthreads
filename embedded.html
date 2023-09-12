@@ -10,6 +10,23 @@
     
     <link rel="stylesheet" href="./src/styles/index.css">
     <link rel="stylesheet" href="./app/style.css">
+
+    <style>
+      zap-threads {
+        --ztr-link-color:  #92379c;
+        --ztr-login-button-color: yellow;
+      }
+    
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #e7e7e7;
+          background-color: #222;
+        }
+        zap-threads {
+          --ztr-link-color: #167bb9;
+        }
+      }
+    </style>
   </head>
   <body>
     <h1>Super Blog</h1>
@@ -20,7 +37,7 @@
     
     <zap-threads
       anchor="https://fiatjaf.com/nostr.html"
-      pubkey="726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11"
+      npub="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9"
       disable="zaps:true,publish:true"
       />
   </body>

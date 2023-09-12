@@ -4,7 +4,7 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
 
 ## Goals
 
- - Implant Nostr on all the different corners of the web
+ - Permeate the web with Nostr
  - Make Disqus obsolete
 
 ![](https://cdn.nostr.build/i/db1295c70ca0a47c3fcd3cba4f01b9ac194dc981462decae07d8fbd410d468ec.jpg)
@@ -16,11 +16,11 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
  - Extremely versatile and customizable
    - Enable/disable many features via attributes
    - Light/dark modes
-   - Full CSS control via `shadowRoot` style
+   - Full styling control
    - Multiple languages (coming soon)
  - Lightweight on clients and relays
-   - ~33kb minified/compressed with base styles and assets (nocomment is ~244kb)
-   - Local storage caching
+   - Local storage caching, offline-first
+   - Under 40kb minified/compressed with styles and assets (nocomment is > 240kb)
  - Available as web component or embeddable script
 
 ## Roadmap
@@ -55,20 +55,23 @@ import "zapthreads";
 Arguments:
 
  - (required) `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
- - `pubkey`: Pubkey (in hex format) to log in the user as (only works with NIP-07!)
- - `relays`: comma separated list of preferred relays (defaults to `["wss://relay.damus.io", "wss://eden.nostr.land"]`)
- - `disableLikes`: defaults to `false`
- - `disableZaps`: defaults to `false`
- - `disablePublish`: defaults to `false`
- - `closeOnEose`: defaults to `false`
- - `urlPrefixes`: defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/` (`https://` is automatically prepended)
+ - `relays`: comma-separated list of preferred relays
+   - defaults to `wss://relay.damus.io,wss://nos.lol`)
+ - `npub`: npub to log in the user as (only works with NIP-07!)
+ - `disable`: comma-separated pairs of preferences to disable
+   - defaults to `likes:false,zaps:false,publish:false,live:false`
+   - pass `likes:true`/`zaps:true` to disable likes/zaps
+   - pass `publish:true` to disable publishing (useful for testing purposes)
+   - pass `live:false` to close the relays subscriptions on EOSE
+ - `urlPrefixes`: comma-separated pairs of URLs
+   - defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/` (`https://` is automatically prepended)
 
 ```html
 <zap-threads 
   anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz"
-  pubkey="726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11"
+  npub="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9"
   relays="wss://relay.nostr.band,wss://nostr-pub.wellorder.net/"
-  disableLikes="true"
+  disable="likes:true"
   />
 ```
 
@@ -77,12 +80,23 @@ As Solid component:
 ```js
 import ZapThreads from 'zapthreads';
 
-<ZapThreads anchor={anchor} relays={relays} closeOnEose={true} />
+<ZapThreads anchor={anchor} relays={relays} />
 ```
 
 ## Customize
 
 ### CSS
+
+Available CSS variables (define in `zap-threads`):
+  - `--ztr-font`
+  - `--ztr-font-size`
+  - `--ztr-text-color`
+  - `--ztr-link-color`
+  - `--ztr-background-color`
+  - `--ztr-icon-color`
+  - `--ztr-login-button-color`
+
+For more advanced CSS control via `shadowRoot`:
 
 ```js
 const style = document.createElement('style');

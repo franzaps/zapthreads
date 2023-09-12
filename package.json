@@ -2,7 +2,7 @@
   "name": "zapthreads",
   "type": "module",
   "version": "0.1.0",
-  "description": "Threaded web comments on Nostr",
+  "description": "Threaded comments on Nostr",
   "repository": {
     "type": "git",
     "url": "https://github.com/fr4nzap/zapthreads.git"
@@ -10,6 +10,7 @@
   "files": [
     "dist"
   ],
+  "types": "./dist/zapthreads.d.ts",
   "main": "./dist/zapthreads.umd.cjs",
   "module": "./dist/zapthreads.cjs",
   "exports": {
@@ -35,6 +36,7 @@
     "ts-jest": "^29.1.0",
     "vite": "^4.1.1",
     "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-dts": "^3.5.3",
     "vite-plugin-externalize-deps": "^0.6.0",
     "vite-plugin-solid": "^2.5.0"
   },

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, onCleanup } from "solid-js";
+import { JSX, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { calculateRelayLatest, encodedEntityToFilter, parseDisable, parseUrlPrefixes, updateProfiles } from "./util/ui";
@@ -10,6 +10,7 @@ import { createMutable } from "solid-js/store";
 import { Sub } from "./nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
 import { clear as clearCache, findAll, save, watchAll } from "./util/db";
+import { decode } from "./nostr-tools/nip19";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -19,7 +20,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const anchor = () => props.anchor;
   const _relays = (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",");
   const relays = () => _relays.map(r => new URL(r).toString());
-  const pubkey = () => props.pubkey;
+  const pubkey = () => props.npub ? decode(props.npub).data as string : '';
   const disable = () => parseDisable(props.disable);
   const closeOnEose = () => disable()['live'] ?? false;
 
@@ -168,18 +169,22 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
 export default ZapThreads;
 
-customElement('zap-threads', {
+customElement<ZapThreadsAttributes>('zap-threads', {
   anchor: "",
   relays: "",
-  pubkey: "",
+  npub: "",
   disable: "",
   'url-prefixes': "",
 }, (props) => {
   return <ZapThreads
-    anchor={props.anchor}
-    relays={props.relays}
-    pubkey={props.pubkey}
-    disable={props.disable}
-    urlPrefixes={props['url-prefixes']}
+    anchor={props.anchor ?? ''}
+    relays={props.relays ?? ''}
+    npub={props.npub ?? ''}
+    disable={props.disable ?? ''}
+    urlPrefixes={props['url-prefixes'] ?? ''}
   />;
 });
+
+export type ZapThreadsAttributes = {
+  [key in 'anchor' | 'relays' | 'npub' | 'disable' | 'url-prefixes']?: string;
+} & JSX.HTMLAttributes<HTMLElement>;

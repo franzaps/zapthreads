@@ -54,7 +54,8 @@ export const updateProfiles = async (pubkeys: string[], relays: string[], profil
       }
     } else {
       // console.log('was not found', pubkey);
-      save('profiles', { pubkey, lastChecked: now, created_at: 0, npub: npubEncode(pubkey) });
+      // TODO disable for now, leave for recheck 
+      // save('profiles', { pubkey, lastChecked: now, created_at: 0, npub: npubEncode(pubkey) });
     }
   }
 };

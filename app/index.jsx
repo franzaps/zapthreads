@@ -29,20 +29,20 @@ const options = [
 const relays = ["wss://relay.damus.io", "wss://eden.nostr.land"];
 const otherRelays = ['wss://relay.damus.io', 'wss://nostr.mom', 'wss://nos.lol']
 
-const defaultPubkey = "726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11";
-const altPubkey = "afd563434a737334d69db899e4a32fe38d73a182bb6d1e91d83a2c4c4e04737c";
+const defaultNpub = "npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9";
+const altNpub = "npub1dergggklka99wwrs92yz8wdjs952h2ux2ha2ed598ngwu9w7a6fsh9xzpc";
 
 render(() => {  
-  const [pubkey, setPubkey] = createSignal(defaultPubkey);
+  const [npub, setNpub] = createSignal(defaultNpub);
   const [anchor, setAnchor] = createSignal('');
-  
+
   return <>
     <h1>Super Blog</h1>
     <h2>Sample article</h2>
     <p>
-      {pubkey() && <span>Logged in as {pubkey()}</span>}
+      {npub() && <span>Logged in as {npub()}</span>}
     </p>
-    <button onClick={() => pubkey() ? setPubkey('') : setPubkey(defaultPubkey)}>{pubkey() ? 'Log out' : 'Log in'}</button>
+    <button onClick={() => npub() ? setNpub('') : setNpub(defaultNpub)}>{npub() ? 'Log out' : 'Log in'}</button>
     <hr/>
 
     <Select class="custom" initialValue={options[4]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
@@ -53,8 +53,8 @@ render(() => {
     </p>
     
     {/* solid component */}
-    {/* <ZapThreads anchor={tonyArticle} relays={['wss://relay.damus.io']} disable={'likes:true'} pubkey={pubkey()} /> */}
+    {/* <ZapThreads anchor={tonyArticle} relays={['wss://relay.damus.io']} disable={'likes:true'} npub={npub()} /> */}
     {/* web component */}
-    {anchor() && <zap-threads anchor={anchor()} disable="publish: true" pubkey={pubkey()} />}
+    {anchor() && <zap-threads anchor={anchor()} disable="publish: true" npub={npub()} />}
   </>
 }, root);
