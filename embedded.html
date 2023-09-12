@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ZapThreads Sample Embedded App</title>
+    
     <script src="./dist/zapthreads.iife.js"></script>
     <!-- <script type="text/javascript" src="https://unpkg.com/zapthreads@0.1.0/dist/zapthreads.iife.js"></script> -->
     
@@ -19,9 +20,8 @@
     
     <zap-threads
       anchor="https://fiatjaf.com/nostr.html"
-      disable-zaps="true"
-      disable-publish="true"
       pubkey="726a1e261cc6474674e8285e3951b3bb139be9a773d1acf49dc868db861a1c11"
+      disable="zaps:true,publish:true"
       />
   </body>
 </html>

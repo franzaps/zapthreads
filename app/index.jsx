@@ -4,7 +4,7 @@ import { render } from 'solid-js/web';
 import './style.css';
 import '../src';
 // import ZapThreads from '../src';
-import { createSignal, createEffect } from 'solid-js';
+import { createSignal } from 'solid-js';
 import { Select } from "@thisbeyond/solid-select";
 import "@thisbeyond/solid-select/style.css";
 
@@ -53,8 +53,8 @@ render(() => {
     </p>
     
     {/* solid component */}
-    {/* <ZapThreads anchor={tonyArticle} relays={['wss://relay.damus.io']} disableZaps={false} disableLikes={true} disablePublish={true} pubkey={pubkey()} /> */}
+    {/* <ZapThreads anchor={tonyArticle} relays={['wss://relay.damus.io']} disable={'likes:true'} pubkey={pubkey()} /> */}
     {/* web component */}
-    {anchor() && <zap-threads anchor={anchor()} relays={otherRelays.join(',')} disable-publish="true" pubkey={pubkey()} />}
+    {anchor() && <zap-threads anchor={anchor()} disable="publish: true" pubkey={pubkey()} />}
   </>
 }, root);

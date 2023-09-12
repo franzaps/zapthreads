@@ -1,35 +1,37 @@
-import { createEffect, on, onCleanup } from "solid-js";
+import { createEffect, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, encodedEntityToFilter, parseUrlPrefixes, updateProfiles } from "./util/ui";
+import { calculateRelayLatest, encodedEntityToFilter, parseDisable, parseUrlPrefixes, updateProfiles } from "./util/ui";
 import { nest } from "./util/nest";
 import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent } from "./util/stores";
-import { Thread } from "./thread";
+import { Thread, ellipsisSvg } from "./thread";
 import { RootComment } from "./reply";
 import { createMutable } from "solid-js/store";
 import { Sub } from "./nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
-import { findAll, save, watchAll } from "./util/db";
+import { clear as clearCache, findAll, save, watchAll } from "./util/db";
 
-const ZapThreads = (props: ZapThreadsProps) => {
+const ZapThreads = (props: { [key: string]: string; }) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
     throw "Only NIP-19 naddr, note and nevent encoded entities and URLs are supported";
   }
 
-  const pubkey = () => props.pubkey;
   const anchor = () => props.anchor;
-  const relays = () => props.relays.length > 0 ? props.relays.map(r => new URL(r).toString()) : ["wss://relay.damus.io"];
-  const closeOnEose = () => props.closeOnEose;
-
-  const profiles = watchAll(() => ['profiles']);
+  const _relays = (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",");
+  const relays = () => _relays.map(r => new URL(r).toString());
+  const pubkey = () => props.pubkey;
+  const disable = () => parseDisable(props.disable);
+  const closeOnEose = () => disable()['live'] ?? false;
 
   const signersStore = createMutable<SignersStore>({});
   const preferencesStore = createMutable<PreferencesStore>({
-    disableLikes: props.disableLikes || false,
-    disableZaps: props.disableZaps || false,
-    disablePublish: props.disablePublish || false,
+    disableLikes: disable()['likes'] ?? false,
+    disableZaps: disable()['zaps'] ?? false,
+    disablePublish: disable()['publish'] ?? false,
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
+
+  const profiles = watchAll(() => ['profiles']);
 
   let sub: Sub | null;
 
@@ -122,16 +124,16 @@ const ZapThreads = (props: ZapThreadsProps) => {
 
         setTimeout(async () => {
           // Update profiles of current events
-          updateProfiles(events().map(e => e.pubkey), relays(), profiles());
+          await updateProfiles(events().map(e => e.pubkey), relays(), profiles());
 
           // Calculate latest received events for each relay
           calculateRelayLatest(_anchor);
-        }, 96); // same as batched throttle in db.ts
 
-        if (closeOnEose()) {
-          sub?.unsub();
-          pool.close(relays());
-        }
+          if (closeOnEose()) {
+            sub?.unsub();
+            pool.close(relays());
+          }
+        }, 96); // same as batched throttle in db.ts
       });
     } catch (e) {
       // TODO properly handle error
@@ -142,6 +144,7 @@ const ZapThreads = (props: ZapThreadsProps) => {
   const events = watchAll(() => ['events', 'kind+anchor', [1, anchor()] as [1, string]]);
   const nestedEvents = () => nest(events() as NoteEvent[]);
   const commentsLength = () => events().length;
+  const [showAdvanced, setShowAdvanced] = createSignal(false);
 
   return <div id="ztr-root">
     <style>{style}</style>
@@ -154,42 +157,29 @@ const ZapThreads = (props: ZapThreadsProps) => {
         <h3 id="ztr-subtitle">Z sats</h3>
       </Show> */}
       <Thread nestedEvents={nestedEvents} />
+      <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
+      {showAdvanced() && <div>
+        <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
+        <button onClick={clearCache}>Clear cache</button></div>
+      }
     </ZapThreadsContext.Provider>
   </div>;
 };
 
 export default ZapThreads;
 
-type ZapThreadsProps = {
-  anchor: string,
-  pubkey: string,
-  relays: string[];
-  closeOnEose: boolean;
-  disableLikes?: boolean,
-  disableZaps?: boolean,
-  disablePublish?: boolean,
-  urlPrefixes?: string,
-};
-
 customElement('zap-threads', {
-  relays: "",
   anchor: "",
-  'disable-likes': "",
-  'disable-zaps': "",
-  'disable-publish': "",
-  'pubkey': "",
-  'close-on-eose': "",
-  'url-prefixes': ""
+  relays: "",
+  pubkey: "",
+  disable: "",
+  'url-prefixes': "",
 }, (props) => {
-  const relays = props.relays === "" ? [] : props.relays.split(",");
   return <ZapThreads
     anchor={props.anchor}
+    relays={props.relays}
     pubkey={props.pubkey}
-    relays={relays}
-    closeOnEose={!!props['close-on-eose']}
-    disableLikes={!!props['disable-likes']}
-    disableZaps={!!props['disable-zaps']}
-    disablePublish={!!props['disable-publish']}
+    disable={props.disable}
     urlPrefixes={props['url-prefixes']}
   />;
 });

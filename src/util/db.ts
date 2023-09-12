@@ -76,6 +76,11 @@ export const save = async <Name extends S, R extends ZapthreadsSchema[Name]['val
   batchFns[type](model);
 };
 
+export const clear = async () => {
+  const names = [..._db.objectStoreNames];
+  await Promise.all(names.map(n => _db.clear(n)));
+};
+
 // idb
 
 interface ZapthreadsSchema extends DBSchema {

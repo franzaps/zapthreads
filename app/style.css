@@ -10,11 +10,10 @@ body {
   --ztr-link-color:  #92379c;
 }
 
-
 @media (prefers-color-scheme: dark) {
   body {
     color: #e7e7e7;
-    background-color: black;
+    background-color: #222;
   }
   :root {
     --ztr-link-color: #167bb9;
