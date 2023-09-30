@@ -177,7 +177,7 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
   return nmd(content.trim());
 };
 
-export const parseDisable = (value?: string) => {
+export const parseDisableArgs = (value?: string) => {
   const parts = value ? value.split(',') : [];
   return parts.reduce<{ [key: string]: boolean; }>((acc, part) => {
     const [key, value] = part.split(':');

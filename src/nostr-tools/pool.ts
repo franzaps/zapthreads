@@ -17,7 +17,7 @@ type BatchedRequest = {
 }
 
 export class SimplePool {
-  private _conn: {[url: string]: Relay}
+  _conn: {[url: string]: Relay}
   private _seenOn: {[id: string]: Set<string>} = {} // a map of all events we've seen in each relay
   private batchedByKey: {[batchKey: string]: BatchedRequest[]} = {}
 

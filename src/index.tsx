@@ -1,7 +1,7 @@
-import { JSX, createEffect, createSignal, on, onCleanup } from "solid-js";
+import { For, JSX, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, encodedEntityToFilter, parseDisable, parseUrlPrefixes, updateProfiles } from "./util/ui";
+import { calculateRelayLatest, encodedEntityToFilter, parseDisableArgs, parseUrlPrefixes, updateProfiles } from "./util/ui";
 import { nest } from "./util/nest";
 import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent } from "./util/stores";
 import { Thread, ellipsisSvg } from "./thread";
@@ -21,7 +21,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const _relays = (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",");
   const relays = () => _relays.map(r => new URL(r).toString());
   const pubkey = () => props.npub ? decode(props.npub).data as string : '';
-  const disable = () => parseDisable(props.disable);
+  const disable = () => parseDisableArgs(props.disable);
   const closeOnEose = () => disable()['live'] ?? false;
 
   const signersStore = createMutable<SignersStore>({});
@@ -161,7 +161,15 @@ const ZapThreads = (props: { [key: string]: string; }) => {
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
       {showAdvanced() && <div>
         <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
-        <button onClick={clearCache}>Clear cache</button></div>
+        <small>
+          <ul>
+            <For each={Object.values(pool._conn)}>
+              {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br/></li>}
+            </For>
+          </ul>
+        </small>
+        <button onClick={clearCache}>Clear cache</button>
+        </div>
       }
     </ZapThreadsContext.Provider>
   </div>;
