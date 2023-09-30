@@ -1,13 +1,11 @@
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
-import viteCompression from 'vite-plugin-compression';
 import dts from "vite-plugin-dts";
 
 export default defineConfig({
   publicDir: false,
   plugins: [
     solidPlugin(),
-    viteCompression({ algorithm: 'brotliCompress' }),
     dts({ insertTypesEntry: true, rollupTypes: true }),
   ],
   build: {
@@ -16,7 +14,7 @@ export default defineConfig({
       entry: './src/index.tsx',
       name: 'ZapThreads',
       fileName: 'zapthreads',
-      formats: ['cjs', 'umd', 'iife']
+      formats: ['es', 'umd', 'iife']
     },
   },
 });

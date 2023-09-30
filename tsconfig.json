@@ -5,6 +5,7 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "declaration": true,
     "strict": true,
+    "strictNullChecks": true,
     "moduleResolution": "node",
     "skipLibCheck": true,
     "esModuleInterop": true,
