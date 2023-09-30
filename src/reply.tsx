@@ -172,6 +172,9 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       unsignedEvent.tags.push(reply);
     }
 
+    // Add client tag
+    unsignedEvent.tags.push(['client', 'zapthreads']);
+
     const id = getEventHash(unsignedEvent);
 
     // Attempt to sign the event
