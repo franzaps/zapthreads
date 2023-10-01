@@ -3,7 +3,7 @@ import { NestedNote } from "./nest";
 import { PreferencesStore, StoredProfile, UrlPrefixesKeys, pool } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
-import { replaceAll } from "../nostr-tools/nip27";
+import { matchAll, replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
 import { findAll, save } from "./db";
 
@@ -89,13 +89,33 @@ export const calculateRelayLatest = async (anchor: string) => {
   }
 };
 
-export const encodedEntityToFilter = (entity: string): Filter => {
+export const encodedEntityToFilterTag = (entity: string): Filter => {
   const decoded = decode(entity);
   switch (decoded.type) {
     case 'nevent': return { "#e": [decoded.data.id] };
     case 'note': return { "#e": [decoded.data] };
     case 'naddr': return {
       "#a": [`${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`]
+    };
+    default: return {};
+  }
+};
+
+export const encodedEntityToFilter = (entity: string): Filter => {
+  const decoded = decode(entity);
+  switch (decoded.type) {
+    case 'nevent': return {
+      'kinds': [1],
+      'ids': [decoded.data.id]
+    };
+    case 'note': return {
+      'kinds': [1],
+      'ids': [decoded.data]
+    };
+    case 'naddr': return {
+      'kinds': [decoded.data.kind],
+      'authors': [decoded.data.pubkey],
+      "#d": [decoded.data.identifier]
     };
     default: return {};
   }
@@ -115,6 +135,7 @@ export const tagFor = (filter: Filter): string[] => {
 const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
 const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/g;
 const NIP_08_REGEX = /\#\[([0-9])\]/g;
+const ANY_HASHTAG = /\B\#([a-zA-Z0-9]+\b)(?!;)/g;
 
 export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
   let content = e.content;
@@ -130,7 +151,7 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
   // turn hashtags into links
   const hashtags = [...new Set(e.tags)].filter(t => t[0] === 't');
   if (hashtags.length > 0) {
-    const re = new RegExp(`\\B#((?:${hashtags.map(h => h[1]).join('|')}))`, 'g');
+    const re = new RegExp(`\\B#((?:${hashtags.map(h => h[1]).join('|')}))`, 'gi');
     content = content.replaceAll(re, `[#$1](${prefs!.urlPrefixes.tag}$1)`);
   }
 
@@ -175,6 +196,38 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
 
   // Markdown => HTML
   return nmd(content.trim());
+};
+
+export const parseTags = (content: string): string[][] => {
+  const result = [];
+  // generate p and e tags in content
+  const nostrMatches = matchAll(content);
+
+  for (const m of nostrMatches) {
+    // TODO will handle all of these with a separate library
+    if (m.decoded.type === 'npub') {
+      result.push(['p', m.decoded.data]);
+    }
+    if (m.decoded.type === 'naddr') {
+      const data = m.decoded.data;
+      result.push(['a', `${data.kind}:${data.pubkey}:${data.identifier}`, '', 'mention']);
+    }
+    if (m.decoded.type === 'nevent') {
+      result.push(['e', m.decoded.data.id]);
+    }
+    if (m.decoded.type === 'note') {
+      result.push(['e', m.decoded.data]);
+    }
+  }
+
+  // add t tags from hashtags in content
+  const hashtagMatches = content.matchAll(ANY_HASHTAG);
+  const hashtags = new Set([...hashtagMatches].map(m => m[1].toLowerCase()));
+  for (const t of hashtags) {
+    result.push(['t', t]);
+  }
+
+  return result;
 };
 
 export const parseUrlPrefixes = (value?: string) => {
@@ -225,8 +278,6 @@ export const timeAgo = (timestamp: number): string => {
   }
   return '';
 };
-
-// extensions
 
 export const totalChildren = (event: NestedNote): number => {
   return event.children.reduce<number>((acc, c) => {

@@ -1,3 +1,7 @@
+#ztr-content, #ztr-content img {
+  max-width: 100%;
+}
+
 #ztr-root {
   font-family: var(--ztr-font);
   font-size: var(--ztr-font-size);
@@ -97,7 +101,7 @@ ul.ztr-comment-info-items li a {
   object-fit: cover;
 }
 
-.ztr-comment-text {
+.ztr-comment-text, #ztr-content {
   margin-top: -1rem;
   padding: 0 0.8rem 0 4rem;
   line-height: 1.5rem;

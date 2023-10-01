@@ -1,15 +1,15 @@
-import { defaultPicture, shortenEncodedId, tagFor, updateProfiles } from "./util/ui";
+import { defaultPicture, parseTags, shortenEncodedId, tagFor, updateProfiles } from "./util/ui";
 import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
 import { EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
 import { npubEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
-import { find, save, watchAll } from "./util/db";
+import { save, watchAll } from "./util/db";
 import { lightningSvg, likeSvg } from "./thread";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, anchor, pubkey, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, anchor, anchorPubkey, pubkey, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -161,19 +161,23 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       tags: []
     };
 
-    unsignedEvent.tags.push(rootTag);
+    // add tags
+    unsignedEvent.tags = [
+      rootTag, // root
+      ...parseTags(content), // tags from content
+      ['client', 'zapthreads'] // client tag
+    ];
+
+    // add p tag from note author to notify
+    if (anchorPubkey()) {
+      unsignedEvent.tags.push(['p', anchorPubkey()!]);
+    }
 
     // Set reply
     if (props.replyTo) {
-      // If the replyTo does not have a reply it means it is at root level
-      // const type = props.replyTo.reply?.id != null ? "reply" : "root";
-      // TODO restore when root is the article ("a")
-      const reply = ["e", props.replyTo, "", "reply"];
+      const reply = ['', props.replyTo, '', 'reply'];
       unsignedEvent.tags.push(reply);
     }
-
-    // Add client tag
-    unsignedEvent.tags.push(['client', 'zapthreads']);
 
     const id = getEventHash(unsignedEvent);
 
@@ -187,7 +191,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
     if (preferencesStore.disable().includes('publish')) {
       // Simulate publishing
-      setTimeout(() => onSuccess(event), 1500);
+      setTimeout(() => onSuccess(event), 1000);
     } else {
       try {
         await Promise.all(pool.publish(relays(), event));

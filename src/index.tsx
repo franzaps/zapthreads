@@ -1,7 +1,7 @@
 import { For, JSX, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, encodedEntityToFilter, parseUrlPrefixes, updateProfiles } from "./util/ui";
+import { calculateRelayLatest, encodedEntityToFilterTag, encodedEntityToFilter, parseUrlPrefixes, updateProfiles } from "./util/ui";
 import { nest } from "./util/nest";
 import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent, isDisableType } from "./util/stores";
 import { Thread, ellipsisSvg } from "./thread";
@@ -11,6 +11,7 @@ import { Sub } from "./nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
 import { clear as clearCache, findAll, save, watchAll } from "./util/db";
 import { decode } from "./nostr-tools/nip19";
+import nmd from "nano-markdown";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -21,7 +22,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const _relays = (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",");
   const relays = () => _relays.map(r => new URL(r).toString());
   const pubkey = () => props.npub ? decode(props.npub).data as string : '';
-  
+
   const disable = () => props.disable.split(',').map(e => e.trim()).filter(isDisableType);
   const closeOnEose = () => disable().includes('watch');
 
@@ -32,6 +33,9 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   });
 
   const profiles = watchAll(() => ['profiles']);
+
+  const [content, setContent] = createSignal('');
+  const [anchorPubkey, setAnchorPubkey] = createSignal('');
 
   let sub: Sub | null;
 
@@ -44,7 +48,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
       const eventIdsForUrl = eventsForUrl.map((e) => e.id);
       preferencesStore.filter = { "#e": eventIdsForUrl };
     } else {
-      preferencesStore.filter = encodedEntityToFilter(anchor());
+      preferencesStore.filter = encodedEntityToFilterTag(anchor());
     }
   }));
 
@@ -71,6 +75,20 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
 
     try {
+      // find content and author
+      const contentEvent = await pool.get(relays(), encodedEntityToFilter(anchor()));
+
+      if (contentEvent) {
+        // TODO improve, cache
+        setAnchorPubkey(contentEvent.pubkey);
+        if (contentEvent.kind === 30023 && preferencesStore.disable().includes('hideContent')) {
+          const titleTag = contentEvent.tags.find(t => t[0] == 'title');
+          const title = titleTag && titleTag[1];
+          // TODO should reuse parseContent and better CSS
+          setContent(nmd(`# ${title}\n ${contentEvent.content}`));
+        }
+      }
+
       const relaysForAnchor = await findAll('relays', 'anchor', anchor());
       const relaysLatest = relaysForAnchor.filter(r => relays().includes(r.url)).map(t => t.latest);
 
@@ -146,32 +164,31 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const commentsLength = () => events().length;
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
-  return <div id="ztr-root">
-    <style>{style}</style>
-    <ZapThreadsContext.Provider value={{ relays, anchor, pubkey, profiles, signersStore, preferencesStore }}>
-      <RootComment />
-      <h2 id="ztr-title">
-        {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
-      </h2>
-      {/* <Show when={!preferencesStore.disableZaps}>
-        <h3 id="ztr-subtitle">Z sats</h3>
-      </Show> */}
-      <Thread nestedEvents={nestedEvents} />
-      <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
-      {showAdvanced() && <div>
-        <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
-        <small>
-          <ul>
-            <For each={Object.values(pool._conn)}>
-              {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br/></li>}
-            </For>
-          </ul>
-        </small>
-        <button onClick={clearCache}>Clear cache</button>
+  return <>
+    {content() && <div id="ztr-content" innerHTML={content()}></div>}
+    <div id="ztr-root">
+      <style>{style}</style>
+      <ZapThreadsContext.Provider value={{ relays, anchor, anchorPubkey, pubkey, profiles, signersStore, preferencesStore }}>
+        <RootComment />
+        <h2 id="ztr-title">
+          {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
+        </h2>
+        <Thread nestedEvents={nestedEvents} />
+        <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
+        {showAdvanced() && <div>
+          <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
+          <small>
+            <ul>
+              <For each={Object.values(pool._conn)}>
+                {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br /></li>}
+              </For>
+            </ul>
+          </small>
+          <button onClick={clearCache}>Clear cache</button>
         </div>
-      }
-    </ZapThreadsContext.Provider>
-  </div>;
+        }
+      </ZapThreadsContext.Provider>
+    </div></>;
 };
 
 export default ZapThreads;
