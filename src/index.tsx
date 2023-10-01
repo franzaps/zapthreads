@@ -1,9 +1,9 @@
 import { For, JSX, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, encodedEntityToFilter, parseDisableArgs, parseUrlPrefixes, updateProfiles } from "./util/ui";
+import { calculateRelayLatest, encodedEntityToFilter, parseUrlPrefixes, updateProfiles } from "./util/ui";
 import { nest } from "./util/nest";
-import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent } from "./util/stores";
+import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent, isDisableType } from "./util/stores";
 import { Thread, ellipsisSvg } from "./thread";
 import { RootComment } from "./reply";
 import { createMutable } from "solid-js/store";
@@ -21,14 +21,13 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const _relays = (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",");
   const relays = () => _relays.map(r => new URL(r).toString());
   const pubkey = () => props.npub ? decode(props.npub).data as string : '';
-  const disable = () => parseDisableArgs(props.disable);
-  const closeOnEose = () => disable()['live'] ?? false;
+  
+  const disable = () => props.disable.split(',').map(e => e.trim()).filter(isDisableType);
+  const closeOnEose = () => disable().includes('watch');
 
   const signersStore = createMutable<SignersStore>({});
   const preferencesStore = createMutable<PreferencesStore>({
-    disableLikes: disable()['likes'] ?? false,
-    disableZaps: disable()['zaps'] ?? false,
-    disablePublish: disable()['publish'] ?? false,
+    disable: disable,
     urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
   });
 
@@ -64,10 +63,10 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     });
 
     const kinds: StoredEvent['kind'][] = [1];
-    if (preferencesStore.disableLikes === false) {
+    if (preferencesStore.disable().includes('likes')) {
       kinds.push(7);
     }
-    if (preferencesStore.disableZaps === false) {
+    if (preferencesStore.disable().includes('zaps')) {
       kinds.push(9735);
     }
 

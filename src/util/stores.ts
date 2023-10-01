@@ -74,15 +74,16 @@ export type EventSigner = {
   signEvent?: SignEvent;
 };
 
-type PreferenceKeys =
-  'disableLikes' |
-  'disableZaps' |
-  'disablePublish'
-  ;
-
 export type UrlPrefixesKeys = 'naddr' | 'nevent' | 'note' | 'npub' | 'nprofile' | 'tag';
 
-export type PreferencesStore = { [key in PreferenceKeys]?: boolean } & {
+const _types = ['likes', 'zaps', 'publish', 'watch', 'replyAnonymously'] as const;
+type DisableType = typeof _types[number];
+export const isDisableType = (type: string): type is DisableType => {
+  return _types.includes(type as DisableType);
+}
+
+export type PreferencesStore = {
+  disable: () => DisableType[],
   urlPrefixes: { [key in UrlPrefixesKeys]?: string },
   filter?: Filter;
 };

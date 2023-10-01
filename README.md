@@ -9,6 +9,8 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
 
 ![](https://cdn.nostr.build/i/db1295c70ca0a47c3fcd3cba4f01b9ac194dc981462decae07d8fbd410d468ec.jpg)
 
+Read more: [Threading the web with Nostr](https://habla.news/franzap/threading-the-web-with-nostr)
+
 ## Features
 
  - Works on a variety of root events: `note`, `nevent`, `naddr`, URLs
@@ -20,7 +22,7 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
    - Multiple languages (coming soon)
  - Lightweight on clients and relays
    - Local storage caching, offline-first
-   - Under 40kb minified/compressed with styles and assets (nocomment is > 240kb)
+   - ~40kb minified/compressed with styles and assets (nocomment is > 240kb)
  - Available as web component or embeddable script
 
 ## Roadmap
@@ -40,10 +42,6 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
 
 ```bash
 npm install zapthreads
-// or
-yarn add zapthreads
-// or
-pnpm add zapthreads
 ```
 
 ```html
@@ -58,11 +56,12 @@ Arguments:
  - `relays`: comma-separated list of preferred relays
    - defaults to `wss://relay.damus.io,wss://nos.lol`)
  - `npub`: npub to log in the user as (only works with NIP-07!)
- - `disable`: comma-separated pairs of preferences to disable
-   - defaults to `likes:false,zaps:false,publish:false,live:false`
-   - pass `likes:true`/`zaps:true` to disable likes/zaps
-   - pass `publish:true` to disable publishing (useful for testing purposes)
-   - pass `live:false` to close the relays subscriptions on EOSE
+ - `disable`: comma-separated string of features to disable, all enabled by default
+   - `likes`
+   - `zaps`
+   - `publish` (when disabled does not send event to relays, useful for testing)
+   - `watch` (when disabled queries relays and closes the connection immediately on EOSE)
+   - `replyAnonymously` (when disabled requires logging in in order to publish)
  - `urlPrefixes`: comma-separated pairs of URLs
    - defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/` (`https://` is automatically prepended)
 
@@ -71,16 +70,8 @@ Arguments:
   anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz"
   npub="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9"
   relays="wss://relay.nostr.band,wss://nostr-pub.wellorder.net/"
-  disable="likes:true"
+  disable="likes"
   />
-```
-
-As Solid component:
-
-```js
-import ZapThreads from 'zapthreads';
-
-<ZapThreads anchor={anchor} relays={relays} />
 ```
 
 ## Customize

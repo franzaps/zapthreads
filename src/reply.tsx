@@ -143,7 +143,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       };
 
       // Publish, store filter and get updated rootTag
-      if (preferencesStore.disablePublish === false) {
+      if (preferencesStore.disable().includes('publish')) {
         pool.publish(relays(), rootEvent);
       } else {
         console.log('Publishing root event disabled', rootEvent);
@@ -185,7 +185,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setLoading(true);
     console.log(JSON.stringify(event, null, 2));
 
-    if (preferencesStore.disablePublish) {
+    if (preferencesStore.disable().includes('publish')) {
       // Simulate publishing
       setTimeout(() => onSuccess(event), 1500);
     } else {
@@ -216,7 +216,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       onChange={e => setComment(e.target.value)}
     />
     <div class="ztr-reply-controls">
-      {preferencesStore.disablePublish && <span>Publishing is disabled</span>}
+      {preferencesStore.disable().includes('publish') && <span>Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
       <Show when={!loading()} fallback={
@@ -234,7 +234,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
           Reply as {loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}
         </button>}
 
-      {!loggedInUser() &&
+      {!loggedInUser() && !preferencesStore.disable().includes('replyAnonymously') &&
         <button disabled={loading()} class="ztr-reply-button" onClick={() => publish()}>
           Reply anonymously
         </button>}
@@ -255,13 +255,13 @@ export const RootComment = () => {
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
       <ul class="ztr-comment-actions">
-        <Show when={!preferencesStore.disableLikes}>
+        <Show when={!preferencesStore.disable().includes('likes')}>
           <li class="ztr-comment-action-like">
             {likeSvg()}
             <span>{likeEvents()!.length} likes</span>
           </li>
         </Show>
-        <Show when={!preferencesStore.disableZaps}>
+        <Show when={!preferencesStore.disable().includes('zaps')}>
           <li class="ztr-comment-action-zap">
             {lightningSvg()}
             <span>{zapCount()} sats</span>
