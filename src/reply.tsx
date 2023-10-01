@@ -197,7 +197,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         await Promise.all(pool.publish(relays(), event));
         onSuccess(event);
       } catch (e) {
-        onError('Your comment was not published');
+        onError('Warning: your comment was not published to all relays');
         setLoading(false);
       }
     }
