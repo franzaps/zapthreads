@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.1
+
+### Bugfixes
+
+ - Fix various issues with tags in replies
+ - Simplify disable features
+
+### Features
+
+ - Show relay status in advanced pane
+ - Early support for basic naddr rendering (disable `hideContent`)
+
 ## 0.2.0
 
 ### Bugfixes
