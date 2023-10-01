@@ -99,6 +99,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setLoading(false);
     // set error message
     setErrorMessage(message);
+    setComment('');
   };
 
   const publish = async (profile?: StoredProfile) => {
