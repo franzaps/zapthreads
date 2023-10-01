@@ -337,7 +337,7 @@ svg {
     fill: var(--ztr-icon-color, #DEDEDE);
   }
   ul.ztr-comment-actions li span {
-    color: var(--ztr-icon-color, #DEDEDE);
+    color: var(--ztr-icon-color);
   }
   .ztr-comment-action-reply:hover svg {
     fill: #96609c;
