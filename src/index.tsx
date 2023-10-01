@@ -67,10 +67,10 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     });
 
     const kinds: StoredEvent['kind'][] = [1];
-    if (preferencesStore.disable().includes('likes')) {
+    if (!preferencesStore.disable().includes('likes')) {
       kinds.push(7);
     }
-    if (preferencesStore.disable().includes('zaps')) {
+    if (!preferencesStore.disable().includes('zaps')) {
       kinds.push(9735);
     }
 

@@ -144,9 +144,9 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
       // Publish, store filter and get updated rootTag
       if (preferencesStore.disable().includes('publish')) {
-        pool.publish(relays(), rootEvent);
-      } else {
         console.log('Publishing root event disabled', rootEvent);
+      } else {
+        pool.publish(relays(), rootEvent);
       }
       // Update filter to own rootEvent
       preferencesStore.filter = { "#e": [rootEvent.id] };
