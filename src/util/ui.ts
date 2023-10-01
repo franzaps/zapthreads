@@ -185,7 +185,7 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
       case 'note':
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.note}${value})`;
       case 'naddr':
-        const same = value === anchor;
+        const same = e.tags.map(t => [...t]).find(t => t[0] === 'a' && t[1] === `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}` && t[3] === 'mention');
         if (same) return '';
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.naddr}${value})`;
       case 'nevent':
