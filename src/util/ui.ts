@@ -186,7 +186,7 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.note}${value})`;
       case 'naddr':
         // If this naddr is the anchor AND it is a mention, remove the text as it's redundant
-        const isAnchorMentioned = anchor === value && e.tags.map(t => [...t]).find(t => t[0] === 'a' && t[1] === `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}` && t[3] === 'root');
+        const isAnchorMentioned = anchor === value && e.tags.map(t => [...t]).find(t => t[0] === 'a' && t[1] === `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}` && t[3] === 'mention');
         if (isAnchorMentioned) return '';
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.naddr}${value})`;
       case 'nevent':

@@ -1,6 +1,8 @@
 import { UnsignedEvent } from "../nostr-tools/event";
 import { parseContent, parseUrlPrefixes } from "./ui";
 
+const emptyPrefs = { disable: () => [], urlPrefixes: parseUrlPrefixes('') };
+
 describe("ui utils", () => {
   describe("parseContent", () => {
     it('removes naddr if mentioned', async () => {
@@ -17,7 +19,7 @@ describe("ui utils", () => {
         "content": `awesome article\n nostr:${naddr}`
       };
 
-      let result = parseContent(e, [], naddr);
+      let result = parseContent(e, [], naddr, emptyPrefs);
       expect(result).toEqual('<p>awesome article</p>');
     });
 
@@ -35,7 +37,7 @@ describe("ui utils", () => {
       e.content = 'I love #Bitcoin';
       e.tags = [['t', 'Bitcoin']];
 
-      result = parseContent(e, [], undefined, { disable: () => [], urlPrefixes: parseUrlPrefixes('') });
+      result = parseContent(e, [], undefined, emptyPrefs);
       expect(result).toEqual('<p>I love <a href=\"https://habla.news/t/Bitcoin\">#Bitcoin</a></p>');
     });
   });
