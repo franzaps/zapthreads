@@ -62,7 +62,7 @@ Arguments:
    - `publish` (when disabled does not send event to relays, useful for testing)
    - `watch` (when disabled queries relays and closes the connection immediately on EOSE)
    - `replyAnonymously` (when disabled requires logging in in order to publish)
- - `urlPrefixes`: comma-separated pairs of URLs
+ - `url-prefixes`: comma-separated pairs of URLs
    - defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/` (`https://` is automatically prepended)
 
 ```html
