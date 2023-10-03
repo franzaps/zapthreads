@@ -12,6 +12,8 @@ import { decode as bolt11Decode } from "light-bolt11-decoder";
 import { clear as clearCache, findAll, save, watchAll } from "./util/db";
 import { decode } from "./nostr-tools/nip19";
 import nmd from "nano-markdown";
+import { getPublicKey } from "./nostr-tools/keys";
+import { getSignature } from "./nostr-tools/event";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -21,7 +23,6 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const anchor = () => props.anchor;
   const _relays = (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",");
   const relays = () => _relays.map(r => new URL(r).toString());
-  const pubkey = () => props.npub ? decode(props.npub).data as string : '';
 
   const disable = () => props.disable.split(',').map(e => e.trim()).filter(isDisableType);
   const closeOnEose = () => disable().includes('watch');
@@ -161,6 +162,62 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
   }));
 
+  // Login external npub/nsec
+  const npubOrNsec = () => props.npub;
+
+  // Auto login when external pubkey supplied
+  createEffect(on(npubOrNsec, (_) => {
+    if (_) {
+      let pubkey: string;
+      let privkey: string | undefined;
+      if (_.startsWith('nsec')) {
+        privkey = decode(_).data as string;
+        pubkey = getPublicKey(privkey);
+      } else {
+        pubkey = decode(_).data as string;
+      }
+      signersStore.external = {
+        pk: pubkey,
+        signEvent: async (event) => {
+          // Sign with private key if nsec was provided
+          if (privkey) {
+            return { sig: getSignature(event, privkey) };
+          }
+
+          // We validate here in order to delay prompting the user as much as possible
+          if (!window.nostr) {
+            alert('Please log in with a NIP-07 extension such as Alby or nos2x');
+            signersStore.active = undefined;
+            throw 'No extension available';
+          }
+
+          const extensionPubkey = await window.nostr!.getPublicKey();
+          const loggedInPubkey = pubkey;
+          if (loggedInPubkey !== extensionPubkey) {
+            // If zapthreads was passed a different pubkey then error
+            const error = `ERROR: Event not signed. Supplied pubkey does not match extension pubkey. ${loggedInPubkey} !== ${extensionPubkey}`;
+            signersStore.active = undefined;
+            alert(error);
+            throw error;
+          } else {
+            return window.nostr!.signEvent(event);
+          }
+
+        }
+      };
+      signersStore.active = signersStore.external;
+    }
+  }));
+
+  // Log out when external npub/nsec is absent
+  createEffect(on(npubOrNsec, (_) => {
+    if (!_) {
+      signersStore.active = undefined;
+    }
+  }, { defer: true }));
+
+  // Build JSX
+
   const events = watchAll(() => ['events', 'kind+anchor', [1, anchor()] as [1, string]]);
   const nestedEvents = () => nest(events() as NoteEvent[]);
   const commentsLength = () => events().length;
@@ -170,7 +227,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     {content() && <div id="ztr-content" innerHTML={content()}></div>}
     <div id="ztr-root">
       <style>{style}</style>
-      <ZapThreadsContext.Provider value={{ relays, anchor, anchorPubkey, pubkey, profiles, signersStore, preferencesStore }}>
+      <ZapThreadsContext.Provider value={{ relays, anchor, anchorPubkey, profiles, signersStore, preferencesStore }}>
         <RootComment />
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}

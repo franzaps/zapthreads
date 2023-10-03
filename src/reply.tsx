@@ -3,13 +3,13 @@ import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
 import { EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
-import { npubEncode } from "./nostr-tools/nip19";
+import { npubEncode, nsecEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
 import { save, watchAll } from "./util/db";
 import { lightningSvg, likeSvg } from "./thread";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, anchor, anchorPubkey, pubkey, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, anchor, anchorPubkey, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -18,52 +18,21 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
   // Sessions
 
-  const login = async (loginType: 'internal' | 'external') => {
-    let pk: string;
-    if (pubkey() && loginType == 'external') {
-      pk = pubkey()!;
-    } else {
-      if (!window.nostr) {
-        onError('No NIP-07 extension!');
-        return;
-      }
-      pk = await window.nostr!.getPublicKey();
+  const login = async () => {
+    if (!window.nostr) {
+      onError('No NIP-07 extension!');
+      return;
     }
+    const pk = await window.nostr!.getPublicKey();
 
-    signersStore[loginType] ||= {
+    signersStore.internal = {
       pk,
-      signEvent: async (event) => {
-        // We do this here in order to delay prompting the user as much as possible
-        const extensionPubkey = await window.nostr!.getPublicKey();
-        const loggedInPubkey = loggedInUser()!.pubkey;
-        if (loggedInPubkey !== extensionPubkey) {
-          // If zapthreads was passed a different pubkey then throw
-          setErrorMessage('Pubkey mismatch');
-          throw `Pubkey mismatch: ${loggedInPubkey} !== ${extensionPubkey}`;
-        }
-        return window.nostr!.signEvent(event);
-      }
+      signEvent: async (event) => window.nostr!.signEvent(event)
     };
 
     onError('');
-    signersStore.active = signersStore.external || signersStore.internal;
+    signersStore.active = signersStore.internal;
   };
-
-  // Auto login when external pubkey supplied
-  createEffect(on(pubkey, (pubkey) => {
-    if (pubkey) {
-      login('external');
-    }
-  }));
-
-  // Log out when external pubkey is absent
-  createEffect(on(pubkey, (pubkey) => {
-    if (!pubkey) {
-      signersStore.active = undefined;
-      // reset error message
-      setErrorMessage('');
-    }
-  }, { defer: true }));
 
   // Logged in user is a computed property of the active signer
   createEffect(async () => {
@@ -105,7 +74,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   const publish = async (profile?: StoredProfile) => {
     let signer: EventSigner | undefined;
     if (profile) {
-      signer = signersStore.external || signersStore.internal;
+      signer = signersStore.active;
     } else {
       if (!signersStore.anonymous) {
         const sk = generatePrivateKey();
@@ -244,7 +213,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
           Reply anonymously
         </button>}
 
-      {!loggedInUser() && <button class="ztr-reply-login-button" onClick={() => login('internal')}>Log in</button>}
+      {!loggedInUser() && <button class="ztr-reply-login-button" onClick={() => login()}>Log in</button>}
     </div>
   </div>;
 };

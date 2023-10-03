@@ -55,7 +55,9 @@ Arguments:
  - (required) `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
  - `relays`: comma-separated list of preferred relays
    - defaults to `wss://relay.damus.io,wss://nos.lol`)
- - `npub`: npub to log in the user as (only works with NIP-07!)
+ - `npub`:
+   - npub to log in the user as (they will only be able to sign with a NIP-07 extension)
+   - nsec also supported
  - `disable`: comma-separated string of features to disable, all enabled by default
    - `likes`
    - `zaps`

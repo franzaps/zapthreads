@@ -33,8 +33,9 @@ const otherRelays = ['wss://relay.damus.io', 'wss://nostr.mom', 'wss://nos.lol']
 
 const defaultNpub = "npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9";
 const altNpub = "npub1dergggklka99wwrs92yz8wdjs952h2ux2ha2ed598ngwu9w7a6fsh9xzpc";
+const nsec = "nsec14cp0lpl34rs3c7wmtg6lvgdndzafavlsjuhnq9zp7v05pqruxp4q9vuh9r";
 
-render(() => {  
+render(() => {
   const [npub, setNpub] = createSignal(defaultNpub);
   const [anchor, setAnchor] = createSignal('');
 

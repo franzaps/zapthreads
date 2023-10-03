@@ -10,7 +10,6 @@ export const ZapThreadsContext = createContext<{
   relays: Accessor<string[]>,
   anchor: Accessor<string>,
   anchorPubkey: Accessor<string | undefined>;
-  pubkey: Accessor<string | undefined>;
   profiles: Accessor<StoredProfile[]>;
   signersStore: SignersStore;
   preferencesStore: PreferencesStore;
@@ -67,7 +66,7 @@ declare global {
 }
 
 export type SignersStore = {
-  [key in "active" | "anonymous" | "internal" | "external"]?: EventSigner;
+  [key in 'active' | 'anonymous' | 'internal' | 'external']?: EventSigner;
 };
 export type SignEvent = (event: UnsignedEvent<1>) => Promise<{ sig: string; }>;
 export type EventSigner = {
