@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2
+
+### Bugfixes
+
+ - Fix hasty release bugs: HTTP anchors and replies work properly again
+
+### Features
+
+ - nsec support (pass to `npub` attribute)
+ - Even better event content parsing
+
 ## 0.3.1
 
 ### Bugfixes
