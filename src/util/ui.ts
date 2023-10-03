@@ -132,9 +132,9 @@ export const tagFor = (filter: Filter): string[] => {
   }
 };
 
-const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
-const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/g;
-const NIP_08_REGEX = /\#\[([0-9])\]/g;
+const URL_REGEX = /https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gi;
+const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/gi;
+const NIP_08_REGEX = /\B\#\[([0-9])\]/g;
 const ANY_HASHTAG = /\B\#([a-zA-Z0-9]+\b)(?!;)/g;
 
 export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
@@ -151,8 +151,8 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
   // turn hashtags into links
   const hashtags = [...new Set(e.tags)].filter(t => t[0] === 't');
   if (hashtags.length > 0) {
-    const re = new RegExp(`\\B#((?:${hashtags.map(h => h[1]).join('|')}))`, 'gi');
-    content = content.replaceAll(re, `[#$1](${prefs!.urlPrefixes.tag}$1)`);
+    const re = new RegExp(`(^|\\s)\\#(${hashtags.map(h => h[1]).join('|')})`, 'gi');
+    content = content.replaceAll(re, `$1[#$2](${prefs!.urlPrefixes.tag}$2)`);
   }
 
   // NIP-08 => NIP-27

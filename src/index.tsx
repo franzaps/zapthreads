@@ -141,8 +141,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         const _anchor = anchor();
 
         setTimeout(async () => {
-          // Update profiles of current events
-          await updateProfiles(events().map(e => e.pubkey), relays(), profiles());
+          // Update profiles of current events (including anchor author)
+          await updateProfiles([...events().map(e => e.pubkey), anchorPubkey()], relays(), profiles());
 
           // Calculate latest received events for each relay
           calculateRelayLatest(_anchor);

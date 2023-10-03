@@ -40,5 +40,31 @@ describe("ui utils", () => {
       result = parseContent(e, [], undefined, emptyPrefs);
       expect(result).toEqual('<p>I love <a href=\"https://habla.news/t/Bitcoin\">#Bitcoin</a></p>');
     });
+
+    it('handles a wrongly placed tag', async () => {
+      const e: UnsignedEvent = {
+        "kind": 1,
+        "tags": [['t', 'nevent1qqs']],
+        "created_at": 0,
+        "pubkey": "",
+        "content": "otoh:\nhttps://nostrapp.link/#nevent1qqs?select=true"
+      };
+      let result = parseContent(e, [], undefined, emptyPrefs);
+      expect(result).toMatch('<p>otoh:\n<a href="https://nostrapp.link/#nevent1qqs?select=true');
+    });
+    it('replaces nip-08 correctly', async () => {
+      const e: UnsignedEvent = {
+        "kind": 1,
+        "tags": [
+          ['p', '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2'],
+          ['t', 'sunstrike']
+        ],
+        "created_at": 0,
+        "pubkey": "",
+        "content": "#sunstrike\n\n#[0]"
+      };
+      let result = parseContent(e, [], undefined, emptyPrefs);
+      expect(result).toMatch('<p><a href=\"https://habla.news/t/sunstrike\">#sunstrike</a></p>\n\n<p><a href=\"https://habla.news/p/npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m\">@npub1sg6...f63m</a></p>');
+    });
   });
 });

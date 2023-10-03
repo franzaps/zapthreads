@@ -83,6 +83,7 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
 
               {showInfo() &&
                 <div class="ztr-info-pane">
+                  <a href={`https://nostr.guru/e/${event().id}`} target="_blank">Event</a>:
                   <pre>{JSON.stringify(event(), ['id', 'created_at', 'pubkey'], 2)}</pre>
                 </div>}
               <div
