@@ -75,17 +75,19 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
 
     try {
-      // find content and author
-      const contentEvent = await pool.get(relays(), encodedEntityToFilter(anchor()));
+      if (!anchor().startsWith('http')) {
+        // find content and author
+        const contentEvent = await pool.get(relays(), encodedEntityToFilter(anchor()));
 
-      if (contentEvent) {
-        // TODO improve, cache
-        setAnchorPubkey(contentEvent.pubkey);
-        if (contentEvent.kind === 30023 && preferencesStore.disable().includes('hideContent')) {
-          const titleTag = contentEvent.tags.find(t => t[0] == 'title');
-          const title = titleTag && titleTag[1];
-          // TODO should reuse parseContent and better CSS
-          setContent(nmd(`# ${title}\n ${contentEvent.content}`));
+        if (contentEvent) {
+          // TODO improve, cache
+          setAnchorPubkey(contentEvent.pubkey);
+          if (contentEvent.kind === 30023 && preferencesStore.disable().includes('hideContent')) {
+            const titleTag = contentEvent.tags.find(t => t[0] == 'title');
+            const title = titleTag && titleTag[1];
+            // TODO should reuse parseContent and better CSS
+            setContent(nmd(`# ${title}\n ${contentEvent.content}`));
+          }
         }
       }
 
