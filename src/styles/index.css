@@ -110,6 +110,11 @@ ul.ztr-comment-info-items li a {
   overflow: hidden;
 }
 
+.ztr-comment-text code {
+  font-size: 1.3em;
+  margin: 0 0.2em;
+}
+
 .ztr-comment-text pre, .ztr-info-pane pre {
   white-space: pre-wrap;
   white-space: -moz-pre-wrap;

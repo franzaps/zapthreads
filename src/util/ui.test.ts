@@ -5,7 +5,7 @@ const emptyPrefs = { disable: () => [], urlPrefixes: parseUrlPrefixes('') };
 
 describe("ui utils", () => {
   describe("parseContent", () => {
-    it('removes naddr if mentioned', async () => {
+    it('removes naddr if mentioned', () => {
       const naddr = "naddr1qqxnzd3cxqmrzv3exgmr2wfeqyf8wumn8ghj7ur4wfcxcetsv9njuetnqyxhwumn8ghj7mn0wvhxcmmvqy08wumn8ghj7mn0wd68yttjv4kxz7fwdehkkmm5v9ex7tnrdakszynhwden5te0danxvcmgv95kutnsw43qz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzpmhxue69uhkummnw3ezuamfdejsygrwg6zz9hahfftnsup23q3mnv5pdz46hpj4l2ktdpfu6rhpthhwjvpsgqqqw4rskylmpy";
       const e: UnsignedEvent = {
         "kind": 1,
@@ -23,7 +23,7 @@ describe("ui utils", () => {
       expect(result).toEqual('<p>awesome article</p>');
     });
 
-    it('parses a nostr url with a custom url prefix', async () => {
+    it('parses a nostr url with a custom url prefix', () => {
       const e: UnsignedEvent = {
         "kind": 1,
         "tags": [],
@@ -41,7 +41,7 @@ describe("ui utils", () => {
       expect(result).toEqual('<p>I love <a href=\"https://habla.news/t/Bitcoin\">#Bitcoin</a></p>');
     });
 
-    it('handles a wrongly placed tag', async () => {
+    it('handles a wrongly placed tag', () => {
       const e: UnsignedEvent = {
         "kind": 1,
         "tags": [['t', 'nevent1qqs']],
@@ -52,7 +52,7 @@ describe("ui utils", () => {
       let result = parseContent(e, [], undefined, emptyPrefs);
       expect(result).toMatch('<p>otoh:\n<a href="https://nostrapp.link/#nevent1qqs?select=true');
     });
-    it('replaces nip-08 correctly', async () => {
+    it('replaces nip-08 correctly', () => {
       const e: UnsignedEvent = {
         "kind": 1,
         "tags": [
@@ -65,6 +65,17 @@ describe("ui utils", () => {
       };
       let result = parseContent(e, [], undefined, emptyPrefs);
       expect(result).toMatch('<p><a href=\"https://habla.news/t/sunstrike\">#sunstrike</a></p>\n\n<p><a href=\"https://habla.news/p/npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m\">@npub1sg6...f63m</a></p>');
+    });
+    it('replaces backticks', () => {
+      const e: UnsignedEvent = {
+        "kind": 1,
+        "tags": [],
+        "created_at": 0,
+        "pubkey": "",
+        "content": "should check for `var a = 1` tags"
+      };
+      let result = parseContent(e, [], undefined, emptyPrefs);
+      expect(result).toMatch('<p>should check for <code>var a = 1</code> tags</p>');
     });
   });
 });

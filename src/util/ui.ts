@@ -135,6 +135,9 @@ export const tagFor = (filter: Filter): string[] => {
 const URL_REGEX = /https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gi;
 const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/gi;
 const NIP_08_REGEX = /\B\#\[([0-9])\]/g;
+const BAD_NIP27_REGEX = /(^|\s)@?((naddr|npub|nevent|note)[a-z0-9]{20,})/g;
+const BACKTICKS_REGEX = /\`(.*?)\`/g;
+
 const ANY_HASHTAG = /\B\#([a-zA-Z0-9]+\b)(?!;)/g;
 
 export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
@@ -171,6 +174,9 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
     }
   });
 
+  // Attempts to NIP-27 => NIP-27
+  content = content.replaceAll(BAD_NIP27_REGEX, '$1nostr:$2');
+
   // NIP-27 => Markdown
   content = replaceAll(content, ({ decoded, value }) => {
     switch (decoded.type) {
@@ -194,6 +200,9 @@ export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor
       default: return value;
     }
   });
+
+  // Replace backticks with code
+  content = content.replaceAll(BACKTICKS_REGEX, '<code>$1</code>');
 
   // Markdown => HTML
   return nmd(content.trim());
