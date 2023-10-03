@@ -176,7 +176,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
     // Set reply
     if (props.replyTo) {
-      const reply = ['', props.replyTo, '', 'reply'];
+      const reply = ['e', props.replyTo, '', 'reply'];
       unsignedEvent.tags.push(reply);
     }
 
