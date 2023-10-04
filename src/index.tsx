@@ -1,7 +1,7 @@
 import { For, JSX, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, encodedEntityToFilterTag, encodedEntityToFilter, parseUrlPrefixes, updateProfiles } from "./util/ui";
+import { calculateRelayLatest, encodedEntityToFilterTag, encodedEntityToFilter, parseUrlPrefixes, updateProfiles, parseContent } from "./util/ui";
 import { nest } from "./util/nest";
 import { PreferencesStore, SignersStore, ZapThreadsContext, pool, StoredEvent, NoteEvent, isDisableType } from "./util/stores";
 import { Thread, ellipsisSvg } from "./thread";
@@ -11,7 +11,6 @@ import { Sub } from "./nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
 import { clear as clearCache, findAll, save, watchAll } from "./util/db";
 import { decode } from "./nostr-tools/nip19";
-import nmd from "nano-markdown";
 import { getPublicKey } from "./nostr-tools/keys";
 import { getSignature } from "./nostr-tools/event";
 
@@ -81,13 +80,12 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         const contentEvent = await pool.get(relays(), encodedEntityToFilter(anchor()));
 
         if (contentEvent) {
-          // TODO improve, cache
           setAnchorPubkey(contentEvent.pubkey);
           if (contentEvent.kind === 30023 && preferencesStore.disable().includes('hideContent')) {
             const titleTag = contentEvent.tags.find(t => t[0] == 'title');
             const title = titleTag && titleTag[1];
-            // TODO should reuse parseContent and better CSS
-            setContent(nmd(`# ${title}\n ${contentEvent.content}`));
+            contentEvent.content = `# ${title}\n ${contentEvent.content}`;
+            setContent(parseContent(contentEvent, profiles(), anchor(), preferencesStore));
           }
         }
       }

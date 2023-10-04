@@ -52,6 +52,7 @@ describe("ui utils", () => {
       let result = parseContent(e, [], undefined, emptyPrefs);
       expect(result).toMatch('<p>otoh:\n<a href="https://nostrapp.link/#nevent1qqs?select=true');
     });
+
     it('replaces nip-08 correctly', () => {
       const e: UnsignedEvent = {
         "kind": 1,
@@ -61,11 +62,12 @@ describe("ui utils", () => {
         ],
         "created_at": 0,
         "pubkey": "",
-        "content": "#sunstrike\n\n#[0]"
+        "content": "#sunstrike\n\nsome #[0]"
       };
       let result = parseContent(e, [], undefined, emptyPrefs);
-      expect(result).toMatch('<p><a href=\"https://habla.news/t/sunstrike\">#sunstrike</a></p>\n\n<p><a href=\"https://habla.news/p/npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m\">@npub1sg6...f63m</a></p>');
+      expect(result).toMatch('<p><a href=\"https://habla.news/t/sunstrike\">#sunstrike</a></p>\n\n<p>some <a href=\"https://habla.news/p/npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m\">@npub1sg6...f63m</a></p>');
     });
+
     it('replaces backticks', () => {
       const e: UnsignedEvent = {
         "kind": 1,
@@ -76,6 +78,21 @@ describe("ui utils", () => {
       };
       let result = parseContent(e, [], undefined, emptyPrefs);
       expect(result).toMatch('<p>should check for <code>var a = 1</code> tags</p>');
+    });
+
+    // 
+
+    it('replaces images', () => {
+      const e: UnsignedEvent = {
+        "kind": 1,
+        "tags": [],
+        "created_at": 0,
+        "pubkey": "",
+        "content": "image here ![image](https://cdn.nostr.build/i/1.png)"
+      };
+      let result = parseContent(e, [], undefined, emptyPrefs);
+
+      expect(result).toMatch('<p>image here <img src="https://cdn.nostr.build/i/1.png" alt="image"/></p>');
     });
   });
 });

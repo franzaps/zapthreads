@@ -132,26 +132,26 @@ export const tagFor = (filter: Filter): string[] => {
   }
 };
 
-const URL_REGEX = /https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gi;
+const URL_REGEX = /(?<=^|\s)https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gi;
 const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/gi;
 const NIP_08_REGEX = /\B\#\[([0-9])\]/g;
-const BAD_NIP27_REGEX = /(^|\s)@?((naddr|npub|nevent|note)[a-z0-9]{20,})/g;
+const BAD_NIP27_REGEX = /(?<=^|\s)@?((naddr|npub|nevent|note)[a-z0-9]{20,})/g;
 const BACKTICKS_REGEX = /\`(.*?)\`/g;
 
 const ANY_HASHTAG = /\B\#([a-zA-Z0-9]+\b)(?!;)/g;
 
-export const parseContent = (e: UnsignedEvent, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
+export const parseContent = (e: Pick<UnsignedEvent, 'content' | 'tags'>, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
   let content = e.content;
 
   // replace http(s) links + images
-  content = content.replace(URL_REGEX, (matched) => {
-    if (matched.match(IMAGE_REGEX)) {
-      return `![image](${matched})`;
+  content = content.replace(URL_REGEX, (url) => {
+    if (url.match(IMAGE_REGEX)) {
+      return `![image](${url})`;
     }
-    return `[${matched}](${matched})`;
+    return `[${url}](${url})`;
   });
 
-  // turn hashtags into links
+  // turn hashtags into links (does not match hashes in URLs)
   const hashtags = [...new Set(e.tags)].filter(t => t[0] === 't');
   if (hashtags.length > 0) {
     const re = new RegExp(`(^|\\s)\\#(${hashtags.map(h => h[1]).join('|')})`, 'gi');
