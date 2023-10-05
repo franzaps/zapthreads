@@ -9,7 +9,7 @@ import { RootComment } from "./reply";
 import { createMutable } from "solid-js/store";
 import { Sub } from "./nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
-import { clear as clearCache, findAll, save, watchAll } from "./util/db";
+import { clear as clearCache, find, findAll, save, watchAll } from "./util/db";
 import { decode } from "./nostr-tools/nip19";
 import { getPublicKey } from "./nostr-tools/keys";
 import { getSignature } from "./nostr-tools/event";
@@ -66,7 +66,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
       sub = null;
     });
 
-    const kinds: StoredEvent['kind'][] = [1];
+    const kinds = [1];
     if (!preferencesStore.disable().includes('likes')) {
       kinds.push(7);
     }
@@ -113,27 +113,43 @@ const ZapThreads = (props: { [key: string]: string; }) => {
             });
           }
         } else if (e.kind === 7) {
-          save('events', {
-            id: e.id,
-            kind: 7,
-            pubkey: e.pubkey,
-            created_at: e.created_at,
-            anchor: anchor()
-          });
+          const likes = await find('aggregates', [anchor(), 7]);
+          if (likes) {
+            if (!likes.sourceIds.includes(e.id)) {
+              likes.sourceIds.push(e.id);
+              likes.sum++;
+              save('aggregates', likes);
+            }
+          } else {
+            save('aggregates', {
+              eventId: anchor(),
+              kind: 7,
+              sourceIds: [e.id],
+              sum: 1
+            });
+          }
         } else if (e.kind === 9735) {
+          const zaps = await find('aggregates', [anchor(), 9735]);
           const invoiceTag = e.tags.find(t => t[0] === "bolt11");
           if (invoiceTag) {
             const decoded = bolt11Decode(invoiceTag[1]);
             const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
+            const sats = Number(amount.value) / 1000;
 
-            save('events', {
-              id: e.id,
-              kind: 9735,
-              pubkey: e.pubkey,
-              created_at: e.created_at,
-              amount: Number(amount.value) / 1000,
-              anchor: anchor()
-            });
+            if (zaps) {
+              if (!zaps.sourceIds.includes(e.id)) {
+                zaps.sourceIds.push(e.id);
+                zaps.sum = zaps.sum + sats;
+                save('aggregates', zaps);
+              }
+            } else {
+              save('aggregates', {
+                eventId: anchor(),
+                kind: 7,
+                sourceIds: [e.id],
+                sum: sats
+              });
+            }
           }
         }
       });

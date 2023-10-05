@@ -15,29 +15,31 @@ export const ZapThreadsContext = createContext<{
   preferencesStore: PreferencesStore;
 }>();
 
-export type BaseEvent = {
+export type NoteEvent = {
   id: string;
-  kind: 1 | 7 | 9735;
+  kind: 1;
+  content: string;
+  tags: string[][];
   created_at: number;
   pubkey: string;
 };
 
-export type NoteEvent = BaseEvent & {
-  kind: 1;
-  content: string;
-  tags: string[][];
+export type AggregateEvent = {
+  eventId: string;
+  sum: number;
+  sourceIds: string[];
+  kind: 7 | 9735;
 };
 
-export type LikeEvent = BaseEvent & {
+export type LikesEvent = AggregateEvent & {
   kind: 7;
 };
 
-export type ZapEvent = BaseEvent & {
+export type ZapsEvent = AggregateEvent & {
   kind: 9735;
-  amount: number;
 };
 
-export type StoredEvent = (NoteEvent | LikeEvent | ZapEvent) & { anchor: string; };
+export type StoredEvent = NoteEvent & { anchor: string; };
 
 export type StoredProfile = {
   pubkey: string,

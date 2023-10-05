@@ -1,6 +1,6 @@
 import { DBSchema, IDBPDatabase, StoreNames, openDB } from "idb";
 import { InitializedResource, Signal, createMemo, createResource, on } from "solid-js";
-import { StoredEvent, StoredProfile, StoredRelay } from "./stores";
+import { AggregateEvent, StoredEvent, StoredProfile, StoredRelay } from "./stores";
 import batchedFunction from "./batched-function";
 import { createMutable, createStore, reconcile, unwrap } from "solid-js/store";
 
@@ -51,9 +51,9 @@ export const findAllKeys = async <Name extends S, IndexName extends keyof Zapthr
   return _db.getAllKeys(type);
 };
 
-export const find = async <Name extends S>(type: Name, id: string) => {
+export const find = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, query: ZapthreadsSchema[Name]["indexes"][IndexName] | IDBKeyRange) => {
   const _db = await db();
-  return _db.get(type, id);
+  return _db.get(type, query);
 };
 
 const batchFns: { [key: string]: Function; } = {};
@@ -89,6 +89,11 @@ interface ZapthreadsSchema extends DBSchema {
     value: StoredEvent,
     indexes: { 'anchor': string, 'kind+anchor': [StoredEvent['kind'], string]; };
   };
+  aggregates: {
+    key: string[],
+    value: AggregateEvent,
+    indexes: { 'eventId+kind': [string, AggregateEvent['kind']]; },
+  },
   relays: {
     key: string[],
     value: StoredRelay,
@@ -104,20 +109,27 @@ interface ZapthreadsSchema extends DBSchema {
 let _db: IDBPDatabase<ZapthreadsSchema>;
 
 const db = async () => _db ||= await
-  openDB<ZapthreadsSchema>('zapthreads', 1, {
-    upgrade(db) {
-      const events = db.createObjectStore('events', { keyPath: 'id' });
-      events.createIndex('anchor', 'anchor');
-      events.createIndex('kind+anchor', ['kind', 'anchor']);
+  openDB<ZapthreadsSchema>('zapthreads', 2, {
+    upgrade(db, oldVersion, newVersion) {
+      if (newVersion == 1) {
+        const events = db.createObjectStore('events', { keyPath: 'id' });
+        events.createIndex('anchor', 'anchor');
+        events.createIndex('kind+anchor', ['kind', 'anchor']);
 
-      const relays = db.createObjectStore('relays', {
-        keyPath: ['url', 'anchor'],
-      });
-      relays.createIndex('url', 'url');
-      relays.createIndex('anchor', 'anchor');
+        const relays = db.createObjectStore('relays', {
+          keyPath: ['url', 'anchor'],
+        });
+        relays.createIndex('url', 'url');
+        relays.createIndex('anchor', 'anchor');
 
-      const profiles = db.createObjectStore('profiles', { keyPath: 'pubkey' });
-      profiles.createIndex('lastChecked', 'lastChecked');
+        const profiles = db.createObjectStore('profiles', { keyPath: 'pubkey' });
+        profiles.createIndex('lastChecked', 'lastChecked');
+      }
+
+      if (newVersion == 2) {
+        const aggregates = db.createObjectStore('aggregates', { keyPath: 'eventId' });
+        aggregates.createIndex('eventId+kind', ['eventId', 'kind']);
+      }
     },
   });
 
@@ -137,19 +149,3 @@ function createDeepSignal<T>(value: T): Signal<T> {
     },
   ] as Signal<T>;
 }
-
-
-// export const _ = async <Name extends S, IndexName extends IndexNames<ZapthreadsSchema, Name>>(storeName: Name, indexName: IndexName, query?: IndexKey<ZapthreadsSchema, Name, IndexName>): Promise<StoreValue<ZapthreadsSchema, Name>[]> => {
-//   console.log('in _');
-
-//   return db.getAllFromIndex(storeName, indexName, query);
-// };
-
-// export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["value"]>(fetcher: () => Promise<Value[]>) => {
-//   const get = createMemo(on([fetcher], () => {
-//     console.log('new watchall');
-//     const [resource] = createResource(fetcher, { initialValue: [] });
-//     return resource as InitializedResource<Value[]>;
-//   }));
-//   return () => get()();
-// };

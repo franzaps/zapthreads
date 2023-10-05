@@ -1,9 +1,9 @@
 import { defaultPicture, parseTags, shortenEncodedId, tagFor, updateProfiles } from "./util/ui";
-import { Show, createEffect, createSignal, on, useContext } from "solid-js";
+import { Show, createEffect, createSignal, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
+import { EventSigner, pool, StoredProfile, ZapThreadsContext } from "./util/stores";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
-import { npubEncode, nsecEncode } from "./nostr-tools/nip19";
+import { npubEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
 import { save, watchAll } from "./util/db";
 import { lightningSvg, likeSvg } from "./thread";
@@ -221,10 +221,11 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 export const RootComment = () => {
   const { preferencesStore, anchor } = useContext(ZapThreadsContext)!;
 
-  const zapEvents = watchAll(() => ['events', 'kind+anchor', [9735, anchor()] as [9735, string]]);
-  const zapCount = () => zapEvents()!.reduce((acc, e) => acc + (e as ZapEvent).amount, 0);
+  const zapsEvents = watchAll(() => ['aggregates', 'eventId+kind', [anchor(), 9735] as [string, 9735]]);
+  const zapCount = () => zapsEvents()[0]?.sum ?? 0;
 
-  const likeEvents = watchAll(() => ['events', 'kind+anchor', [7, anchor()] as [7, string]]);
+  const likesEvents = watchAll(() => ['aggregates', 'eventId+kind', [anchor(), 7] as [string, 7]]);
+  const likeCount = () => likesEvents()[0]?.sum ?? 0;
 
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
@@ -232,7 +233,7 @@ export const RootComment = () => {
         <Show when={!preferencesStore.disable().includes('likes')}>
           <li class="ztr-comment-action-like">
             {likeSvg()}
-            <span>{likeEvents()!.length} likes</span>
+            <span>{likeCount()} likes</span>
           </li>
         </Show>
         <Show when={!preferencesStore.disable().includes('zaps')}>
