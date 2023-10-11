@@ -138,6 +138,11 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       ['client', 'zapthreads'] // client tag
     ];
 
+    // add 'e' tag from replaceable event to prevent context switching
+    if (rootTag[0] !== 'e' && preferencesStore.staticId) {
+      unsignedEvent.tags.push(['e', preferencesStore.staticId]);
+    }
+
     // add p tag from note author to notify
     if (anchorPubkey()) {
       unsignedEvent.tags.push(['p', anchorPubkey()!]);

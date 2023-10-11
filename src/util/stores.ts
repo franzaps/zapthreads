@@ -86,4 +86,5 @@ export type PreferencesStore = {
   disable: () => DisableType[],
   urlPrefixes: { [key in UrlPrefixesKeys]?: string },
   filter?: Filter;
+  staticId?: string;
 };
