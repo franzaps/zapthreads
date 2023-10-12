@@ -8,10 +8,10 @@ import { createAutofocus } from "@solid-primitives/autofocus";
 import { save, watchAll } from "./util/db";
 import { lightningSvg, likeSvg } from "./thread";
 
-export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
+export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; replyValue?: string }) => {
   const { relays, anchor, anchorPubkey, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
-
-  const [comment, setComment] = createSignal('');
+  
+  const [comment, setComment] = createSignal(props.replyValue ?? '');
   const [loading, setLoading] = createSignal(false);
   const [loggedInUser, setLoggedInUser] = createSignal<StoredProfile>();
   const [errorMessage, setErrorMessage] = createSignal('');
@@ -223,7 +223,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   </div>;
 };
 
-export const RootComment = () => {
+export const RootComment = (props: {replyValue?: string}) => {
   const { preferencesStore, anchor } = useContext(ZapThreadsContext)!;
 
   const zapEvents = watchAll(() => ['events', 'kind+anchor', [9735, anchor()] as [9735, string]]);
@@ -247,7 +247,7 @@ export const RootComment = () => {
           </li>
         </Show>
       </ul>
-      <ReplyEditor />
+      <ReplyEditor replyValue={props.replyValue} />
     </div>
   </div>;
 };
