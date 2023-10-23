@@ -1,4 +1,4 @@
-import { defaultPicture, parseTags, shortenEncodedId, tagFor, updateProfiles } from "./util/ui";
+import { defaultPicture, parseTags, shortenEncodedId, updateProfiles } from "./util/ui";
 import { Show, createEffect, createSignal, on, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
 import { EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
@@ -94,64 +94,76 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     const content = comment().trim();
     if (!content) return;
 
-    // Ensure root
-    let rootTag = tagFor(preferencesStore.filter!);
-
-    if (rootTag.length === 0) {
-      const url = anchor();
-      const unsignedRootEvent: UnsignedEvent<1> = {
-        pubkey: signer.pk,
-        created_at: Math.round(Date.now() / 1000),
-        kind: 1,
-        tags: [['r', url]],
-        content: `Comments on ${url} (added by zapthreads) ↴`
-      };
-      const rootEvent: Event<1> = {
-        id: getEventHash(unsignedRootEvent),
-        ...unsignedRootEvent,
-        ...await signer.signEvent(unsignedRootEvent)
-      };
-
-      // Publish, store filter and get updated rootTag
-      if (preferencesStore.disable().includes('publish')) {
-        console.log('Publishing root event disabled', rootEvent);
-      } else {
-        pool.publish(relays(), rootEvent);
-      }
-      // Update filter to own rootEvent
-      preferencesStore.filter = { "#e": [rootEvent.id] };
-      rootTag = tagFor(preferencesStore.filter!);
-    }
-
     const unsignedEvent: UnsignedEvent<1> = {
       kind: 1,
       created_at: Math.round(Date.now() / 1000),
       content: content,
       pubkey: signer.pk,
-      tags: []
+      tags: [
+        ...parseTags(content), // tags from content
+        ['client', 'zapthreads'] // client tag
+      ]
     };
 
-    // add tags
-    unsignedEvent.tags = [
-      rootTag, // root
-      ...parseTags(content), // tags from content
-      ['client', 'zapthreads'] // client tag
-    ];
+    // Establish reference tag (root or reply)
 
-    // add 'e' tag from replaceable event to prevent context switching
-    if (rootTag[0] !== 'e' && preferencesStore.staticId) {
-      unsignedEvent.tags.push(['e', preferencesStore.staticId]);
+    const filter = preferencesStore.filter!;
+    const version = preferencesStore.version;
+
+    let referenceTag;
+
+    if (props.replyTo) {
+      referenceTag = ['e', props.replyTo, '', 'reply'];
+    } else { // it is a root
+      // add e tag to reply to a particular replaceable event version
+      if (filter['#a'] && version) {
+        referenceTag = ['e', version, '', 'root'];
+      } else if (filter['#e'] && filter['#e'].length > 0) {
+        // this could be for an URL anchor
+        referenceTag = ['e', filter['#e'][0], '', 'root'];
+      }
+
+      // If no root tag is present, create it to use as anchor
+      if (!referenceTag) {
+        const url = anchor();
+        const unsignedRootEvent: UnsignedEvent<1> = {
+          pubkey: signer.pk,
+          created_at: Math.round(Date.now() / 1000),
+          kind: 1,
+          tags: [['r', url]],
+          content: `Comments on ${url} (added by zapthreads) ↴`
+        };
+        const rootEvent: Event<1> = {
+          id: getEventHash(unsignedRootEvent),
+          ...unsignedRootEvent,
+          ...await signer.signEvent(unsignedRootEvent)
+        };
+
+        // Publish, store filter and get updated rootTag
+        if (preferencesStore.disable().includes('publish')) {
+          console.log('Publishing root event disabled', rootEvent);
+        } else {
+          pool.publish(relays(), rootEvent);
+        }
+        // Update filter to this rootEvent
+        preferencesStore.filter = { "#e": [rootEvent.id] };
+        referenceTag = ['e', rootEvent.id, '', 'root'];
+      }
     }
 
-    // add p tag from note author to notify
+    // Add reference tag (root or reply marker)
+    if (referenceTag) {
+      unsignedEvent.tags.push(referenceTag);
+    }
+
+    // Add a tag from replaceable event, if present
+    if (filter && filter['#a'] && filter['#a'][0]) {
+      unsignedEvent.tags.push(['a', filter['#a'][0]]);
+    }
+
+    // Add p tag from note author to notify
     if (anchorPubkey()) {
       unsignedEvent.tags.push(['p', anchorPubkey()!]);
-    }
-
-    // Set reply
-    if (props.replyTo) {
-      const reply = ['e', props.replyTo, '', 'reply'];
-      unsignedEvent.tags.push(reply);
     }
 
     const id = getEventHash(unsignedEvent);

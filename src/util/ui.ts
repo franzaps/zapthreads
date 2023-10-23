@@ -121,17 +121,6 @@ export const encodedEntityToFilter = (entity: string): Filter => {
   }
 };
 
-export const tagFor = (filter: Filter): string[] => {
-  if (filter["#a"]) {
-    return ["a", filter["#a"][0], "", "root"];
-  }
-  if (filter["#e"] && filter["#e"].length > 0) {
-    return ["e", filter["#e"][0], "", "root"];
-  } else {
-    return [];
-  }
-};
-
 const URL_REGEX = /(?<=^|\s)https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gi;
 const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/gi;
 const NIP_08_REGEX = /\B\#\[([0-9])\]/g;

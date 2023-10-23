@@ -20,9 +20,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   }
 
   const anchor = () => props.anchor;
-  const staticId = () => props.staticId;
-  const _relays = (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",");
-  const relays = () => _relays.map(r => new URL(r).toString());
+  const version = () => props.version;
+  const relays = () => (props.relays || "wss://relay.damus.io,wss://nos.lol").split(",").map(r => new URL(r).toString());
 
   const disable = () => props.disable.split(',').map(e => e.trim()).filter(isDisableType);
   const closeOnEose = () => disable().includes('watch');
@@ -40,9 +39,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   let sub: Sub | null;
 
-  // Only update when anchor or relay props change
-  createEffect(on([anchor, staticId, relays], async () => {
-    preferencesStore.staticId = staticId();
+  // Only update when anchor/version or relay props change
+  createEffect(on([anchor, version, relays], async () => {
     if (anchor().startsWith('http')) {
       const eventsForUrl = await pool.list(relays(), [
         { '#r': [anchor()], kinds: [1] }
@@ -51,6 +49,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
       preferencesStore.filter = { "#e": eventIdsForUrl };
     } else {
       preferencesStore.filter = encodedEntityToFilterTag(anchor());
+      preferencesStore.version = version();
     }
   }));
 
@@ -89,6 +88,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
             contentEvent.content = `# ${title}\n ${contentEvent.content}`;
             setContent(parseContent(contentEvent, profiles(), anchor(), preferencesStore));
           }
+          preferencesStore.version ||= contentEvent.id;
         }
       }
 
@@ -254,7 +254,7 @@ export default ZapThreads;
 
 customElement<ZapThreadsAttributes>('zap-threads', {
   anchor: "",
-  staticId: "",
+  version: "",
   relays: "",
   npub: "",
   disable: "",
@@ -262,7 +262,7 @@ customElement<ZapThreadsAttributes>('zap-threads', {
 }, (props) => {
   return <ZapThreads
     anchor={props.anchor ?? ''}
-    staticId={props.staticId ?? ''}
+    version={props.version ?? ''}
     relays={props.relays ?? ''}
     npub={props.npub ?? ''}
     disable={props.disable ?? ''}
@@ -271,5 +271,5 @@ customElement<ZapThreadsAttributes>('zap-threads', {
 });
 
 export type ZapThreadsAttributes = {
-  [key in 'anchor' | 'static-id' | 'relays' | 'npub' | 'disable' | 'url-prefixes']?: string;
+  [key in 'anchor' | 'version' | 'relays' | 'npub' | 'disable' | 'url-prefixes']?: string;
 } & JSX.HTMLAttributes<HTMLElement>;
