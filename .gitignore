@@ -4,6 +4,7 @@
 **/.vscode
 **/*.d.ts
 **/*.d.ts.map
+!src/types/*
 
 pnpm-lock.yaml
 .DS_Store
