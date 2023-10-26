@@ -274,5 +274,5 @@ customElement<ZapThreadsAttributes>('zap-threads', {
 });
 
 export type ZapThreadsAttributes = {
-  [key in 'anchor' | 'version' | 'relays' | 'npub' | 'disable' | 'url-prefixes']?: string;
+  [key in 'anchor' | 'version' | 'relays' | 'npub' | 'disable' | 'url-prefixes' | 'reply']?: string;
 } & JSX.HTMLAttributes<HTMLElement>;
