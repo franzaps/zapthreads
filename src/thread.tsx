@@ -1,12 +1,12 @@
 import { Index, createEffect, createMemo, createSignal, onCleanup, useContext } from "solid-js";
-import { defaultPicture, parseContent, shortenEncodedId, svgWidth, timeAgo, totalChildren } from "./util/ui";
+import { defaultPicture, encodedEntityToFilter, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
-import { NestedNote } from "./util/nest";
-import { ZapThreadsContext } from "./util/stores";
-import { npubEncode } from "./nostr-tools/nip19";
+import { NestedNoteEvent } from "./util/nest";
+import { noteEncode, npubEncode } from "./nostr-tools/nip19";
 import { createElementSize } from "@solid-primitives/resize-observer";
+import { ZapThreadsContext } from "./util/stores";
 
-export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
+export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEventIds: () => string[]; }) => {
   const { anchor, preferencesStore, profiles } = useContext(ZapThreadsContext)!;
 
   return <div class="ztr-thread">
@@ -24,17 +24,17 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
 
           const [profilePicture, setProfilePicture] = createSignal(defaultPicture);
 
-          const pubkey = () => event().pubkey;
+          const pubkey = () => event().pk;
           const npub = () => npubEncode(pubkey());
-          const profile = () => profiles().find(p => p.pubkey === pubkey());
+          const profile = () => profiles().find(p => p.pk === pubkey());
 
           createEffect(async () => {
-            setProfilePicture(profile()?.imgUrl || defaultPicture);
+            setProfilePicture(profile()?.i || defaultPicture);
           });
 
           // Update createdAt every minute
           let timer: any;
-          const createdAt = () => timeAgo(event().created_at! * 1000);
+          const createdAt = () => timeAgo(event().ts * 1000);
           const [createdTimeAgo, setCreatedTimeAgo] = createSignal<string>();
 
           createEffect(() => {
@@ -44,7 +44,29 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
             }, 60 * 1000);
           });
 
+          const isAnchorMentioned = () => event().a === anchor().value && event().am;
+
+          const action = () => event().k === 9802 ? 'highlight' : (isAnchorMentioned() ? 'mention' : 'comment');
+
           const total = createMemo(() => totalChildren(event()));
+
+          const isUnspecifiedVersion = () =>
+            // if it does not have a parent or rootId
+            !event().parent && !event().ro;
+
+          const isMissingEvent = () =>
+            // if it does not have a parent
+            !event().parent &&
+            // does have a root but it's not in the rootEvents
+            event().ro && !props.rootEventIds().includes(event().ro!);
+
+          const isDifferentVersion = () =>
+            // if it does not have a parent
+            !event().parent &&
+            // does have a root in root events
+            event().ro && props.rootEventIds().includes(event().ro!)
+            // but does not match the current version
+            && preferencesStore.version && preferencesStore.version !== event().ro;
 
           onCleanup(() => clearInterval(timer));
 
@@ -57,9 +79,9 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
                   </div>
                   <ul class="ztr-comment-info-items">
                     <li class="ztr-comment-info-author">
-                      <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{profile()?.name || shortenEncodedId(npub())}</a>
+                      <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{profile()?.n || shortenEncodedId(npub())}</a>
                     </li>
-                    <li>{createdTimeAgo()}</li>
+                    <li><strong>{action()}ed</strong> <span style="white-space: nowrap;">{createdTimeAgo()}</span></li>
                     {total() > 0 &&
                       <>
                         <li>{separatorSvg()}</li>
@@ -84,13 +106,21 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
               {showInfo() &&
                 <div class="ztr-info-pane">
                   <a href={`https://nostr.guru/e/${event().id}`} target="_blank">Event</a>:
-                  <pre>{JSON.stringify(event(), ['id', 'created_at', 'pubkey'], 2)}</pre>
+                  <pre>{JSON.stringify(event(), ['id', 'k', 'ts', 'pk', 'ro', 'er', 'a', 'am'], 2)}</pre>
+                  {preferencesStore.version && <pre>Current version: {preferencesStore.version}</pre>}
                 </div>}
+
+              <p class="ztr-comment-text warning">
+                {isMissingEvent() && <>{warningSvg()}<strong>This is a {action()} that referenced this article in <a href={preferencesStore.urlPrefixes.note + noteEncode(event().ro!)}>another thread</a></strong></>}
+                {isUnspecifiedVersion() && <>{warningSvg()}<strong>Article contents may have changed since this {action()} was made</strong></>}
+                {isDifferentVersion() && <>{warningSvg()}<strong>Article contents changed since this {action()} was made</strong></>}
+              </p>
+
               <div
                 ref={setTarget}
-                class="ztr-comment-text"
+                classList={{ "ztr-comment-text": true, "highlight": event().k == 9802 }}
                 style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
-                innerHTML={parseContent(event(), profiles(), anchor(), preferencesStore)}>
+                innerHTML={parseContent(event(), profiles(), preferencesStore)}>
               </div>
 
               {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
@@ -123,7 +153,7 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
                 <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
             {!isThreadCollapsed() && <div class="ztr-comment-replies">
-              <Thread nestedEvents={() => event().children} />
+              <Thread nestedEvents={() => event().children} rootEventIds={props.rootEventIds} />
             </div>}
           </div>;
         }
@@ -131,10 +161,6 @@ export const Thread = (props: { nestedEvents: () => NestedNote[]; }) => {
     </Index>
   </div>;
 };
-
-const sortByDate = (arr: NestedNote[]) => arr.sort((a, b) => (a.created_at || 0) >= (b.created_at || 0)
-  ? -1
-  : 1);
 
 // SVG
 
@@ -150,3 +176,5 @@ const expandSvg = () => <svg width={svgWidth} height={svgWidth} viewBox="0 0 576
 export const ellipsisSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width={svgWidth} height={svgWidth} viewBox="0 -200 560 640"><path d="M8 256a56 56 0 1 1 112 0A56 56 0 1 1 8 256zm160 0a56 56 0 1 1 112 0 56 56 0 1 1 -112 0zm216-56a56 56 0 1 1 0 112 56 56 0 1 1 0-112z" /></svg>;
 const rightArrow = () => <svg xmlns="http://www.w3.org/2000/svg" width={svgWidth * 0.7} height={svgWidth * 0.7} viewBox="0 -50 256 512"><path d="M246.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-9.2-9.2-22.9-11.9-34.9-6.9s-19.8 16.6-19.8 29.6l0 256c0 12.9 7.8 24.6 19.8 29.6s25.7 2.2 34.9-6.9l128-128z" /></svg>;
 const downArrow = () => <svg xmlns="http://www.w3.org/2000/svg" width={svgWidth * 0.7} height={svgWidth * 0.7} viewBox="0 -50 320 512"><path d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z" /></svg>;
+
+const warningSvg = () => <svg width={svgWidth} xmlns="http://www.w3.org/2000/svg" height={svgWidth} viewBox="0 0 512 512"><path d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480H40c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24V296c0 13.3 10.7 24 24 24s24-10.7 24-24V184c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z" /></svg>;

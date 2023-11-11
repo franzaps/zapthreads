@@ -7,7 +7,7 @@ body {
 }
 
 :root {
-  --ztr-link-color:  #92379c;
+  --ztr-link-color: #92379c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -15,8 +15,9 @@ body {
     color: #e7e7e7;
     background-color: #222;
   }
+
   :root {
-    --ztr-link-color: #167bb9;
+    --ztr-link-color: #F6AD55;
   }
 }
 
@@ -26,17 +27,21 @@ body {
   color: #fa7f25;
   background: white;
 }
+
 .custom .solid-select-control {
   outline-color: #fca560;
   border-color: #fca560;
 }
+
 .custom .solid-select-placeholder {
   color: #fca560;
 }
+
 .custom .solid-select-option:hover {
   background-color: #fa7f25;
   color: #fff;
 }
+
 .custom .solid-select-option[data-focused=true] {
   background-color: #fca560;
   color: #fff;

@@ -49,6 +49,6 @@
     "light-bolt11-decoder": "^3.0.0",
     "nano-markdown": "^1.2.2",
     "solid-element": "^1.7.1",
-    "solid-js": "^1.7.6"
+    "solid-js": "^1.8.5"
   }
 }

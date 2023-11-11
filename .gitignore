@@ -7,6 +7,7 @@
 !src/types/*
 
 pnpm-lock.yaml
+.pnpm-store/
 .DS_Store
 
 TODO.md

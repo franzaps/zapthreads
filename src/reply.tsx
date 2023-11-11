@@ -1,19 +1,19 @@
-import { defaultPicture, parseTags, shortenEncodedId, updateProfiles } from "./util/ui";
-import { Show, createEffect, createSignal, on, useContext } from "solid-js";
+import { defaultPicture, generateTags, shortenEncodedId, updateProfiles } from "./util/ui";
+import { Show, createEffect, createSignal, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { EventSigner, pool, StoredProfile, ZapEvent, ZapThreadsContext } from "./util/stores";
+import { EventSigner, ZapThreadsContext, pool } from "./util/stores";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
-import { npubEncode, nsecEncode } from "./nostr-tools/nip19";
 import { createAutofocus } from "@solid-primitives/autofocus";
 import { save, watchAll } from "./util/db";
 import { lightningSvg, likeSvg } from "./thread";
+import { Profile, eventToNoteEvent } from "./util/models";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, anchor, anchorPubkey, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
+  const { relays, anchor, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
 
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
-  const [loggedInUser, setLoggedInUser] = createSignal<StoredProfile>();
+  const [loggedInUser, setLoggedInUser] = createSignal<Profile>();
   const [errorMessage, setErrorMessage] = createSignal('');
 
   // Sessions
@@ -38,9 +38,9 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   createEffect(async () => {
     if (signersStore.active) {
       const pk = signersStore.active.pk;
-      let profile = profiles().find(p => p.pubkey === pk);
+      let profile = profiles().find(p => p.pk === pk);
       if (!profile) {
-        profile = { pubkey: pk, lastChecked: 0, created_at: 0, npub: npubEncode(pk) };
+        profile = { pk, l: 0, ts: 0 };
         await save('profiles', profile);
       }
       setLoggedInUser(profile);
@@ -58,7 +58,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setComment('');
     setErrorMessage('');
 
-    await save('events', { ...event as Event<1>, anchor: anchor() }, { immediate: true });
+    await save('events', eventToNoteEvent(event as Event<1>), { immediate: true });
 
     // callback (closes the reply form)
     props.onDone?.call(this);
@@ -71,7 +71,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setComment('');
   };
 
-  const publish = async (profile?: StoredProfile) => {
+  const publish = async (profile?: Profile) => {
     let signer: EventSigner | undefined;
     if (profile) {
       signer = signersStore.active;
@@ -100,14 +100,14 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       content: content,
       pubkey: signer.pk,
       tags: [
-        ...parseTags(content), // tags from content
+        ...generateTags(content), // tags from content
         ['client', 'zapthreads'] // client tag
       ]
     };
 
     // Establish reference tag (root or reply)
 
-    const filter = preferencesStore.filter!;
+    const filter = preferencesStore.filter;
     const version = preferencesStore.version;
 
     let referenceTag;
@@ -125,7 +125,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
       // If no root tag is present, create it to use as anchor
       if (!referenceTag) {
-        const url = anchor();
+        const url = anchor().value;
         const unsignedRootEvent: UnsignedEvent<1> = {
           pubkey: signer.pk,
           created_at: Math.round(Date.now() / 1000),
@@ -156,15 +156,17 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       unsignedEvent.tags.push(referenceTag);
     }
 
+    // TODO this probably not there
     // Add a tag from replaceable event, if present
     if (filter && filter['#a'] && filter['#a'][0]) {
       unsignedEvent.tags.push(['a', filter['#a'][0]]);
     }
 
-    // Add p tag from note author to notify
-    if (anchorPubkey()) {
-      unsignedEvent.tags.push(['p', anchorPubkey()!]);
-    }
+    // TODO Add p tag from note author to notify them ()
+    // const contentEvents = await findAll('events', 'anchor', anchor()); ??
+    // if (anchorPubkey()) {
+    //   unsignedEvent.tags.push(['p', anchorPubkey()!]);
+    // }
 
     const id = getEventHash(unsignedEvent);
 
@@ -193,9 +195,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   // Only autofocus if 
   const autofocus = props.replyTo !== undefined;
   let ref!: HTMLTextAreaElement;
-  createAutofocus(() => {
-    return autofocus ? ref : undefined;
-  });
+  createAutofocus(() => autofocus && ref);
 
   return <div class="ztr-reply-form">
     <textarea
@@ -216,13 +216,13 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         </svg>
       }>
         <div class="ztr-comment-info-picture">
-          <img src={loggedInUser()?.imgUrl || defaultPicture} />
+          <img src={loggedInUser()?.i || defaultPicture} />
         </div>
       </Show>
 
       {loggedInUser() &&
         <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser())}>
-          Reply as {loggedInUser()!.name || shortenEncodedId(loggedInUser()!.npub!)}
+          Reply as {loggedInUser()!.n || shortenEncodedId(loggedInUser()!.pk)}
         </button>}
 
       {!loggedInUser() && !preferencesStore.disable().includes('replyAnonymously') &&
@@ -238,10 +238,12 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 export const RootComment = () => {
   const { preferencesStore, anchor } = useContext(ZapThreadsContext)!;
 
-  const zapEvents = watchAll(() => ['events', 'kind+anchor', [9735, anchor()] as [9735, string]]);
-  const zapCount = () => zapEvents()!.reduce((acc, e) => acc + (e as ZapEvent).amount, 0);
-
-  const likeEvents = watchAll(() => ['events', 'kind+anchor', [7, anchor()] as [7, string]]);
+  // TODO watchAll aggregates until we implement watch
+  const aggregateEvents = watchAll(() => ['aggregates']);
+  const zapCount = () => aggregateEvents().find(a => a.eid === anchor().value && a.k === 9735)?.sum ?? 0;
+  const likeCount = () => {
+    return aggregateEvents().find(a => a.eid === anchor().value && a.k === 7)?.ids.length ?? 0;
+  };
 
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
@@ -249,7 +251,7 @@ export const RootComment = () => {
         <Show when={!preferencesStore.disable().includes('likes')}>
           <li class="ztr-comment-action-like">
             {likeSvg()}
-            <span>{likeEvents()!.length} likes</span>
+            <span>{likeCount()} likes</span>
           </li>
         </Show>
         <Show when={!preferencesStore.disable().includes('zaps')}>

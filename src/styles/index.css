@@ -1,4 +1,5 @@
-#ztr-content, #ztr-content img {
+#ztr-content,
+#ztr-content img {
   max-width: 100%;
 }
 
@@ -6,8 +7,10 @@
   font-family: var(--ztr-font);
   font-size: var(--ztr-font-size);
   color: var(--ztr-text-color);
-  border: 1px solid transparent; /* Removes margin collapse */
+  border: 1px solid transparent;
+  /* Removes margin collapse */
   margin-top: 4rem;
+  line-height: 1.2rem;
 }
 
 #ztr-subtitle {
@@ -28,7 +31,8 @@ a {
   padding: 0;
 }
 
-.ztr-comment, .ztr-reply-button {
+.ztr-comment,
+.ztr-reply-button {
   background-color: var(--ztr-background-color, rgba(0, 0, 0, 0.03));
 }
 
@@ -63,7 +67,7 @@ a {
 
 ul.ztr-comment-info-items {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -72,7 +76,6 @@ ul.ztr-comment-info-items {
 
 ul.ztr-comment-info-items li {
   display: inline-block;
-  text-align: center;
   cursor: default;
   padding-right: 0.75rem;
 }
@@ -82,7 +85,7 @@ ul.ztr-comment-info-items li a {
 }
 
 .ztr-comment-info-author {
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
 .ztr-comment-info-dots {
@@ -101,13 +104,19 @@ ul.ztr-comment-info-items li a {
   object-fit: cover;
 }
 
-.ztr-comment-text, #ztr-content {
-  margin-top: -1rem;
+.ztr-comment-text,
+#ztr-content {
+  margin-bottom: 0.75rem;
   padding: 0 0.8rem 0 4rem;
   line-height: 1.5rem;
   line-break: loose;
   word-break: break-word;
   overflow: hidden;
+  max-width: 750px;
+}
+
+.ztr-comment-text p {
+  margin: 0;
 }
 
 .ztr-comment-text code {
@@ -115,7 +124,8 @@ ul.ztr-comment-info-items li a {
   margin: 0 0.2em;
 }
 
-.ztr-comment-text pre, .ztr-info-pane pre {
+.ztr-comment-text pre,
+.ztr-info-pane pre {
   white-space: pre-wrap;
   white-space: -moz-pre-wrap;
 }
@@ -128,8 +138,28 @@ ul.ztr-comment-info-items li a {
   max-width: 100%;
 }
 
+.ztr-comment-text.warning {
+  margin-top: -0.5rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+}
+
+.ztr-comment-text.warning svg {
+  height: 1em;
+  fill: #e4984d;
+  padding-right: 0.7em;
+}
+
 .ztr-comment-replies {
   margin-left: 2em;
+}
+
+.highlight p {
+  background: #F6AD55;
+  color: #2B2B2B;
+  display: inline;
+  padding: 0.2em;
 }
 
 /* Styling the reply to comment form */
@@ -145,13 +175,14 @@ ul.ztr-comment-info-items li a {
   cursor: pointer;
 }
 
-ul.ztr-comment-actions, .ztr-comment-expand {
+ul.ztr-comment-actions,
+.ztr-comment-expand {
   display: flex;
   align-items: center;
   list-style: none;
   margin: 0;
   padding: 0 0 0 4rem;
-  /* font-size: 1.05rem; */
+  font-size: 0.9rem;
   font-weight: 600;
   user-select: none;
 }
@@ -172,13 +203,13 @@ ul.ztr-comment-actions li span {
 svg {
   fill: var(--ztr-icon-color, #3B3B3B);
 }
-  
+
 .ztr-comment-action-reply:hover svg {
   fill: #92379c;
 }
 
 .ztr-comment-action-reply:hover span {
-  color:#92379c;
+  color: #92379c;
 }
 
 .ztr-comment-action-zap:hover svg {
@@ -186,7 +217,7 @@ svg {
 }
 
 .ztr-comment-action-zap:hover span {
-  color:#e4984d;
+  color: #e4984d;
 }
 
 .ztr-comment-action-like:hover svg {
@@ -194,7 +225,7 @@ svg {
 }
 
 .ztr-comment-action-like:hover span {
-  color:#e35428;
+  color: #e35428;
 }
 
 .ztr-reply-form {
@@ -303,10 +334,12 @@ svg {
     stroke-dasharray: 1, 150;
     stroke-dashoffset: 0;
   }
+
   50% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -35;
   }
+
   100% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -124;
@@ -335,23 +368,30 @@ svg {
   .ztr-spinner .path {
     stroke: var(--ztr-text-color, #DEDEDE);
   }
-  .ztr-comment, .ztr-reply-button {
+
+  .ztr-comment,
+  .ztr-reply-button {
     background-color: var(--ztr-background-color, rgba(255, 255, 255, 0.06));
   }
+
   .ztr-reply-login-button {
     color: #2B2B2B;
     background-color: var(--ztr-login-button-color, #DEDEDE);
   }
+
   svg {
     fill: var(--ztr-icon-color, #DEDEDE);
   }
+
   ul.ztr-comment-actions li span {
     color: var(--ztr-icon-color);
   }
+
   .ztr-comment-action-reply:hover svg {
     fill: #96609c;
   }
+
   .ztr-comment-action-reply:hover span {
-    color:#96609c;
+    color: #96609c;
   }
 }

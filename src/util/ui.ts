@@ -1,25 +1,25 @@
 import { UnsignedEvent } from "../nostr-tools/event";
-import { NestedNote } from "./nest";
-import { PreferencesStore, StoredProfile, UrlPrefixesKeys, pool } from "./stores";
+import { NestedNoteEvent } from "./nest";
+import { Anchor, PreferencesStore, UrlPrefixesKeys, pool } from "./stores";
 import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { matchAll, replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
 import { findAll, save } from "./db";
+import { NoteEvent, Profile } from "./models";
 
 // Misc profile helpers
 
-export const updateProfiles = async (pubkeys: string[], relays: string[], profiles: StoredProfile[]): Promise<void> => {
+export const updateProfiles = async (pubkeys: string[], relays: string[], profiles: Profile[]): Promise<void> => {
   const now = +new Date;
   const sixHours = 21600000;
 
   const pubkeysToUpdate = [...new Set(pubkeys)].filter(pubkey => {
-    const profile = profiles.find(p => p.pubkey === pubkey);
-    if (profile?.lastChecked && profile!.lastChecked > now - sixHours) {
+    const profile = profiles.find(p => p.pk === pubkey);
+    if (profile?.l && profile!.l > now - sixHours) {
       // console.log(profile!.lastChecked, now - sixHours, profile!.lastChecked < now - sixHours);
       return false;
     } else {
-      // console.log('old or no lastchecked for', profile?.pubkey);
       return true;
     }
   }).filter(e => !!e);
@@ -39,65 +39,48 @@ export const updateProfiles = async (pubkeys: string[], relays: string[], profil
       const payload = JSON.parse(e.content);
       const pubkey = e.pubkey;
       const updatedProfile = {
-        pubkey,
-        created_at: e.created_at,
-        imgUrl: payload.image || payload.picture,
-        name: payload.displayName || payload.display_name || payload.name,
+        pk: pubkey,
+        ts: e.created_at,
+        i: payload.image || payload.picture,
+        n: payload.displayName || payload.display_name || payload.name,
       };
-      const storedProfile = profiles.find(p => p.pubkey === pubkey);
-      if (!storedProfile || !storedProfile?.name || storedProfile!.created_at < updatedProfile.created_at) {
-        // console.log('saving profile');
-        save('profiles', { ...updatedProfile, lastChecked: now });
+      const storedProfile = profiles.find(p => p.pk === pubkey);
+      if (!storedProfile || !storedProfile?.n || storedProfile!.ts < updatedProfile.ts) {
+        save('profiles', { ...updatedProfile, l: now });
       } else {
-        // console.log('only last checked', now);
-        save('profiles', { ...storedProfile, lastChecked: now });
+        save('profiles', { ...storedProfile, l: now });
       }
-    } else {
-      // console.log('was not found', pubkey);
-      // TODO disable for now, leave for recheck 
-      // save('profiles', { pubkey, lastChecked: now, created_at: 0, npub: npubEncode(pubkey) });
     }
   }
 };
 
 // Calculate latest created_at to be used as `since` on subsequent relay requests
-export const calculateRelayLatest = async (anchor: string) => {
-  const eventsForAnchor = await findAll('events', 'anchor', anchor);
+export const calculateRelayLatest = async (anchor: Anchor) => {
+  // TODO look up here could be on 'a', 'r' or 'e' - depending on anchor!
+  const eventsForAnchor = await findAll('events', 'a', [anchor.value]);
 
   const obj: { [url: string]: number; } = {};
 
   for (const e of eventsForAnchor) {
     const relaysForEvent = pool.seenOn(e.id);
     for (const relayUrl of relaysForEvent) {
-      if (e.created_at > (obj[relayUrl] || 0)) {
-        obj[relayUrl] = e.created_at;
+      if (e.ts > (obj[relayUrl] || 0)) {
+        obj[relayUrl] = e.ts;
       }
     }
   }
 
-  const relays = await findAll('relays', 'anchor', anchor);
-  for (const url in obj) {
-    const relay = relays.find(r => r.url === url);
+  const relays = await findAll('relays', 'a', [anchor.value]);
+  for (const name in obj) {
+    const relay = relays.find(r => r.n === name);
     if (relay) {
-      if (obj[url] > relay.latest) {
-        relay.latest = obj[url];
+      if (obj[name] > relay.l) {
+        relay.l = obj[name];
         save('relays', relay);
       }
     } else {
-      save('relays', { url, anchor, latest: obj[url] });
+      save('relays', { n: name, a: anchor.value, l: obj[name] });
     }
-  }
-};
-
-export const encodedEntityToFilterTag = (entity: string): Filter => {
-  const decoded = decode(entity);
-  switch (decoded.type) {
-    case 'nevent': return { "#e": [decoded.data.id] };
-    case 'note': return { "#e": [decoded.data] };
-    case 'naddr': return {
-      "#a": [`${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`]
-    };
-    default: return {};
   }
 };
 
@@ -129,8 +112,8 @@ const BACKTICKS_REGEX = /\`(.*?)\`/g;
 
 const ANY_HASHTAG = /\B\#([a-zA-Z0-9]+\b)(?!;)/g;
 
-export const parseContent = (e: Pick<UnsignedEvent, 'content' | 'tags'>, profiles: StoredProfile[], anchor?: string, prefs?: PreferencesStore): string => {
-  let content = e.content;
+export const parseContent = (e: NoteEvent, profiles: Profile[], prefs?: PreferencesStore): string => {
+  let content = e.c;
 
   // replace http(s) links + images
   content = content.replace(URL_REGEX, (url) => {
@@ -141,48 +124,47 @@ export const parseContent = (e: Pick<UnsignedEvent, 'content' | 'tags'>, profile
   });
 
   // turn hashtags into links (does not match hashes in URLs)
-  const hashtags = [...new Set(e.tags)].filter(t => t[0] === 't');
+  const hashtags = [...new Set(e.t)];
   if (hashtags.length > 0) {
-    const re = new RegExp(`(^|\\s)\\#(${hashtags.map(h => h[1]).join('|')})`, 'gi');
+    const re = new RegExp(`(^|\\s)\\#(${hashtags.join('|')})`, 'gi');
     content = content.replaceAll(re, `$1[#$2](${prefs!.urlPrefixes.tag}$2)`);
   }
 
   // NIP-08 => NIP-27
-  content = content.replace(NIP_08_REGEX, (match, capture) => {
-    switch (e.tags[capture][0]) {
-      case "e":
-        return 'nostr:' + noteEncode(e.tags[capture][1]);
-      case "a":
-        const [kind, pubkey, identifier] = e.tags[capture][1].split(":");
-        return 'nostr:' + naddrEncode({ identifier, pubkey, kind: parseInt(kind) });
-      case "p":
-        const _pubkey = e.tags[capture][1];
-        return 'nostr:' + npubEncode(_pubkey);
-      default:
-        return match;
-    }
-  });
+  // TODO restore??
+
+  // content = content.replace(NIP_08_REGEX, (match, capture) => {
+  //   switch (e.tags[capture][0]) {
+  //     case "e":
+  //       return 'nostr:' + noteEncode(e.tags[capture][1]);
+  //     case "a":
+  //       const [kind, pubkey, identifier] = e.tags[capture][1].split(":");
+  //       return 'nostr:' + naddrEncode({ identifier, pubkey, kind: parseInt(kind) });
+  //     case "p":
+  //       const _pubkey = e.tags[capture][1];
+  //       return 'nostr:' + npubEncode(_pubkey);
+  //     default:
+  //       return match;
+  //   }
+  // });
 
   // Attempts to NIP-27 => NIP-27
-  content = content.replaceAll(BAD_NIP27_REGEX, '$1nostr:$2');
+  content = content.replaceAll(BAD_NIP27_REGEX, 'nostr:$1');
 
   // NIP-27 => Markdown
   content = replaceAll(content, ({ decoded, value }) => {
     switch (decoded.type) {
       case 'nprofile':
-        let p1 = profiles.find(p => p.pubkey === decoded.data.pubkey);
-        const text1 = p1?.name || shortenEncodedId(value);
+        let p1 = profiles.find(p => p.pk === decoded.data.pubkey);
+        const text1 = p1?.n || shortenEncodedId(value);
         return `[@${text1}](${prefs!.urlPrefixes.nprofile}${value})`;
       case 'npub':
-        let p2 = profiles.find(p => p.pubkey === decoded.data);
-        const text2 = p2?.name || shortenEncodedId(value);
+        let p2 = profiles.find(p => p.pk === decoded.data);
+        const text2 = p2?.n || shortenEncodedId(value);
         return `[@${text2}](${prefs!.urlPrefixes.npub}${value})`;
       case 'note':
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.note}${value})`;
       case 'naddr':
-        // If this naddr is the anchor AND it is a mention, remove the text as it's redundant
-        const isAnchorMentioned = anchor === value && e.tags.map(t => [...t]).find(t => t[0] === 'a' && t[1] === `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}` && t[3] === 'mention');
-        if (isAnchorMentioned) return '';
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.naddr}${value})`;
       case 'nevent':
         return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.nevent}${value})`;
@@ -197,13 +179,12 @@ export const parseContent = (e: Pick<UnsignedEvent, 'content' | 'tags'>, profile
   return nmd(content.trim());
 };
 
-export const parseTags = (content: string): string[][] => {
+export const generateTags = (content: string): string[][] => {
   const result = [];
   // generate p and e tags in content
   const nostrMatches = matchAll(content);
 
   for (const m of nostrMatches) {
-    // TODO will handle all of these with a separate library
     if (m.decoded.type === 'npub') {
       result.push(['p', m.decoded.data]);
     }
@@ -251,6 +232,10 @@ export const shortenEncodedId = (encoded: string) => {
   return encoded.substring(0, 8) + '...' + encoded.substring(encoded.length - 4);
 };
 
+export const sortByDate = <T extends { ts?: number; }>(arr: T[]) => arr.sort((a, b) => (a.ts || 0) >= (b.ts || 0)
+  ? -1
+  : 1);
+
 export const svgWidth = 20;
 export const defaultPicture = 'data:image/svg+xml;utf-8,<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><circle cx="512" cy="512" r="512" fill="%23333" fill-rule="evenodd" /></svg>';
 
@@ -269,16 +254,21 @@ export const timeAgo = (timestamp: number): string => {
     const h = Math.floor(secondsPast / 3600);
     return `${h} hour${h === 1 ? '' : 's'} ago`;
   }
-  if (secondsPast > 86400) {
+  // 604800ms = 1 week
+  if (secondsPast <= 604800) {
+    const d = Math.floor(secondsPast / 86400);
+    return `${d} day${d === 1 ? '' : 's'} ago`;
+  }
+  if (secondsPast > 604800) {
     const date: Date = new Date(timestamp);
     const day = date.toLocaleDateString('en-us', { day: "numeric", month: "long" });
     const year = date.getFullYear() === now.getFullYear() ? '' : ' ' + date.getFullYear();
-    return day + year;
+    return 'on ' + day + year;
   }
   return '';
 };
 
-export const totalChildren = (event: NestedNote): number => {
+export const totalChildren = (event: NestedNoteEvent): number => {
   return event.children.reduce<number>((acc, c) => {
     return acc + totalChildren(c);
   }, event.children.length);
