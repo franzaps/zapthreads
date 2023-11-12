@@ -30,7 +30,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       signEvent: async (event) => window.nostr!.signEvent(event)
     };
 
-    onError('');
+    onError(''); // clear error
     signersStore.active = signersStore.internal;
   };
 
@@ -68,7 +68,6 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setLoading(false);
     // set error message
     setErrorMessage(message);
-    setComment('');
   };
 
   const publish = async (profile?: Profile) => {
