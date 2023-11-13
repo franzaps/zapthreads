@@ -1,11 +1,11 @@
-import { NestedNoteEvent } from "./nest";
-import { Anchor, UrlPrefixesKeys, pool, PreferencesStore } from "./stores";
+import { NestedNoteEvent } from "./nest.ts";
+import { Anchor, UrlPrefixesKeys, pool, PreferencesStore } from "./stores.ts";
 import { decode } from "nostr-tools/nip19";
 import { Filter } from "nostr-tools/filter";
 import { matchAll, replaceAll } from "nostr-tools/nip27";
 import nmd from "nano-markdown";
-import { findAll, save } from "./db";
-import { NoteEvent, Profile } from "./models";
+import { findAll, save } from "./db.ts";
+import { NoteEvent, Profile } from "./models.ts";
 
 // Misc profile helpers
 
@@ -53,14 +53,24 @@ export const updateProfiles = async (pubkeys: string[], relays: string[], profil
   }
 };
 
-// Calculate latest created_at to be used as `since` on subsequent relay requests
-export const calculateRelayLatest = async (anchor: Anchor) => {
-  // TODO look up here could be on 'a', 'r' or 'e' - depending on anchor!
-  const eventsForAnchor = await findAll('events', 'a', [anchor.value]);
+export const getRelayLatest = async (anchor: Anchor, relayNames: string[]) => {
+  const relaysForAnchor = await findAll('relays', anchor.value, { index: 'a' });
+  const relaysLatest = relaysForAnchor.filter(r => relayNames.includes(r.n)).map(t => t.l);
 
+  // TODO Do not use the common minimum, pass each relay's latest as its since
+  // (but we need to stop using this pool)
+  return relaysLatest.length > 0 ? Math.min(...relaysLatest) + 1 : 0;
+};
+
+// Calculate and save latest created_at to be used as `since`
+// on subsequent relay requests (we use created_at to be a bit safer than with +Date.now)
+// This since only applies to filter queries
+// ({ "#e": store.rootEventIds }, { "#a": [anchor().value] })
+// and not to aggregate or root event queries
+export const saveRelayLatestForFilter = async (anchor: Anchor, events: NoteEvent[]) => {
   const obj: { [url: string]: number; } = {};
 
-  for (const e of eventsForAnchor) {
+  for (const e of events) {
     const relaysForEvent = pool.seenOn(e.id);
     for (const relayUrl of relaysForEvent) {
       if (e.ts > (obj[relayUrl] || 0)) {
@@ -69,15 +79,17 @@ export const calculateRelayLatest = async (anchor: Anchor) => {
     }
   }
 
-  const relays = await findAll('relays', 'a', [anchor.value]);
+  const relays = await findAll('relays', anchor.value, { index: 'a' });
   for (const name in obj) {
     const relay = relays.find(r => r.n === name);
     if (relay) {
       if (obj[name] > relay.l) {
+        // update
         relay.l = obj[name];
         save('relays', relay);
       }
     } else {
+      // create new
       save('relays', { n: name, a: anchor.value, l: obj[name] });
     }
   }
@@ -110,7 +122,7 @@ const BACKTICKS_REGEX = /\`(.*?)\`/g;
 
 const ANY_HASHTAG = /\B\#([a-zA-Z0-9]+\b)(?!;)/g;
 
-export const parseContent = (e: NoteEvent, store: PreferencesStore, articles: NoteEvent[]): string => {
+export const parseContent = (e: NoteEvent, store: PreferencesStore, articles: NoteEvent[] = []): string => {
   let content = e.c;
   const urlPrefixes = store.urlPrefixes!;
   const profiles = store.profiles!;

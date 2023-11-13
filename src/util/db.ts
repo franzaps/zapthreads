@@ -1,70 +1,90 @@
 import { InitializedResource, Signal, createMemo, createResource, on } from "solid-js";
-import batchedFunction from "./batched-function";
+import batchedFunction from "./batched-function.ts";
 import { createMutable, createStore, reconcile, unwrap } from "solid-js/store";
-import { IDBPDatabase, StoreNames, openDB } from "idb";
-import { ZapthreadsSchema, upgrade } from "./models";
+import { IDBPDatabase, IndexKey, IndexNames, StoreNames, StoreValue, openDB } from "idb";
+import { ZapthreadsSchema, upgrade } from "./models.ts";
 
-type S = StoreNames<ZapthreadsSchema>;
+type DBTypes = ZapthreadsSchema;
 
 let _db: IDBPDatabase<ZapthreadsSchema>;
 const db = async () => _db ||= await openDB<ZapthreadsSchema>('zapthreads', 2, { upgrade });
 
 // db utils
 
-export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["value"], IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(query: () => [Name] | [Name, IndexName, ZapthreadsSchema[Name]["indexes"][IndexName][] | IDBKeyRange[]]) => {
-  const get = createMemo(on(query, () => {
-    const [type, index, value] = query();
-    const fetchData = () => findAll(type, index, value);
+export const watchAll = <Name extends StoreNames<DBTypes>, IndexName extends IndexNames<DBTypes, Name>, Value extends StoreValue<DBTypes, Name>>(cb: () => [Name] | [Name, IndexKey<DBTypes, Name, IndexName> | IndexKey<DBTypes, Name, IndexName>[] | IDBKeyRange, options?: { index: IndexName; }]) => {
+  const get = createMemo(on(cb, () => {
+    const [storeName, query, options] = cb();
+    const fetchData = () => findAll(storeName, query, options);
 
-    const [resource, { mutate }] = createResource(() => sigStore[type], fetchData, {
+    const [resource, { mutate }] = createResource(() => sigStore[storeName], fetchData, {
       initialValue: [],
       storage: createDeepSignal
     });
     // trigger initial value
-    findAll(type, index, value).then(mutate);
+    findAll(storeName, query, options).then(mutate);
 
     return resource as InitializedResource<Value[]>;
   }));
   return () => get()();
 };
 
-// TODO remove this "array" syntax for query?
-export const findAll = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, index?: IndexName, query?: ZapthreadsSchema[Name]["indexes"][IndexName][] | IDBKeyRange[]) => {
-  const _db = await db();
-  if (index && query) {
-    const queries = query.map(v => _db.getAllFromIndex(type, index, v));
-    const resolved = await Promise.all(queries);
-    return resolved.flat(); // flatten arrays of results
-  }
-  return _db.getAll(type);
+export const watch = <Name extends StoreNames<DBTypes>, IndexName extends IndexNames<DBTypes, Name>, Value extends StoreValue<DBTypes, Name>>(cb: () => [Name, IndexKey<DBTypes, Name, IndexName> | IDBKeyRange, options?: { index: IndexName; }]) => {
+  const get = createMemo(on(cb, () => {
+    const [storeName, query, options] = cb();
+    const fetchData = () => find(storeName, query!, options);
+
+    const [resource, { mutate }] = createResource(() => sigStore[storeName], fetchData, {
+      initialValue: undefined,
+      storage: createDeepSignal
+    });
+    // trigger initial value
+    find(storeName, query!, options).then(mutate);
+
+    return resource as InitializedResource<Value | undefined>;
+  }));
+  return () => get()();
 };
 
-export const findAllKeys = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, index?: IndexName, query?: ZapthreadsSchema[Name]["indexes"][IndexName] | IDBKeyRange) => {
+export const findAll = async <Name extends StoreNames<DBTypes>, IndexName extends IndexNames<DBTypes, Name>>(storeName: Name, query?: IndexKey<DBTypes, Name, IndexName> | IndexKey<DBTypes, Name, IndexName>[] | IDBKeyRange, options?: { index: IndexName; }) => {
   const _db = await db();
-  if (index && query) {
-    return _db.getAllKeysFromIndex(type, index, query);
+  if (query && options) {
+    if (Array.isArray(query)) {
+      const queries = query.map(value => _db.getAllFromIndex(storeName, options.index, value));
+      const resolved = await Promise.all(queries);
+      return resolved.flat(); // flatten arrays of results\
+    }
+    return _db.getAllFromIndex(storeName, options.index, query);
   }
-  return _db.getAllKeys(type);
+  return _db.getAll(storeName);
 };
 
-export const find = async <Name extends S, IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(type: Name, query: ZapthreadsSchema[Name]["indexes"][IndexName] | IDBKeyRange, index?: IndexName) => {
+export const findAllKeys = async <Name extends StoreNames<DBTypes>, IndexName extends IndexNames<DBTypes, Name>>(storeName: Name, query?: IndexKey<DBTypes, Name, IndexName> | IDBKeyRange, options?: { index: IndexName; }) => {
   const _db = await db();
-  if (index && query) {
-    return _db.getFromIndex(type, index, query);
+  if (query && options) {
+    return _db.getAllKeysFromIndex(storeName, options.index, query);
   }
-  return _db.get(type, query);
+  return _db.getAllKeys(storeName);
+};
+
+
+export const find = async <Name extends StoreNames<DBTypes>, IndexName extends IndexNames<DBTypes, Name>>(storeName: Name, query: IndexKey<DBTypes, Name, IndexName> | IDBKeyRange, options?: { index: IndexName; }) => {
+  const _db = await db();
+  if (options) {
+    return _db.getFromIndex(storeName, options.index, query);
+  }
+  return _db.get(storeName, query as IDBKeyRange);
 };
 
 const batchFns: { [key: string]: Function; } = {};
 
-export const save = async <Name extends S, R extends ZapthreadsSchema[Name]['value']>(type: Name, model: R, options: { immediate: boolean; } = { immediate: false }) => {
+export const save = async <Name extends StoreNames<DBTypes>, Value extends StoreValue<DBTypes, Name>>(type: Name, model: Value, options: { immediate: boolean; } = { immediate: false }) => {
   const _db = await db();
   if (options.immediate) {
     const result = _db.put(type, model);
     sigStore[type] = +new Date;
     return result;
   }
-  batchFns[type] ||= batchedFunction(async (models: R[]) => {
+  batchFns[type] ||= batchedFunction(async (models: Value[]) => {
     const tx = _db.transaction(type, 'readwrite');
     const result = await Promise.all([...models.map(e => tx.store.put(e)), tx.done]);
     if (result) {

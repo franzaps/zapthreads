@@ -1,10 +1,19 @@
 import { UnsignedEvent } from "nostr-tools/event";
-import { parseContent, parseUrlPrefixes } from "./ui";
-
-const emptyPrefs = { disable: () => [], urlPrefixes: parseUrlPrefixes('') };
+import { parseContent, parseUrlPrefixes } from "./ui.ts";
+import { createMutable } from "solid-js/store";
+import { PreferencesStore } from "./stores.ts";
+import { eventToNoteEvent } from "./models.ts";
 
 describe("ui utils", () => {
   describe("parseContent", () => {
+    const store = createMutable<PreferencesStore>({
+      filter: {},
+      profiles: () => [],
+      rootEventIds: [],
+      disable: [],
+      urlPrefixes: parseUrlPrefixes('naddr:nostr.com/')
+    });
+
     it('removes naddr if mentioned', () => {
       const naddr = "naddr1qqxnzd3cxqmrzv3exgmr2wfeqyf8wumn8ghj7ur4wfcxcetsv9njuetnqyxhwumn8ghj7mn0wvhxcmmvqy08wumn8ghj7mn0wd68yttjv4kxz7fwdehkkmm5v9ex7tnrdakszynhwden5te0danxvcmgv95kutnsw43qz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzpmhxue69uhkummnw3ezuamfdejsygrwg6zz9hahfftnsup23q3mnv5pdz46hpj4l2ktdpfu6rhpthhwjvpsgqqqw4rskylmpy";
       const e: UnsignedEvent = {
@@ -19,7 +28,7 @@ describe("ui utils", () => {
         "content": `awesome article\n nostr:${naddr}`
       };
 
-      let result = parseContent(e, [], naddr, emptyPrefs);
+      let result = parseContent(eventToNoteEvent(e), store);
       expect(result).toEqual('<p>awesome article</p>');
     });
 
@@ -31,13 +40,13 @@ describe("ui utils", () => {
         "pubkey": "",
         "content": "nostr:naddr1qqxnzd3cxqmrzv3exgmr2wfeqyf8wumn8ghj7ur4wfcxcetsv9njuetnqyxhwumn8ghj7mn0wvhxcmmvqy08wumn8ghj7mn0wd68yttjv4kxz7fwdehkkmm5v9ex7tnrdakszynhwden5te0danxvcmgv95kutnsw43qz9rhwden5te0wfjkccte9ejxzmt4wvhxjmcpzpmhxue69uhkummnw3ezuamfdejsygrwg6zz9hahfftnsup23q3mnv5pdz46hpj4l2ktdpfu6rhpthhwjvpsgqqqw4rskylmpy"
       };
-      let result = parseContent(e, [], undefined, { disable: () => [], urlPrefixes: parseUrlPrefixes('naddr:nostr.com/') });
+      let result = parseContent(eventToNoteEvent(e), store);
       expect(result).toMatch('<p><a href="https://nostr.com/naddr1qqxnzd3cxqmrzv');
 
       e.content = 'I love #Bitcoin';
       e.tags = [['t', 'Bitcoin']];
 
-      result = parseContent(e, [], undefined, emptyPrefs);
+      result = parseContent(eventToNoteEvent(e), store);
       expect(result).toEqual('<p>I love <a href=\"https://habla.news/t/Bitcoin\">#Bitcoin</a></p>');
     });
 
@@ -49,7 +58,7 @@ describe("ui utils", () => {
         "pubkey": "",
         "content": "otoh:\nhttps://nostrapp.link/#nevent1qqs?select=true"
       };
-      let result = parseContent(e, [], undefined, emptyPrefs);
+      let result = parseContent(eventToNoteEvent(e), store);
       expect(result).toMatch('<p>otoh:\n<a href="https://nostrapp.link/#nevent1qqs?select=true');
     });
 
@@ -64,7 +73,7 @@ describe("ui utils", () => {
         "pubkey": "",
         "content": "#sunstrike\n\nsome #[0]"
       };
-      let result = parseContent(e, [], undefined, emptyPrefs);
+      let result = parseContent(eventToNoteEvent(e), store);
       expect(result).toMatch('<p><a href=\"https://habla.news/t/sunstrike\">#sunstrike</a></p>\n\n<p>some <a href=\"https://habla.news/p/npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m\">@npub1sg6...f63m</a></p>');
     });
 
@@ -76,7 +85,7 @@ describe("ui utils", () => {
         "pubkey": "",
         "content": "should check for `var a = 1` tags"
       };
-      let result = parseContent(e, [], undefined, emptyPrefs);
+      let result = parseContent(eventToNoteEvent(e), store);
       expect(result).toMatch('<p>should check for <code>var a = 1</code> tags</p>');
     });
 
@@ -90,8 +99,7 @@ describe("ui utils", () => {
         "pubkey": "",
         "content": "image here ![image](https://cdn.nostr.build/i/1.png)"
       };
-      let result = parseContent(e, [], undefined, emptyPrefs);
-
+      let result = parseContent(eventToNoteEvent(e), store);
       expect(result).toMatch('<p>image here <img src="https://cdn.nostr.build/i/1.png" alt="image"/></p>');
     });
   });

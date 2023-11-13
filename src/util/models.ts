@@ -1,6 +1,6 @@
 import { DBSchema, IDBPDatabase } from "idb";
 import { parse } from "nostr-tools/nip10";
-import { Event } from "nostr-tools/event";
+import { UnsignedEvent } from "nostr-tools/event";
 
 // models
 
@@ -103,7 +103,7 @@ export const upgrade = async (db: IDBPDatabase<ZapthreadsSchema>, oldVersion: nu
 
 // util
 
-export const eventToNoteEvent = (e: Event): NoteEvent => {
+export const eventToNoteEvent = (e: UnsignedEvent & { id?: string; }): NoteEvent => {
   const nip10result = parse(e);
 
   const aTag = e.tags.find(t => t[0] === 'a');
@@ -119,7 +119,7 @@ export const eventToNoteEvent = (e: Event): NoteEvent => {
   const tl = titleTag && titleTag[1];
 
   return {
-    id: e.id,
+    id: e.id ?? "",
     k: e.kind as 1 | 9802 | 30023,
     c: e.content,
     ts: e.created_at,

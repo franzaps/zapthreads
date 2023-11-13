@@ -1,8 +1,7 @@
-import { Accessor, createContext } from "solid-js";
 import { UnsignedEvent } from "nostr-tools/event";
 import { SimplePool } from "nostr-tools/pool";
 import { Filter } from "nostr-tools/filter";
-import { Profile } from "./models";
+import { Profile } from "./models.ts";
 import { createMutable } from "solid-js/store";
 
 // Global data (for now)

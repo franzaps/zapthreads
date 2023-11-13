@@ -1,4 +1,4 @@
-import { NoteEvent } from "./models";
+import { NoteEvent } from "./models.ts";
 
 // Parent & children are strictly UI concepts, an event with no parent
 // means it sits at the first level, no children means no replies to it

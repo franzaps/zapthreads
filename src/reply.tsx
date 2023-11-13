@@ -1,12 +1,12 @@
-import { defaultPicture, generateTags, satsAbbrev, shortenEncodedId, updateProfiles } from "./util/ui";
-import { Show, createEffect, createSignal, useContext } from "solid-js";
+import { defaultPicture, generateTags, satsAbbrev, shortenEncodedId, updateProfiles } from "./util/ui.ts";
+import { Show, createEffect, createSignal } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "nostr-tools/event";
-import { EventSigner, pool, signersStore, store } from "./util/stores";
+import { EventSigner, pool, signersStore, store } from "./util/stores.ts";
 import { generatePrivateKey, getPublicKey } from "nostr-tools/keys";
 import { createAutofocus } from "@solid-primitives/autofocus";
-import { find, findAll, save, watchAll } from "./util/db";
-import { lightningSvg, likeSvg } from "./thread";
-import { Profile, eventToNoteEvent } from "./util/models";
+import { find, save, watch, watchAll } from "./util/db.ts";
+import { Profile, eventToNoteEvent } from "./util/models.ts";
+import { lightningSvg, likeSvg } from "./thread.tsx";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const [comment, setComment] = createSignal('');
@@ -233,14 +233,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 export const RootComment = () => {
   const anchor = () => store.anchor!;
 
-  // TODO watchAll aggregates until we implement watch
-  const aggregateEvents = watchAll(() => ['aggregates']);
-  const zapCount = () => {
-    return aggregateEvents().find(a => a.eid === anchor().value && a.k === 9735)?.sum ?? 0;
-  };
-  const likeCount = () => {
-    return aggregateEvents().find(a => a.eid === anchor().value && a.k === 7)?.ids.length ?? 0;
-  };
+  const zapsAggregate = watch(() => ['aggregates', IDBKeyRange.only([anchor().value, 9735])]);
+  const likesAggregate = watch(() => ['aggregates', IDBKeyRange.only([anchor().value, 7])]);
+  const zapCount = () => zapsAggregate()?.sum ?? 0;
+  const likeCount = () => likesAggregate()?.ids.length ?? 0;
 
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">

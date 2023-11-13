@@ -1,11 +1,11 @@
-import { Index, Show, createEffect, createMemo, createSignal, onCleanup, useContext } from "solid-js";
-import { defaultPicture, encodedEntityToFilter, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui";
-import { ReplyEditor } from "./reply";
-import { NestedNoteEvent } from "./util/nest";
+import { Index, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { defaultPicture, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui.ts";
+import { ReplyEditor } from "./reply.tsx";
+import { NestedNoteEvent } from "./util/nest.ts";
 import { noteEncode, npubEncode } from "nostr-tools/nip19";
 import { createElementSize } from "@solid-primitives/resize-observer";
-import { store } from "./util/stores";
-import { NoteEvent } from "./util/models";
+import { store } from "./util/stores.ts";
+import { NoteEvent } from "./util/models.ts";
 
 export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles: () => NoteEvent[]; }) => {
   const anchor = () => store.anchor!;

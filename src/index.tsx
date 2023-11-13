@@ -1,19 +1,19 @@
-import { For, JSX, createComputed, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
+import { JSX, createComputed, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent } from "./util/ui";
-import { nest } from "./util/nest";
-import { store, pool, isDisableType, Anchor, signersStore } from "./util/stores";
-import { Thread, ellipsisSvg } from "./thread";
-import { RootComment } from "./reply";
+import { saveRelayLatestForFilter, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent, getRelayLatest as getRelayLatestForFilter } from "./util/ui.ts";
+import { nest } from "./util/nest.ts";
+import { store, pool, isDisableType, signersStore } from "./util/stores.ts";
+import { Thread, ellipsisSvg } from "./thread.tsx";
+import { RootComment } from "./reply.tsx";
 import { Sub } from "nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
-import { clear as clearCache, find, findAll, save, watchAll } from "./util/db";
+import { clear as clearCache, find, findAll, save, watchAll } from "./util/db.ts";
 import { decode } from "nostr-tools/nip19";
 import { getPublicKey } from "nostr-tools/keys";
 import { getSignature } from "nostr-tools/event";
 import { Filter } from "nostr-tools/filter";
-import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models";
+import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
@@ -76,7 +76,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     // We sort by date so that the IDs are kept in order before discarding the timestamp
     switch (anchor().type) {
       case 'http':
-        localRootEvents = await findAll('events', 'r', [anchor().value]);
+        localRootEvents = await findAll('events', anchor().value, { index: 'r' });
         store.rootEventIds = sortByDate(localRootEvents).map(e => e.id);
         filterForRemoteRootEvents = { '#r': [anchor().value], kinds: [1] };
         break;
@@ -94,7 +94,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         }
       case 'naddr':
         const [kind, pubkey, identifier] = anchor().value.split(':');
-        localRootEvents = (await findAll('events', 'd', [identifier])).filter(e => e.pk === pubkey);
+        localRootEvents = (await findAll('events', identifier, { index: 'd' })).filter(e => e.pk === pubkey);
         if (localRootEvents.length > 0) {
           store.rootEventIds = sortByDate(localRootEvents).map(e => e.id);
           store.anchorAuthor = localRootEvents[0].pk;
@@ -103,7 +103,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         break;
     }
 
-    pool.list(relays(), [{ ...filterForRemoteRootEvents, since: await since() }]).then(remoteRootEvents => {
+    // No `since` here as we are not keeping track of a since for root events
+    pool.list(relays(), [{ ...filterForRemoteRootEvents }]).then(remoteRootEvents => {
       const remoteRootNoteEvents = remoteRootEvents.map(eventToNoteEvent);
       for (const e of remoteRootNoteEvents) {
         save('events', e);
@@ -152,15 +153,6 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
   }, { defer: true }));
 
-  const since = async () => {
-    const relaysForAnchor = await findAll('relays', 'a', [anchor().value]);
-    const relaysLatest = relaysForAnchor.filter(r => relays().includes(r.n)).map(t => t.l);
-
-    // TODO Do not use the common minimum, pass each relay's latest as its since
-    // (but we need to stop using this pool)
-    return relaysLatest.length > 0 ? Math.min(...relaysLatest) + 1 : 0;
-  };
-
   const filter = () => store.filter;
 
   // Filter -> remote events, content
@@ -187,7 +179,9 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     try {
       console.log('[zapthreads] subscribing to', anchor().value);
 
-      sub = pool.sub(relays(), [{ ...filter(), kinds, since: await since() }]);
+      const since = await getRelayLatestForFilter(anchor(), relays());
+
+      sub = pool.sub(relays(), [{ ...filter(), kinds, since }]);
 
       const newLikeIds = new Set<string>();
       const newZaps: { [id: string]: number; } = {};
@@ -234,8 +228,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
           // Update profiles of current events (including anchor author)
           await updateProfiles([...events().map(e => e.pk)], relays(), store.profiles());
 
-          // Calculate latest received events for each relay
-          calculateRelayLatest(_anchor);
+          // Save latest received events for each relay
+          saveRelayLatestForFilter(_anchor, events());
 
           if (closeOnEose()) {
             sub?.unsub();
@@ -303,7 +297,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
   }, { defer: true }));
 
-  const articles = watchAll(() => ['events', 'k', [30023]]);
+  const articles = watchAll(() => ['events', 30023, { index: 'k' }]);
 
   const content = createMemo(() => {
     if (store.disable!.includes('hideContent') && anchor().type === 'naddr') {
@@ -324,9 +318,9 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     switch (anchor().type) {
       case 'http':
       case 'note':
-        return watchAll(() => ['events', 'ro', store.rootEventIds]);
+        return watchAll(() => ['events', store.rootEventIds, { index: 'ro' }]);
       case 'naddr':
-        return watchAll(() => ['events', 'a', [anchor().value]]);
+        return watchAll(() => ['events', anchor().value, { index: 'a' }]);
     }
   });
   const events = () => eventsWatcher()();
