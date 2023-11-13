@@ -6,7 +6,7 @@ export default defineConfig({
   publicDir: false,
   plugins: [
     solidPlugin(),
-    dts({ insertTypesEntry: true, rollupTypes: true }),
+    dts({ insertTypesEntry: true }),
   ],
   build: {
     minify: 'terser',

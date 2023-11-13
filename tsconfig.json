@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "module": "esnext",
+    "module": "nodenext",
     "target": "esnext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "declaration": true,
     "strict": true,
     "strictNullChecks": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "emitDeclarationOnly": true,

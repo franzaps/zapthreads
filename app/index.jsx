@@ -63,6 +63,6 @@ render(() => {
     {/* solid component */}
     {/* <ZapThreads anchor={tonyArticle} relays={['wss://relay.damus.io']} disable={'likes'} npub={npub()} /> */}
     {/* web component */}
-    {anchor() && <zap-threads anchor={anchor()} disable="publish,replies" relays={otherRelays.join(',')} npub={npub()} />}
+    {anchor() && <zap-threads anchor={anchor()} disable="publish" relays={otherRelays.join(',')} npub={npub()} />}
   </>;
 }, root);
