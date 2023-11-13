@@ -1,4 +1,4 @@
-import { Index, createEffect, createMemo, createSignal, onCleanup, useContext } from "solid-js";
+import { Index, Show, createEffect, createMemo, createSignal, onCleanup, useContext } from "solid-js";
 import { defaultPicture, encodedEntityToFilter, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNoteEvent } from "./util/nest";
@@ -134,10 +134,12 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </div>}
 
               <ul class="ztr-comment-actions">
-                <li class="ztr-comment-action-reply" onClick={() => setOpen(!isOpen()) && setShowInfo(false)}>
-                  {replySvg()}
-                  <span>{isOpen() ? 'Cancel' : 'Reply'}</span>
-                </li>
+                <Show when={!store.disable!.includes('replies')}>
+                  <li class="ztr-comment-action-reply" onClick={() => setOpen(!isOpen()) && setShowInfo(false)}>
+                    {replySvg()}
+                    <span>{isOpen() ? 'Cancel' : 'Reply'}</span>
+                  </li>
+                </Show>
                 {/* <Show when={!store.disableZaps}>
                   <li class="ztr-comment-action-zap">
                     {lightningSvg()}
