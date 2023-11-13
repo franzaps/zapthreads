@@ -1,8 +1,8 @@
 import { NestedNoteEvent } from "./nest";
 import { Anchor, UrlPrefixesKeys, pool, PreferencesStore } from "./stores";
-import { decode, naddrEncode } from "../nostr-tools/nip19";
-import { Filter } from "../nostr-tools/filter";
-import { matchAll, replaceAll } from "../nostr-tools/nip27";
+import { decode } from "nostr-tools/nip19";
+import { Filter } from "nostr-tools/filter";
+import { matchAll, replaceAll } from "nostr-tools/nip27";
 import nmd from "nano-markdown";
 import { findAll, save } from "./db";
 import { NoteEvent, Profile } from "./models";

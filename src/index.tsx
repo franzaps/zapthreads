@@ -6,13 +6,13 @@ import { nest } from "./util/nest";
 import { store, pool, isDisableType, Anchor, signersStore } from "./util/stores";
 import { Thread, ellipsisSvg } from "./thread";
 import { RootComment } from "./reply";
-import { Sub } from "./nostr-tools/relay";
+import { Sub } from "nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
 import { clear as clearCache, find, findAll, save, watchAll } from "./util/db";
-import { decode } from "./nostr-tools/nip19";
-import { getPublicKey } from "./nostr-tools/keys";
-import { getSignature } from "./nostr-tools/event";
-import { Filter } from "./nostr-tools/filter";
+import { decode } from "nostr-tools/nip19";
+import { getPublicKey } from "nostr-tools/keys";
+import { getSignature } from "nostr-tools/event";
+import { Filter } from "nostr-tools/filter";
 import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
@@ -370,9 +370,9 @@ const Advanced = () => <div>
   <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
   <small>
     <ul>
-      <For each={Object.values(pool._conn)}>
+      {/* <For each={Object.values(pool._conn)}>
         {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br /></li>}
-      </For>
+      </For> */}
     </ul>
   </small>
   <button onClick={clearCache}>Clear cache</button>

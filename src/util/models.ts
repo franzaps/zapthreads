@@ -1,6 +1,6 @@
 import { DBSchema, IDBPDatabase } from "idb";
-import { parse } from "../nostr-tools/nip10";
-import { Event } from "../nostr-tools/event";
+import { parse } from "nostr-tools/nip10";
+import { Event } from "nostr-tools/event";
 
 // models
 

@@ -2,7 +2,7 @@ import { Index, createEffect, createMemo, createSignal, onCleanup, useContext } 
 import { defaultPicture, encodedEntityToFilter, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui";
 import { ReplyEditor } from "./reply";
 import { NestedNoteEvent } from "./util/nest";
-import { noteEncode, npubEncode } from "./nostr-tools/nip19";
+import { noteEncode, npubEncode } from "nostr-tools/nip19";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import { store } from "./util/stores";
 import { NoteEvent } from "./util/models";

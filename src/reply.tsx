@@ -1,8 +1,8 @@
 import { defaultPicture, generateTags, satsAbbrev, shortenEncodedId, updateProfiles } from "./util/ui";
 import { Show, createEffect, createSignal, useContext } from "solid-js";
-import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
+import { UnsignedEvent, Event, getSignature, getEventHash } from "nostr-tools/event";
 import { EventSigner, pool, signersStore, store } from "./util/stores";
-import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
+import { generatePrivateKey, getPublicKey } from "nostr-tools/keys";
 import { createAutofocus } from "@solid-primitives/autofocus";
 import { find, findAll, save, watchAll } from "./util/db";
 import { lightningSvg, likeSvg } from "./thread";

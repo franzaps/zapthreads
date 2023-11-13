@@ -1,4 +1,4 @@
-import { UnsignedEvent } from "../nostr-tools/event";
+import { UnsignedEvent } from "nostr-tools/event";
 import { parseContent, parseUrlPrefixes } from "./ui";
 
 const emptyPrefs = { disable: () => [], urlPrefixes: parseUrlPrefixes('') };
