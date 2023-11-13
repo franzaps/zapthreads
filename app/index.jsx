@@ -27,7 +27,7 @@ const options = [
   { label: "An nevent by thepurpose", name: "nevent1qqsz3e0y8qqw32qa50awy83lctpey3npgaq4mgv4jesqwdpge64z5wspr3mhxue69uhkummnw3ez6vp39e3x7mr59ehkyum9wfmx2uspz3mhxue69uhhyetvv9ujuerpd46hxtnfdupmk2rc" },
   { label: "Habla crowdfunding", name: "note17atrwgclprsqlskylp655saavazgmc7du6e3rrpxehd6qehnggzqnat5tp" },
   { label: "Alby article", name: "naddr1qqxnzd3e8yenvv3sxgmrqvf4qgsyv47lazt9h6ycp2fsw270khje5egjgsrdkrupjg27u796g7f5k0srqsqqqa289wap68" },
-  { label: "Xanny article", name: "naddr1qqyrxe3hxa3xvwtyqgs0plu8uaukh2r0ep95spajtfw7ugrdwfxx7cd23pfewk3emmh07kqrqsqqqa289j2qgr" }
+  { label: "Lau note", name: "note1taa0qwh9nwu6t4h7tjwdp3fx9nefz73tnh4a9reylzg94d5re8mq854v75" }
 ];
 
 const relays = ["wss://relay.damus.io", "wss://eden.nostr.land"];

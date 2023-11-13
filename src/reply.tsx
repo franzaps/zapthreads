@@ -1,20 +1,22 @@
-import { defaultPicture, generateTags, shortenEncodedId, updateProfiles } from "./util/ui";
+import { defaultPicture, generateTags, satsAbbrev, shortenEncodedId, updateProfiles } from "./util/ui";
 import { Show, createEffect, createSignal, useContext } from "solid-js";
 import { UnsignedEvent, Event, getSignature, getEventHash } from "./nostr-tools/event";
-import { EventSigner, ZapThreadsContext, pool } from "./util/stores";
+import { EventSigner, pool, signersStore, store } from "./util/stores";
 import { generatePrivateKey, getPublicKey } from "./nostr-tools/keys";
 import { createAutofocus } from "@solid-primitives/autofocus";
-import { save, watchAll } from "./util/db";
+import { find, findAll, save, watchAll } from "./util/db";
 import { lightningSvg, likeSvg } from "./thread";
 import { Profile, eventToNoteEvent } from "./util/models";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
-  const { relays, anchor, profiles, signersStore, preferencesStore } = useContext(ZapThreadsContext)!;
-
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [loggedInUser, setLoggedInUser] = createSignal<Profile>();
   const [errorMessage, setErrorMessage] = createSignal('');
+
+  const anchor = () => store.anchor!;
+  const profiles = store.profiles!;
+  const relays = () => store.relays!;
 
   // Sessions
 
@@ -104,68 +106,62 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       ]
     };
 
-    // Establish reference tag (root or reply)
+    if (store.anchorAuthor !== unsignedEvent.pubkey) {
+      // Add p tag from note author to notify them
+      unsignedEvent.tags.push(['p', store.anchorAuthor!]);
+    }
 
-    const filter = preferencesStore.filter;
-    const version = preferencesStore.version;
-
-    let referenceTag;
-
+    // If it is a reply, prepare root and reply tags
     if (props.replyTo) {
-      referenceTag = ['e', props.replyTo, '', 'reply'];
-    } else { // it is a root
-      // add e tag to reply to a particular replaceable event version
-      if (filter['#a'] && version) {
-        referenceTag = ['e', version, '', 'root'];
-      } else if (filter['#e'] && filter['#e'].length > 0) {
-        // this could be for an URL anchor
-        referenceTag = ['e', filter['#e'][0], '', 'root'];
+      const replyEvent = await find('events', IDBKeyRange.only(props.replyTo));
+      if (replyEvent) {
+        // If it is a reply, it must have a root
+        unsignedEvent.tags.push(['e', replyEvent.ro!, '', 'root']);
+        // If the user is not replying to themselves, add p to notify
+        if (replyEvent.pk !== unsignedEvent.pubkey) {
+          unsignedEvent.tags.push(['p', replyEvent.pk]);
+        }
       }
-
-      // If no root tag is present, create it to use as anchor
-      if (!referenceTag) {
+      unsignedEvent.tags.push(['e', props.replyTo, '', 'reply']);
+    } else {
+      // Otherwise find the root
+      const rootEventId = store.version || store.rootEventIds[0];
+      if (rootEventId) {
+        unsignedEvent.tags.push(['e', rootEventId, '', 'root']);
+      } else if (anchor().type === 'http') {
+        // If no root tag is present, create it to use as anchor
         const url = anchor().value;
         const unsignedRootEvent: UnsignedEvent<1> = {
           pubkey: signer.pk,
           created_at: Math.round(Date.now() / 1000),
           kind: 1,
           tags: [['r', url]],
-          content: `Comments on ${url} (added by zapthreads) ↴`
+          content: `Comments on ${url}↴`
         };
+
         const rootEvent: Event<1> = {
           id: getEventHash(unsignedRootEvent),
           ...unsignedRootEvent,
           ...await signer.signEvent(unsignedRootEvent)
         };
 
+        save('events', eventToNoteEvent(rootEvent));
+
         // Publish, store filter and get updated rootTag
-        if (preferencesStore.disable().includes('publish')) {
+        if (store.disable!.includes('publish')) {
           console.log('Publishing root event disabled', rootEvent);
         } else {
           pool.publish(relays(), rootEvent);
         }
         // Update filter to this rootEvent
-        preferencesStore.filter = { "#e": [rootEvent.id] };
-        referenceTag = ['e', rootEvent.id, '', 'root'];
+        store.filter = { "#e": [rootEvent.id] };
+        unsignedEvent.tags.push(['e', rootEvent.id, '', 'root']);
       }
     }
 
-    // Add reference tag (root or reply marker)
-    if (referenceTag) {
-      unsignedEvent.tags.push(referenceTag);
+    if (anchor().type === 'naddr') {
+      unsignedEvent.tags.push(['a', anchor().value]);
     }
-
-    // TODO this probably not there
-    // Add a tag from replaceable event, if present
-    if (filter && filter['#a'] && filter['#a'][0]) {
-      unsignedEvent.tags.push(['a', filter['#a'][0]]);
-    }
-
-    // TODO Add p tag from note author to notify them ()
-    // const contentEvents = await findAll('events', 'anchor', anchor()); ??
-    // if (anchorPubkey()) {
-    //   unsignedEvent.tags.push(['p', anchorPubkey()!]);
-    // }
 
     const id = getEventHash(unsignedEvent);
 
@@ -177,7 +173,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setLoading(true);
     console.log(JSON.stringify(event, null, 2));
 
-    if (preferencesStore.disable().includes('publish')) {
+    if (store.disable!.includes('publish')) {
       // Simulate publishing
       setTimeout(() => onSuccess(event), 1000);
     } else {
@@ -188,7 +184,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         onError('Warning: your comment was not published to all relays');
         setLoading(false);
       }
-    }
+    };
   };
 
   // Only autofocus if 
@@ -206,7 +202,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       onChange={e => setComment(e.target.value)}
     />
     <div class="ztr-reply-controls">
-      {preferencesStore.disable().includes('publish') && <span>Publishing is disabled</span>}
+      {store.disable!.includes('publish') && <span>Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
       <Show when={!loading()} fallback={
@@ -224,7 +220,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
           Reply as {loggedInUser()!.n || shortenEncodedId(loggedInUser()!.pk)}
         </button>}
 
-      {!loggedInUser() && !preferencesStore.disable().includes('replyAnonymously') &&
+      {!loggedInUser() && !store.disable!.includes('replyAnonymously') &&
         <button disabled={loading()} class="ztr-reply-button" onClick={() => publish()}>
           Reply anonymously
         </button>}
@@ -235,11 +231,13 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 };
 
 export const RootComment = () => {
-  const { preferencesStore, anchor } = useContext(ZapThreadsContext)!;
+  const anchor = () => store.anchor!;
 
   // TODO watchAll aggregates until we implement watch
   const aggregateEvents = watchAll(() => ['aggregates']);
-  const zapCount = () => aggregateEvents().find(a => a.eid === anchor().value && a.k === 9735)?.sum ?? 0;
+  const zapCount = () => {
+    return aggregateEvents().find(a => a.eid === anchor().value && a.k === 9735)?.sum ?? 0;
+  };
   const likeCount = () => {
     return aggregateEvents().find(a => a.eid === anchor().value && a.k === 7)?.ids.length ?? 0;
   };
@@ -247,16 +245,16 @@ export const RootComment = () => {
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
       <ul class="ztr-comment-actions">
-        <Show when={!preferencesStore.disable().includes('likes')}>
+        <Show when={!store.disable!.includes('likes')}>
           <li class="ztr-comment-action-like">
             {likeSvg()}
             <span>{likeCount()} likes</span>
           </li>
         </Show>
-        <Show when={!preferencesStore.disable().includes('zaps')}>
+        <Show when={!store.disable!.includes('zaps')}>
           <li class="ztr-comment-action-zap">
             {lightningSvg()}
-            <span>{zapCount()} sats</span>
+            <span>{satsAbbrev(zapCount())} sats</span>
           </li>
         </Show>
       </ul>

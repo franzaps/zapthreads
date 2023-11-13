@@ -11,7 +11,7 @@ const db = async () => _db ||= await openDB<ZapthreadsSchema>('zapthreads', 2, {
 
 // db utils
 
-export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["value"], IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(query: () => [Name] | [Name, IndexName, ZapthreadsSchema[Name]["indexes"][IndexName][]]) => {
+export const watchAll = <Name extends S, Value extends ZapthreadsSchema[Name]["value"], IndexName extends keyof ZapthreadsSchema[Name]["indexes"]>(query: () => [Name] | [Name, IndexName, ZapthreadsSchema[Name]["indexes"][IndexName][] | IDBKeyRange[]]) => {
   const get = createMemo(on(query, () => {
     const [type, index, value] = query();
     const fetchData = () => findAll(type, index, value);

@@ -1,7 +1,6 @@
-import { UnsignedEvent } from "../nostr-tools/event";
 import { NestedNoteEvent } from "./nest";
-import { Anchor, PreferencesStore, UrlPrefixesKeys, pool } from "./stores";
-import { decode, naddrEncode, noteEncode, npubEncode } from "../nostr-tools/nip19";
+import { Anchor, UrlPrefixesKeys, pool, PreferencesStore } from "./stores";
+import { decode, naddrEncode } from "../nostr-tools/nip19";
 import { Filter } from "../nostr-tools/filter";
 import { matchAll, replaceAll } from "../nostr-tools/nip27";
 import nmd from "nano-markdown";
@@ -106,14 +105,15 @@ export const encodedEntityToFilter = (entity: string): Filter => {
 
 const URL_REGEX = /(?<=^|\s)https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gi;
 const IMAGE_REGEX = /(\S*(?:png|jpg|jpeg|gif|webp))/gi;
-const NIP_08_REGEX = /\B\#\[([0-9])\]/g;
 const BAD_NIP27_REGEX = /(?<=^|\s)@?((naddr|npub|nevent|note)[a-z0-9]{20,})/g;
 const BACKTICKS_REGEX = /\`(.*?)\`/g;
 
 const ANY_HASHTAG = /\B\#([a-zA-Z0-9]+\b)(?!;)/g;
 
-export const parseContent = (e: NoteEvent, profiles: Profile[], prefs?: PreferencesStore): string => {
+export const parseContent = (e: NoteEvent, store: PreferencesStore, articles: NoteEvent[]): string => {
   let content = e.c;
+  const urlPrefixes = store.urlPrefixes!;
+  const profiles = store.profiles!;
 
   // replace http(s) links + images
   content = content.replace(URL_REGEX, (url) => {
@@ -127,47 +127,34 @@ export const parseContent = (e: NoteEvent, profiles: Profile[], prefs?: Preferen
   const hashtags = [...new Set(e.t)];
   if (hashtags.length > 0) {
     const re = new RegExp(`(^|\\s)\\#(${hashtags.join('|')})`, 'gi');
-    content = content.replaceAll(re, `$1[#$2](${prefs!.urlPrefixes.tag}$2)`);
+    content = content.replaceAll(re, `$1[#$2](${urlPrefixes.tag}$2)`);
   }
 
-  // NIP-08 => NIP-27
-  // TODO restore??
-
-  // content = content.replace(NIP_08_REGEX, (match, capture) => {
-  //   switch (e.tags[capture][0]) {
-  //     case "e":
-  //       return 'nostr:' + noteEncode(e.tags[capture][1]);
-  //     case "a":
-  //       const [kind, pubkey, identifier] = e.tags[capture][1].split(":");
-  //       return 'nostr:' + naddrEncode({ identifier, pubkey, kind: parseInt(kind) });
-  //     case "p":
-  //       const _pubkey = e.tags[capture][1];
-  //       return 'nostr:' + npubEncode(_pubkey);
-  //     default:
-  //       return match;
-  //   }
-  // });
-
-  // Attempts to NIP-27 => NIP-27
+  // NIP-27 attempts => NIP-27
   content = content.replaceAll(BAD_NIP27_REGEX, 'nostr:$1');
 
   // NIP-27 => Markdown
   content = replaceAll(content, ({ decoded, value }) => {
     switch (decoded.type) {
       case 'nprofile':
-        let p1 = profiles.find(p => p.pk === decoded.data.pubkey);
+        let p1 = profiles().find(p => p.pk === decoded.data.pubkey);
         const text1 = p1?.n || shortenEncodedId(value);
-        return `[@${text1}](${prefs!.urlPrefixes.nprofile}${value})`;
+        return `[@${text1}](${urlPrefixes.nprofile}${value})`;
       case 'npub':
-        let p2 = profiles.find(p => p.pk === decoded.data);
+        let p2 = profiles().find(p => p.pk === decoded.data);
         const text2 = p2?.n || shortenEncodedId(value);
-        return `[@${text2}](${prefs!.urlPrefixes.npub}${value})`;
+        return `[@${text2}](${urlPrefixes.npub}${value})`;
       case 'note':
-        return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.note}${value})`;
+        return `[@${shortenEncodedId(value)}](${urlPrefixes.note}${value})`;
       case 'naddr':
-        return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.naddr}${value})`;
+        const d = decoded.data;
+        const article = articles.find(a => a.pk === d.pubkey && a.d === d.identifier);
+        if (article && article.tl) {
+          return `[${article.tl}](${urlPrefixes.naddr}${value})`;
+        }
+        return `[@${shortenEncodedId(value)}](${urlPrefixes.naddr}${value})`;
       case 'nevent':
-        return `[@${shortenEncodedId(value)}](${prefs!.urlPrefixes.nevent}${value})`;
+        return `[@${shortenEncodedId(value)}](${urlPrefixes.nevent}${value})`;
       default: return value;
     }
   });
@@ -266,6 +253,16 @@ export const timeAgo = (timestamp: number): string => {
     return 'on ' + day + year;
   }
   return '';
+};
+
+export const satsAbbrev = (sats: number): string => {
+  if (sats < 10000) {
+    return sats.toString();
+  } else if (sats < 1000000) {
+    return Math.round(sats / 1000) + 'k';
+  } else {
+    return Math.round(sats / 1000000) + 'M';
+  }
 };
 
 export const totalChildren = (event: NestedNoteEvent): number => {

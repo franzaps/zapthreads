@@ -4,10 +4,14 @@ import { ReplyEditor } from "./reply";
 import { NestedNoteEvent } from "./util/nest";
 import { noteEncode, npubEncode } from "./nostr-tools/nip19";
 import { createElementSize } from "@solid-primitives/resize-observer";
-import { ZapThreadsContext } from "./util/stores";
+import { store } from "./util/stores";
+import { watchAll } from "./util/db";
 
-export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEventIds: () => string[]; }) => {
-  const { anchor, preferencesStore, profiles } = useContext(ZapThreadsContext)!;
+const articles = watchAll(() => ['events', 'k', [30023]]);
+
+export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; }) => {
+  const anchor = () => store.anchor!;
+  const profiles = store.profiles!;
 
   return <div class="ztr-thread">
     <Index each={sortByDate(props.nestedEvents())}>
@@ -58,15 +62,15 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEvent
             // if it does not have a parent
             !event().parent &&
             // does have a root but it's not in the rootEvents
-            event().ro && !props.rootEventIds().includes(event().ro!);
+            event().ro && !store.rootEventIds.includes(event().ro!);
 
           const isDifferentVersion = () =>
             // if it does not have a parent
             !event().parent &&
             // does have a root in root events
-            event().ro && props.rootEventIds().includes(event().ro!)
+            event().ro && store.rootEventIds.includes(event().ro!)
             // but does not match the current version
-            && preferencesStore.version && preferencesStore.version !== event().ro;
+            && store.version && store.version !== event().ro;
 
           onCleanup(() => clearInterval(timer));
 
@@ -79,7 +83,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEvent
                   </div>
                   <ul class="ztr-comment-info-items">
                     <li class="ztr-comment-info-author">
-                      <a href={preferencesStore.urlPrefixes.npub + npub()} target="_blank" >{profile()?.n || shortenEncodedId(npub())}</a>
+                      <a href={store.urlPrefixes!.npub + npub()} target="_blank" >{profile()?.n || shortenEncodedId(npub())}</a>
                     </li>
                     <li><strong>{action()}ed</strong> <span style="white-space: nowrap;">{createdTimeAgo()}</span></li>
                     {total() > 0 &&
@@ -106,12 +110,12 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEvent
               {showInfo() &&
                 <div class="ztr-info-pane">
                   <a href={`https://nostr.guru/e/${event().id}`} target="_blank">Event</a>:
-                  <pre>{JSON.stringify(event(), ['id', 'k', 'ts', 'pk', 'ro', 'er', 'a', 'am'], 2)}</pre>
-                  {preferencesStore.version && <pre>Current version: {preferencesStore.version}</pre>}
+                  <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre>
+                  {store.version && <pre>Current version: {store.version}</pre>}
                 </div>}
 
               <p class="ztr-comment-text warning">
-                {isMissingEvent() && <>{warningSvg()}<strong>This is a {action()} that referenced this article in <a href={preferencesStore.urlPrefixes.note + noteEncode(event().ro!)}>another thread</a></strong></>}
+                {isMissingEvent() && <>{warningSvg()}<strong>This is a {action()} that referenced this article in <a href={store.urlPrefixes!.note + noteEncode(event().ro!)}>another thread</a></strong></>}
                 {isUnspecifiedVersion() && <>{warningSvg()}<strong>Article contents may have changed since this {action()} was made</strong></>}
                 {isDifferentVersion() && <>{warningSvg()}<strong>Article contents changed since this {action()} was made</strong></>}
               </p>
@@ -120,7 +124,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEvent
                 ref={setTarget}
                 classList={{ "ztr-comment-text": true, "highlight": event().k == 9802 }}
                 style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
-                innerHTML={parseContent(event(), profiles(), preferencesStore)}>
+                innerHTML={parseContent(event(), store, articles())}>
               </div>
 
               {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
@@ -136,13 +140,13 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEvent
                   {replySvg()}
                   <span>{isOpen() ? 'Cancel' : 'Reply'}</span>
                 </li>
-                {/* <Show when={!preferencesStore.disableZaps}>
+                {/* <Show when={!store.disableZaps}>
                   <li class="ztr-comment-action-zap">
                     {lightningSvg()}
                     <span>10</span>
                   </li>
                 </Show>
-                <Show when={!preferencesStore.disableLikes}>
+                <Show when={!store.disableLikes}>
                   <li class="ztr-comment-action-like">
                     {likeSvg()}
                     <span>27</span>
@@ -153,7 +157,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[], rootEvent
                 <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
             {!isThreadCollapsed() && <div class="ztr-comment-replies">
-              <Thread nestedEvents={() => event().children} rootEventIds={props.rootEventIds} />
+              <Thread nestedEvents={() => event().children} />
             </div>}
           </div>;
         }

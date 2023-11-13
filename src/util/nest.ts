@@ -1,5 +1,7 @@
 import { NoteEvent } from "./models";
 
+// Parent & children are strictly UI concepts, an event with no parent
+// means it sits at the first level, no children means no replies to it
 export type NestedNoteEvent = NoteEvent & { parent?: NoteEvent, children: NestedNoteEvent[]; };
 
 export const nest = (events: NoteEvent[], parent?: NoteEvent): NestedNoteEvent[] => {
@@ -8,7 +10,7 @@ export const nest = (events: NoteEvent[], parent?: NoteEvent): NestedNoteEvent[]
   // Find all events at this level of recursion (filter by parent)
   const currentLevelEvents = new Set(nestedEvents.filter(e => {
     if (parent) {
-      const belongsToLevel: boolean = parent.id === (e.er || e.ro);
+      const belongsToLevel: boolean = parent.id === (e.re || e.ro);
       if (belongsToLevel) {
         e.parent = parent;
       }
@@ -16,7 +18,7 @@ export const nest = (events: NoteEvent[], parent?: NoteEvent): NestedNoteEvent[]
     }
 
     // If no parent is found in the events array, match those without it
-    return !nestedEvents.find(e2 => e2.id === (e.er || e.ro));
+    return !nestedEvents.find(e2 => e2.id === (e.re || e.ro));
   }));
 
   // Remove found events from the original event array

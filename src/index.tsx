@@ -1,12 +1,11 @@
-import { For, JSX, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
+import { For, JSX, createComputed, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, parseUrlPrefixes, updateProfiles, totalChildren, sortByDate } from "./util/ui";
+import { calculateRelayLatest, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes } from "./util/ui";
 import { nest } from "./util/nest";
-import { PreferencesStore, SignersStore, pool, isDisableType, ZapThreadsContext, Anchor } from "./util/stores";
+import { store, pool, isDisableType, Anchor, signersStore } from "./util/stores";
 import { Thread, ellipsisSvg } from "./thread";
 import { RootComment } from "./reply";
-import { createMutable } from "solid-js/store";
 import { Sub } from "./nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
 import { clear as clearCache, find, findAll, save, watchAll } from "./util/db";
@@ -21,37 +20,43 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     throw "Only NIP-19 naddr, note and nevent encoded entities and URLs are supported";
   }
 
-  const anchor = (): Anchor => {
-    if (props.anchor.startsWith('http')) {
-      return { type: 'http', value: props.anchor };
-    }
-    const decoded = decode(props.anchor);
-    switch (decoded.type) {
-      case 'nevent': return { type: 'note', value: decoded.data.id };
-      case 'note': return { type: 'note', value: decoded.data };
-      case 'naddr':
-        const d = decoded.data;
-        return { type: 'naddr', value: `${d.kind}:${d.pubkey}:${d.identifier}` };
-      default: throw 'Malformed anchor';
-    }
-  };
+  createComputed(() => {
+    store.anchor = (() => {
+      if (props.anchor.startsWith('http')) {
+        return { type: 'http', value: props.anchor };
+      }
+      const decoded = decode(props.anchor);
+      switch (decoded.type) {
+        case 'nevent': return { type: 'note', value: decoded.data.id };
+        case 'note': return { type: 'note', value: decoded.data };
+        case 'naddr':
+          const d = decoded.data;
+          return { type: 'naddr', value: `${d.kind}:${d.pubkey}:${d.identifier}` };
+        default: throw 'Malformed anchor';
+      }
+    })();
+  });
+  const anchor = () => store.anchor!;
 
-  const version = () => props.version;
-  const defaultRelays = "wss://relay.damus.io,wss://nos.lol";
-  const relays = () => (props.relays || defaultRelays).split(",").map(r => new URL(r).toString());
-  const [rootEventIds, setRootEventIds] = createSignal([] as string[]);
+  createComputed(() => {
+    const defaultRelays = "wss://relay.damus.io,wss://nos.lol";
+    store.relays = (props.relays || defaultRelays).split(",").map(r => new URL(r).toString());
+  });
+  const relays = () => store.relays!;
 
-  const disable = () => props.disable.split(',').map(e => e.trim()).filter(isDisableType);
-  const closeOnEose = () => disable().includes('watch');
+  createComputed(() => {
+    store.disable = props.disable.split(',').map(e => e.trim()).filter(isDisableType);
+  });
+  const disable = () => store.disable!;
 
-  const signersStore = createMutable<SignersStore>({});
-  const preferencesStore = createMutable<PreferencesStore>({
-    filter: {},
-    disable: disable,
-    urlPrefixes: parseUrlPrefixes(props.urlPrefixes),
+  createComputed(() => {
+    store.urlPrefixes = parseUrlPrefixes(props.urlPrefixes);
   });
 
-  const profiles = watchAll(() => ['profiles']);
+  const requestedVersion = () => props.version;
+  const closeOnEose = () => disable().includes('watch');
+
+  store.profiles = watchAll(() => ['profiles']);
 
   let sub: Sub | null;
 
@@ -59,7 +64,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   // clear version on anchor change
   createEffect(on([anchor], () => {
-    preferencesStore.version = version();
+    store.version = requestedVersion();
   }));
 
   // Anchors -> root events
@@ -72,13 +77,15 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     switch (anchor().type) {
       case 'http':
         localRootEvents = await findAll('events', 'r', [anchor().value]);
-        setRootEventIds(sortByDate(localRootEvents).map(e => e.id));
+        store.rootEventIds = sortByDate(localRootEvents).map(e => e.id);
         filterForRemoteRootEvents = { '#r': [anchor().value], kinds: [1] };
         break;
       case 'note':
+        // In the case of note we only have one possible anchor, so return if found
         const e = await find('events', anchor().value);
         if (e) {
-          setRootEventIds([e.id]);
+          store.rootEventIds = [e.id];
+          store.anchorAuthor = e.pk;
           return;
         } else {
           // queue to fetch from remote
@@ -88,7 +95,10 @@ const ZapThreads = (props: { [key: string]: string; }) => {
       case 'naddr':
         const [kind, pubkey, identifier] = anchor().value.split(':');
         localRootEvents = (await findAll('events', 'd', [identifier])).filter(e => e.pk === pubkey);
-        setRootEventIds(sortByDate(localRootEvents).map(e => e.id));
+        if (localRootEvents.length > 0) {
+          store.rootEventIds = sortByDate(localRootEvents).map(e => e.id);
+          store.anchorAuthor = localRootEvents[0].pk;
+        }
         filterForRemoteRootEvents = { authors: [pubkey], kinds: [parseInt(kind)], '#d': [identifier] };
         break;
     }
@@ -105,36 +115,39 @@ const ZapThreads = (props: { [key: string]: string; }) => {
           const events = [...localRootEvents, ...remoteRootNoteEvents];
           const sortedEventIds = sortByDate([...events]).map(e => e.id);
           // only set root event ids if we have a newer event from remote
-          if ((sortedEventIds.length > 0 && sortedEventIds[0]) !== rootEventIds()[0]) {
-            setRootEventIds(sortedEventIds);
+          if ((sortedEventIds.length > 0 && sortedEventIds[0]) !== store.rootEventIds[0]) {
+            store.rootEventIds = sortedEventIds;
           }
           break;
         case 'note':
-          setRootEventIds(remoteRootNoteEvents.map(e => e.id));
+          store.rootEventIds = remoteRootNoteEvents.map(e => e.id);
           break;
+      }
+
+      if (remoteRootNoteEvents.length > 0) {
+        store.anchorAuthor = remoteRootNoteEvents[0].pk;
       }
     });
   }));
 
   // Root events -> filter
-  createEffect(on([rootEventIds, version], () => {
+  createEffect(on([() => store.rootEventIds, requestedVersion], () => {
     // set the filter for finding actual comments
     switch (anchor().type) {
       case 'http':
       case 'note':
-        if ((preferencesStore.filter['#e'] ?? []).toString() !== rootEventIds().toString()) {
-          preferencesStore.filter = { "#e": rootEventIds() };
+        if ((store.filter['#e'] ?? []).toString() !== store.rootEventIds.toString()) {
+          store.filter = { "#e": store.rootEventIds };
         }
         return;
       case 'naddr':
-        const existingAnchor = preferencesStore.filter['#a'] && preferencesStore.filter['#a'][0];
+        const existingAnchor = store.filter['#a'] && store.filter['#a'][0];
         if (anchor().value !== existingAnchor) {
-          preferencesStore.filter = { "#a": [anchor().value] };
-          console.log('(in 2) updating filter', preferencesStore.filter['#a']![0]);
+          store.filter = { "#a": [anchor().value] };
         }
 
         // Version only applicable to naddr - get provided version or default to most recent root event ID
-        preferencesStore.version = version() || rootEventIds()[0];
+        store.version = requestedVersion() || store.rootEventIds[0];
         return;
     }
   }, { defer: true }));
@@ -148,7 +161,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     return relaysLatest.length > 0 ? Math.min(...relaysLatest) + 1 : 0;
   };
 
-  const filter = () => preferencesStore.filter;
+  const filter = () => store.filter;
 
   // Filter -> remote events, content
   createEffect(on([filter, relays], async () => {
@@ -164,10 +177,10 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
     const kinds = [1, 9802, 7, 9735];
     // TODO restore (with a specific `since` for aggregates)
-    // if (!preferencesStore.disable().includes('likes')) {
+    // if (!store.disable().includes('likes')) {
     //   kinds.push(7);
     // }
-    // if (!preferencesStore.disable().includes('zaps')) {
+    // if (!store.disable().includes('zaps')) {
     //   kinds.push(9735);
     // }
 
@@ -219,7 +232,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
         setTimeout(async () => {
           // Update profiles of current events (including anchor author)
-          await updateProfiles([...events().map(e => e.pk)], relays(), profiles());
+          await updateProfiles([...events().map(e => e.pk)], relays(), store.profiles());
 
           // Calculate latest received events for each relay
           calculateRelayLatest(_anchor);
@@ -292,7 +305,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   // TODO restore (not working)
   // const content = createMemo(() => {
-  //   if (preferencesStore.disable().includes('hideContent') && anchor().type === 'naddr') {
+  //   if (store.disable().includes('hideContent') && anchor().type === 'naddr') {
   //     // find content and author
   //     const [kind, pubkey, identifier] = anchor().value.split(':');
   //     const eventWatcher = watchAll(() => ['events', 'd', [identifier]]);
@@ -305,7 +318,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   //       const titleTag = undefined; //contentEvent.tags.find(t => t[0] == 'title');
   //       const title = titleTag && titleTag[1];
   //       contentEvent.c = `# ${title}\n ${contentEvent.c}`;
-  //       return parseContent(contentEvent, profiles(), preferencesStore);
+  //       return parseContent(contentEvent, profiles(), store);
   //     }
   //   }
   // });
@@ -317,7 +330,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     switch (anchor().type) {
       case 'http':
       case 'note':
-        return watchAll(() => ['events', 'ro', rootEventIds()]);
+        return watchAll(() => ['events', 'ro', store.rootEventIds]);
       case 'naddr':
         return watchAll(() => ['events', 'a', [anchor().value]]);
     }
@@ -327,7 +340,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   // Filter -> local events
   const nestedEvents = createMemo(() => {
     // calculate only once root event IDs are ready
-    if (rootEventIds() && rootEventIds().length) {
+    if (store.rootEventIds && store.rootEventIds.length) {
       const nested = nest(events());
       return nested.filter(e => {
         // remove all highlights without children (we only want those that have comments on them)
@@ -347,28 +360,26 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     {/* {content() && <div id="ztr-content" innerHTML={content()}></div>} */}
     <div id="ztr-root">
       <style>{style}</style>
-      <ZapThreadsContext.Provider value={{ relays, anchor, profiles, signersStore, preferencesStore }}>
-        <RootComment />
-        <h2 id="ztr-title">
-          {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
-        </h2>
-        <Thread nestedEvents={nestedEvents} rootEventIds={rootEventIds} />
+      <RootComment />
+      <h2 id="ztr-title">
+        {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
+      </h2>
+      <Thread nestedEvents={nestedEvents} />
 
-        {/* TODO move to its own component */}
-        <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
-        {showAdvanced() && <div>
-          <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
-          <small>
-            <ul>
-              <For each={Object.values(pool._conn)}>
-                {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br /></li>}
-              </For>
-            </ul>
-          </small>
-          <button onClick={clearCache}>Clear cache</button>
-        </div>
-        }
-      </ZapThreadsContext.Provider>
+      {/* TODO move to its own component */}
+      <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
+      {showAdvanced() && <div>
+        <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
+        <small>
+          <ul>
+            <For each={Object.values(pool._conn)}>
+              {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br /></li>}
+            </For>
+          </ul>
+        </small>
+        <button onClick={clearCache}>Clear cache</button>
+      </div>
+      }
     </div></>;
 };
 

@@ -12,14 +12,15 @@ export type NoteEvent = {
   pk: string;
   // tags
   ro?: string; // e root
-  er?: string; // e reply
-  em?: string[]; // e mentions
+  re?: string; // e reply
+  me?: string[]; // e mentions
   p?: string[];
-  a?: string;
-  am?: boolean; // was a mentioned?
-  r?: string;
-  t?: string[];
-  d?: string;
+  a?: string; // a tag
+  am?: boolean; // was a tag a mention?
+  r?: string; // r tag
+  t?: string[]; // t tags
+  d?: string; // d tag
+  tl?: string; // title
 };
 
 export type AggregateEvent = {
@@ -54,6 +55,7 @@ export interface ZapthreadsSchema extends DBSchema {
       'ro': string;
       'r': string;
       'd': string;
+      'k': number;
     };
   };
   aggregates: {
@@ -88,6 +90,7 @@ export const upgrade = async (db: IDBPDatabase<ZapthreadsSchema>, oldVersion: nu
   events.createIndex('ro', 'ro');
   events.createIndex('r', 'r');
   events.createIndex('d', 'd');
+  events.createIndex('k', 'k');
 
   db.createObjectStore('aggregates', { keyPath: ['eid', 'k'] });
 
@@ -112,6 +115,8 @@ export const eventToNoteEvent = (e: Event): NoteEvent => {
   const t = [...new Set(tTags.map(t => t[1]))]; // dedup tags
   const dTag = e.tags.find(t => t[0] === 'd');
   const d = dTag && dTag[1];
+  const titleTag = e.tags.find(t => t[0] === 'title');
+  const tl = titleTag && titleTag[1];
 
   return {
     id: e.id,
@@ -120,13 +125,14 @@ export const eventToNoteEvent = (e: Event): NoteEvent => {
     ts: e.created_at,
     pk: e.pubkey,
     ro: nip10result.root?.id,
-    er: nip10result.reply?.id,
-    em: nip10result.mentions.map(m => m.id),
+    re: nip10result.reply?.id,
+    me: nip10result.mentions.map(m => m.id),
     p: nip10result.profiles.map(p => p.pubkey),
     a,
     am,
     r,
     t,
     d,
+    tl,
   };
 };
