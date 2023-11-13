@@ -7,7 +7,9 @@ import { ZapthreadsSchema, upgrade } from "./models.ts";
 type DBTypes = ZapthreadsSchema;
 
 let _db: IDBPDatabase<ZapthreadsSchema>;
-const db = async () => _db ||= await openDB<ZapthreadsSchema>('zapthreads', 2, { upgrade });
+const db = async () => {
+  return _db ||= await openDB<ZapthreadsSchema>('zapthreads', 2, { upgrade });
+};
 
 // db utils
 

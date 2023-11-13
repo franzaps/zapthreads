@@ -78,11 +78,10 @@ export interface ZapthreadsSchema extends DBSchema {
   };
 }
 
-export const upgrade = async (db: IDBPDatabase<ZapthreadsSchema>, oldVersion: number, newVersion: number | null) => {
-  if (oldVersion == 1) {
-    // TODO test this works by going back to older version
+export const upgrade = async (db: IDBPDatabase<ZapthreadsSchema>, currentVersion: number) => {
+  if (currentVersion <= 1) {
     const names = [...db.objectStoreNames];
-    await Promise.all(names.map(n => db.clear(n)));
+    await Promise.all(names.map(n => db.deleteObjectStore(n)));
   }
 
   const events = db.createObjectStore('events', { keyPath: 'id' });
