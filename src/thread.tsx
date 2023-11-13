@@ -5,11 +5,9 @@ import { NestedNoteEvent } from "./util/nest";
 import { noteEncode, npubEncode } from "./nostr-tools/nip19";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import { store } from "./util/stores";
-import { watchAll } from "./util/db";
+import { NoteEvent } from "./util/models";
 
-const articles = watchAll(() => ['events', 'k', [30023]]);
-
-export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; }) => {
+export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles: () => NoteEvent[]; }) => {
   const anchor = () => store.anchor!;
   const profiles = store.profiles!;
 
@@ -124,7 +122,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; }) => {
                 ref={setTarget}
                 classList={{ "ztr-comment-text": true, "highlight": event().k == 9802 }}
                 style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
-                innerHTML={parseContent(event(), store, articles())}>
+                innerHTML={parseContent(event(), store, props.articles())}>
               </div>
 
               {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
@@ -157,7 +155,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; }) => {
                 <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
             {!isThreadCollapsed() && <div class="ztr-comment-replies">
-              <Thread nestedEvents={() => event().children} />
+              <Thread nestedEvents={() => event().children} articles={props.articles} />
             </div>}
           </div>;
         }

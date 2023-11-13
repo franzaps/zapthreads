@@ -1,7 +1,7 @@
 import { For, JSX, createComputed, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { calculateRelayLatest, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes } from "./util/ui";
+import { calculateRelayLatest, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent } from "./util/ui";
 import { nest } from "./util/nest";
 import { store, pool, isDisableType, Anchor, signersStore } from "./util/stores";
 import { Thread, ellipsisSvg } from "./thread";
@@ -303,25 +303,19 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
   }, { defer: true }));
 
-  // TODO restore (not working)
-  // const content = createMemo(() => {
-  //   if (store.disable().includes('hideContent') && anchor().type === 'naddr') {
-  //     // find content and author
-  //     const [kind, pubkey, identifier] = anchor().value.split(':');
-  //     const eventWatcher = watchAll(() => ['events', 'd', [identifier]]);
-  //     console.log('in content evcen', eventWatcher());
+  const articles = watchAll(() => ['events', 'k', [30023]]);
 
-  //     const contentEvents = eventWatcher().filter(e => e.pk === pubkey && e.k === parseInt(kind));
-  //     const contentEvent = contentEvents.length > 0 && sortByDate(contentEvents)[0];
+  const content = createMemo(() => {
+    if (store.disable!.includes('hideContent') && anchor().type === 'naddr') {
+      const [_, pubkey, identifier] = anchor().value.split(':');
+      const contentEvent = articles().find(e => e.d === identifier && e.pk === pubkey);
 
-  //     if (contentEvent && contentEvent.k === 30023) {
-  //       const titleTag = undefined; //contentEvent.tags.find(t => t[0] == 'title');
-  //       const title = titleTag && titleTag[1];
-  //       contentEvent.c = `# ${title}\n ${contentEvent.c}`;
-  //       return parseContent(contentEvent, profiles(), store);
-  //     }
-  //   }
-  // });
+      if (contentEvent) {
+        const c = `# ${contentEvent.tl}\n ${contentEvent.c}`;
+        return parseContent({ ...contentEvent, c }, store, []);
+      }
+    }
+  });
 
   // Build JSX
 
@@ -357,31 +351,32 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
   return <>
-    {/* {content() && <div id="ztr-content" innerHTML={content()}></div>} */}
+    {content() && <div id="ztr-content" innerHTML={content()}></div>}
     <div id="ztr-root">
       <style>{style}</style>
       <RootComment />
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
       </h2>
-      <Thread nestedEvents={nestedEvents} />
+      <Thread nestedEvents={nestedEvents} articles={articles} />
 
-      {/* TODO move to its own component */}
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
-      {showAdvanced() && <div>
-        <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
-        <small>
-          <ul>
-            <For each={Object.values(pool._conn)}>
-              {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br /></li>}
-            </For>
-          </ul>
-        </small>
-        <button onClick={clearCache}>Clear cache</button>
-      </div>
+      {showAdvanced() && <Advanced />
       }
     </div></>;
 };
+
+const Advanced = () => <div>
+  <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
+  <small>
+    <ul>
+      <For each={Object.values(pool._conn)}>
+        {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br /></li>}
+      </For>
+    </ul>
+  </small>
+  <button onClick={clearCache}>Clear cache</button>
+</div>;
 
 export default ZapThreads;
 
