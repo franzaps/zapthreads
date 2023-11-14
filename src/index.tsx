@@ -35,40 +35,36 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         default: throw 'Malformed anchor';
       }
     })();
-  });
-  const anchor = () => store.anchor!;
 
-  createComputed(() => {
     const defaultRelays = "wss://relay.damus.io,wss://nos.lol";
     store.relays = (props.relays || defaultRelays).split(",").map(r => new URL(r).toString());
+
+    if ((props.author || '').startsWith('npub')) {
+      store.externalAuthor = props.author;
+    }
+
+    store.disableFeatures = props.disable.split(',').map(e => e.trim()).filter(isDisableType);
+    store.urlPrefixes = parseUrlPrefixes(props.urls);
   });
+
+  const anchor = () => store.anchor!;
   const relays = () => store.relays!;
-
-  createComputed(() => {
-    store.disable = props.disable.split(',').map(e => e.trim()).filter(isDisableType);
-  });
-  const disable = () => store.disable!;
-
-  createComputed(() => {
-    store.urlPrefixes = parseUrlPrefixes(props.urlPrefixes);
-  });
-
+  const disableFeatures = () => store.disableFeatures!;
   const requestedVersion = () => props.version;
-  const closeOnEose = () => disable().includes('watch');
 
   store.profiles = watchAll(() => ['profiles']);
 
-  let sub: Sub | null;
+  const closeOnEose = () => disableFeatures().includes('watch');
 
   // Anchors -> root events -> events
 
   // clear version on anchor change
-  createEffect(on([anchor], () => {
+  createComputed(on([anchor], () => {
     store.version = requestedVersion();
   }));
 
   // Anchors -> root events
-  createEffect(on([anchor, relays], async () => {
+  createComputed(on([anchor, relays], async () => {
     let filterForRemoteRootEvents: Filter;
     let localRootEvents: NoteEvent[];
 
@@ -131,14 +127,16 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     });
   }));
 
+  const rootEventIds = () => store.rootEventIds;
+
   // Root events -> filter
-  createEffect(on([() => store.rootEventIds, requestedVersion], () => {
+  createComputed(on([rootEventIds, requestedVersion], () => {
     // set the filter for finding actual comments
     switch (anchor().type) {
       case 'http':
       case 'note':
-        if ((store.filter['#e'] ?? []).toString() !== store.rootEventIds.toString()) {
-          store.filter = { "#e": store.rootEventIds };
+        if ((store.filter['#e'] ?? []).toString() !== rootEventIds().toString()) {
+          store.filter = { "#e": rootEventIds() };
         }
         return;
       case 'naddr':
@@ -148,12 +146,16 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         }
 
         // Version only applicable to naddr - get provided version or default to most recent root event ID
-        store.version = requestedVersion() || store.rootEventIds[0];
+        store.version = requestedVersion() || rootEventIds()[0];
         return;
     }
   }, { defer: true }));
 
+  // Subscription
+
   const filter = () => store.filter;
+
+  let sub: Sub | null;
 
   // Filter -> remote events, content
   createEffect(on([filter, relays], async () => {
@@ -169,10 +171,10 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
     const kinds = [1, 9802, 7, 9735];
     // TODO restore (with a specific `since` for aggregates)
-    // if (!store.disable().includes('likes')) {
+    // if (!store.disableFeatures().includes('likes')) {
     //   kinds.push(7);
     // }
-    // if (!store.disable().includes('zaps')) {
+    // if (!store.disableFeatures().includes('zaps')) {
     //   kinds.push(9735);
     // }
 
@@ -244,10 +246,10 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   }, { defer: true }));
 
   // Login external npub/nsec
-  const npubOrNsec = () => props.npub;
+  const npubOrNsec = () => props.user;
 
   // Auto login when external pubkey supplied
-  createEffect(on(npubOrNsec, (_) => {
+  createComputed(on(npubOrNsec, (_) => {
     if (_) {
       let pubkey: string;
       let privkey: string | undefined;
@@ -291,7 +293,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   }));
 
   // Log out when external npub/nsec is absent
-  createEffect(on(npubOrNsec, (_) => {
+  createComputed(on(npubOrNsec, (_) => {
     if (!_) {
       signersStore.active = undefined;
     }
@@ -300,7 +302,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const articles = watchAll(() => ['events', 30023, { index: 'k' }]);
 
   const content = createMemo(() => {
-    if (store.disable!.includes('hideContent') && anchor().type === 'naddr') {
+    if (store.disableFeatures!.includes('hideContent') && anchor().type === 'naddr') {
       const [_, pubkey, identifier] = anchor().value.split(':');
       const contentEvent = articles().find(e => e.d === identifier && e.pk === pubkey);
 
@@ -348,7 +350,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     {content() && <div id="ztr-content" innerHTML={content()}></div>}
     <div id="ztr-root">
       <style>{style}</style>
-      {!store.disable!.includes('replies') && <RootComment />}
+      {!store.disableFeatures!.includes('replies') && <RootComment />}
       <h2 id="ztr-title">
         {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
       </h2>
@@ -374,24 +376,28 @@ const Advanced = () => <div>
 
 export default ZapThreads;
 
+// NOTE that the element seems to lose reactivity (in Solid, at least)
+// when using multiple word attributes
 customElement<ZapThreadsAttributes>('zap-threads', {
   anchor: "",
   version: "",
   relays: "",
-  npub: "",
+  user: "",
+  author: "",
   disable: "",
-  'url-prefixes': "",
+  urls: "",
 }, (props) => {
   return <ZapThreads
-    anchor={props.anchor ?? ''}
-    version={props.version ?? ''}
-    relays={props.relays ?? ''}
-    npub={props.npub ?? ''}
-    disable={props.disable ?? ''}
-    urlPrefixes={props['url-prefixes'] ?? ''}
+    anchor={props['anchor'] ?? ''}
+    version={props['version'] ?? ''}
+    relays={props['relays'] ?? ''}
+    user={props['user'] ?? ''}
+    author={props['author'] ?? ''}
+    disable={props['disable'] ?? ''}
+    urls={props['urls'] ?? ''}
   />;
 });
 
 export type ZapThreadsAttributes = {
-  [key in 'anchor' | 'version' | 'relays' | 'npub' | 'disable' | 'url-prefixes']?: string;
+  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls']?: string;
 } & JSX.HTMLAttributes<HTMLElement>;

@@ -134,7 +134,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </div>}
 
               <ul class="ztr-comment-actions">
-                <Show when={!store.disable!.includes('replies')}>
+                <Show when={!store.disableFeatures!.includes('replies')}>
                   <li class="ztr-comment-action-reply" onClick={() => setOpen(!isOpen()) && setShowInfo(false)}>
                     {replySvg()}
                     <span>{isOpen() ? 'Cancel' : 'Reply'}</span>

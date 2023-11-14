@@ -10,7 +10,7 @@ describe("ui utils", () => {
       filter: {},
       profiles: () => [],
       rootEventIds: [],
-      disable: [],
+      disableFeatures: [],
       urlPrefixes: parseUrlPrefixes('naddr:nostr.com/')
     });
 

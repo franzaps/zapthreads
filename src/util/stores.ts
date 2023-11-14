@@ -35,15 +35,16 @@ export const isDisableType = (type: string): type is DisableType => {
 };
 
 export type PreferencesStore = {
-  disable?: DisableType[],
-  urlPrefixes?: { [key in UrlPrefixesKeys]?: string },
-  filter: Filter;
-  version?: string;
-  anchorAuthor?: string;
-  rootEventIds: string[];
+  anchor?: Anchor, // derived from anchor prop
+  relays?: string[]; // prop
+  version?: string;  // derived from version prop
+  rootEventIds: string[];  // derived from anchor prop
+  filter: Filter;  // derived from anchor prop
+  externalAuthor?: string; // prop, mostly used with http anchor type
+  disableFeatures?: DisableType[]; // prop
+  urlPrefixes?: { [key in UrlPrefixesKeys]?: string }, // prop
 
-  relays?: string[],
-  anchor?: Anchor,
+  anchorAuthor?: string;
   profiles: () => Profile[];
 };
 

@@ -1,44 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ZapThreads Sample Embedded App</title>
-    
-    <script src="./dist/zapthreads.iife.js"></script>
-    <!-- <script type="text/javascript" src="https://unpkg.com/zapthreads@0.1.0/dist/zapthreads.iife.js"></script> -->
-    
-    <link rel="stylesheet" href="./src/styles/index.css">
-    <link rel="stylesheet" href="./app/style.css">
 
-    <style>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZapThreads Sample Embedded App</title>
+
+  <script src="./dist/zapthreads.iife.js"></script>
+  <!-- <script type="text/javascript" src="https://unpkg.com/zapthreads@0.1.0/dist/zapthreads.iife.js"></script> -->
+
+  <link rel="stylesheet" href="./src/styles/index.css">
+  <link rel="stylesheet" href="./app/style.css">
+
+  <style>
+    zap-threads {
+      --ztr-link-color: #92379c;
+      --ztr-login-button-color: yellow;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        color: #e7e7e7;
+        background-color: #222;
+      }
+
       zap-threads {
-        --ztr-link-color:  #92379c;
-        --ztr-login-button-color: yellow;
+        --ztr-link-color: #167bb9;
       }
-    
-      @media (prefers-color-scheme: dark) {
-        body {
-          color: #e7e7e7;
-          background-color: #222;
-        }
-        zap-threads {
-          --ztr-link-color: #167bb9;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Super Blog</h1>
-    <h2>Sample article with embedded script</h2>
-    <p>
-      Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-    </p>
-    
-    <zap-threads
-      anchor="https://fiatjaf.com/nostr.html"
-      npub="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9"
-      disable="zaps,publish"
-      />
-  </body>
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Super Blog</h1>
+  <h2>Sample article with embedded script</h2>
+  <p>
+    Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+    aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
+    sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum
+    dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+    enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute
+    irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+  </p>
+
+  <zap-threads anchor="https://fiatjaf.com/nostr.html"
+    user="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9" disable="zaps,publish" />
+</body>
+
 </html>

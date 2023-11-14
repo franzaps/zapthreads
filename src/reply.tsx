@@ -4,9 +4,10 @@ import { UnsignedEvent, Event, getSignature, getEventHash } from "nostr-tools/ev
 import { EventSigner, pool, signersStore, store } from "./util/stores.ts";
 import { generatePrivateKey, getPublicKey } from "nostr-tools/keys";
 import { createAutofocus } from "@solid-primitives/autofocus";
-import { find, save, watch, watchAll } from "./util/db.ts";
+import { find, save, watch } from "./util/db.ts";
 import { Profile, eventToNoteEvent } from "./util/models.ts";
 import { lightningSvg, likeSvg } from "./thread.tsx";
+import { decode } from "nostr-tools/nip19";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const [comment, setComment] = createSignal('');
@@ -111,6 +112,13 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       unsignedEvent.tags.push(['p', store.anchorAuthor!]);
     }
 
+    if (store.externalAuthor) {
+      try {
+        const pubkey = decode(store.externalAuthor).data as string;
+        unsignedEvent.tags.push(['p', pubkey]);
+      } catch (_) { }
+    }
+
     // If it is a reply, prepare root and reply tags
     if (props.replyTo) {
       const replyEvent = await find('events', IDBKeyRange.only(props.replyTo));
@@ -148,7 +156,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         save('events', eventToNoteEvent(rootEvent));
 
         // Publish, store filter and get updated rootTag
-        if (store.disable!.includes('publish')) {
+        if (store.disableFeatures!.includes('publish')) {
           console.log('Publishing root event disabled', rootEvent);
         } else {
           pool.publish(relays(), rootEvent);
@@ -173,7 +181,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setLoading(true);
     console.log(JSON.stringify(event, null, 2));
 
-    if (store.disable!.includes('publish')) {
+    if (store.disableFeatures!.includes('publish')) {
       // Simulate publishing
       setTimeout(() => onSuccess(event), 1000);
     } else {
@@ -202,7 +210,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       onChange={e => setComment(e.target.value)}
     />
     <div class="ztr-reply-controls">
-      {store.disable!.includes('publish') && <span>Publishing is disabled</span>}
+      {store.disableFeatures!.includes('publish') && <span>Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
       <Show when={!loading()} fallback={
@@ -220,7 +228,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
           Reply as {loggedInUser()!.n || shortenEncodedId(loggedInUser()!.pk)}
         </button>}
 
-      {!loggedInUser() && !store.disable!.includes('replyAnonymously') &&
+      {!loggedInUser() && !store.disableFeatures!.includes('replyAnonymously') &&
         <button disabled={loading()} class="ztr-reply-button" onClick={() => publish()}>
           Reply anonymously
         </button>}
@@ -241,13 +249,13 @@ export const RootComment = () => {
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
       <ul class="ztr-comment-actions">
-        <Show when={!store.disable!.includes('likes')}>
+        <Show when={!store.disableFeatures!.includes('likes')}>
           <li class="ztr-comment-action-like">
             {likeSvg()}
             <span>{likeCount()} likes</span>
           </li>
         </Show>
-        <Show when={!store.disable!.includes('zaps')}>
+        <Show when={!store.disableFeatures!.includes('zaps')}>
           <li class="ztr-comment-action-zap">
             {lightningSvg()}
             <span>{satsAbbrev(zapCount())} sats</span>

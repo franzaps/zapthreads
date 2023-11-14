@@ -52,25 +52,34 @@ import "zapthreads";
 
 Arguments:
 
- - (required) `anchor`: NIP-19 naddr or URL from where to retrieve anchor events
+ - `anchor`:
+   - Required!
+   - NIP-19 naddr, note, nevent or URL from where to retrieve events
+ - `version`
+   - ID of the event to show in case a naddr (long-form note) has multiple versions
  - `relays`: comma-separated list of preferred relays
    - defaults to `wss://relay.damus.io,wss://nos.lol`)
- - `npub`:
+ - `user`:
    - npub to log in the user as (they will only be able to sign with a NIP-07 extension)
-   - nsec also supported
+   - nsec is also supported
+ - `author`:
+   - This npub will be added as a `p` tag to all comments
+   - Useful for notifying the author of a website (http anchor)
  - `disable`: comma-separated string of features to disable, all enabled by default
    - `likes`
    - `zaps`
    - `publish` (when disabled does not send event to relays, useful for testing)
    - `watch` (when disabled queries relays and closes the connection immediately on EOSE)
    - `replyAnonymously` (when disabled requires logging in in order to publish)
- - `url-prefixes`: comma-separated pairs of URLs
-   - defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/` (`https://` is automatically prepended)
+   - `hideContent` (when disabled it shows the content if the anchor is a naddr)
+ - `urls`: comma-separated pairs of URLs
+   - defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/`
+   - `https://` will be automatically prepended
 
 ```html
 <zap-threads 
   anchor="naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz"
-  npub="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9"
+  user="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9"
   relays="wss://relay.nostr.band,wss://nostr-pub.wellorder.net/"
   disable="likes"
   />
