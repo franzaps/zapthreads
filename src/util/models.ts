@@ -1,4 +1,4 @@
-import { DBSchema, IDBPDatabase } from "idb";
+import { DBSchema, IDBPDatabase, StoreNames } from "idb";
 import { parse } from "nostr-tools/nip10";
 import { UnsignedEvent } from "nostr-tools/event";
 
@@ -78,25 +78,32 @@ export interface ZapthreadsSchema extends DBSchema {
   };
 }
 
+export const indices: { [key in StoreNames<ZapthreadsSchema>]: any } = {
+  'events': 'id',
+  'aggregates': ['eid', 'k'],
+  'profiles': ['pk'],
+  'relays': ['n', 'a']
+};
+
 export const upgrade = async (db: IDBPDatabase<ZapthreadsSchema>, currentVersion: number) => {
   if (currentVersion <= 1) {
     const names = [...db.objectStoreNames];
     await Promise.all(names.map(n => db.deleteObjectStore(n)));
   }
 
-  const events = db.createObjectStore('events', { keyPath: 'id' });
+  const events = db.createObjectStore('events', { keyPath: indices['events'] });
   events.createIndex('a', 'a');
   events.createIndex('ro', 'ro');
   events.createIndex('r', 'r');
   events.createIndex('d', 'd');
   events.createIndex('k', 'k');
 
-  db.createObjectStore('aggregates', { keyPath: ['eid', 'k'] });
+  db.createObjectStore('aggregates', { keyPath: indices['aggregates'] });
 
-  const profiles = db.createObjectStore('profiles', { keyPath: 'pk' });
+  const profiles = db.createObjectStore('profiles', { keyPath: indices['profiles'] });
   profiles.createIndex('l', 'l');
 
-  const relays = db.createObjectStore('relays', { keyPath: ['n', 'a'] });
+  const relays = db.createObjectStore('relays', { keyPath: indices['relays'] });
   relays.createIndex('a', 'a');
 };
 

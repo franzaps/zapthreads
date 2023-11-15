@@ -78,7 +78,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         break;
       case 'note':
         // In the case of note we only have one possible anchor, so return if found
-        const e = await find('events', anchor().value);
+        const e = await find('events', IDBKeyRange.only(anchor().value));
         if (e) {
           store.rootEventIds = [e.id];
           store.anchorAuthor = e.pk;
@@ -185,6 +185,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
       sub = pool.sub(relays(), [{ ...filter(), kinds, since }]);
 
+      // TODO improve likes/zaps correctness by stopping assuming
+      // anchor and check tag for exact anchor/root event ID
       const newLikeIds = new Set<string>();
       const newZaps: { [id: string]: number; } = {};
 

@@ -50,7 +50,7 @@ render(() => {
     <button onClick={() => npub() ? setNpub('') : setNpub(defaultNpub)}>{npub() ? 'Log out' : 'Log in'}</button>
     <hr />
 
-    <Select class="custom" initialValue={options[5]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
+    <Select class="custom" initialValue={options[1]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
 
     <hr />
 
