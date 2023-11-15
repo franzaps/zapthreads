@@ -210,12 +210,14 @@ export const generateTags = (content: string): string[][] => {
 };
 
 export const parseUrlPrefixes = (value?: string) => {
-  value ||= ["naddr:habla.news/a/",
-    "npub:habla.news/p/",
-    "nprofile:habla.news/p/",
-    "nevent:habla.news/e/",
-    "note:habla.news/n/",
-    "tag:habla.news/t/"].join(',');
+  value ||= [
+    "naddr:nostr.com/",
+    "npub:nostr.com/",
+    "nprofile:nostr.com/",
+    "nevent:nostr.com/",
+    "note:nostr.com/",
+    "tag:snort.social/t/"
+  ].join(',');
   const result: { [key in UrlPrefixesKeys]?: string; } = {};
 
   for (const pair of value.split(',')) {
