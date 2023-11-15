@@ -153,24 +153,38 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   // Subscription
 
-  const filter = () => store.filter;
+  const filter = createMemo(() => {
+    return store.filter;
+  }, { defer: true });
 
   let sub: Sub | null;
 
   // Filter -> remote events, content
-  createEffect(on([filter, relays], async () => {
+  createEffect(on([filter], async () => {
+    // Fix values to this effect
+    const _filter = filter();
+    const _relays = relays();
+    const _anchor = anchor();
+    const _events = events();
+    const _profiles = store.profiles();
+
+    if (Object.entries(_filter).length === 0) {
+      return;
+    }
+
     // Ensure clean subs
     sub?.unsub();
     sub = null;
 
     onCleanup(() => {
-      console.log('[zapthreads] unsubscribing and cleaning up');
+      console.log('[zapthreads] unsubscribing and cleaning up', _anchor.value);
       sub?.unsub();
       sub = null;
     });
 
     const kinds = [1, 9802, 7, 9735];
-    // TODO restore (with a specific `since` for aggregates)
+    // TODO restore with a specific `since` for aggregates
+    // (leaving it like this will fail when re-enabling likes/zaps)
     // if (!store.disableFeatures().includes('likes')) {
     //   kinds.push(7);
     // }
@@ -178,73 +192,63 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     //   kinds.push(9735);
     // }
 
-    try {
-      console.log('[zapthreads] subscribing to', anchor().value);
+    console.log('[zapthreads] subscribing to', _anchor.value);
 
-      const since = await getRelayLatestForFilter(anchor(), relays());
+    const since = await getRelayLatestForFilter(_anchor, _relays);
 
-      sub = pool.sub(relays(), [{ ...filter(), kinds, since }]);
+    sub = pool.sub(_relays, [{ ..._filter, kinds, since }]);
 
-      // TODO improve likes/zaps correctness by stopping assuming
-      // anchor and check tag for exact anchor/root event ID
-      const newLikeIds = new Set<string>();
-      const newZaps: { [id: string]: number; } = {};
+    const newLikeIds = new Set<string>();
+    const newZaps: { [id: string]: string; } = {};
 
-      sub.on('event', async (e) => {
-        if (e.kind === 1 || e.kind === 9802) {
-          if (e.content.trim()) {
-            save('events', eventToNoteEvent(e));
-          }
-        } else if (e.kind === 7) {
-          newLikeIds.add(e.id);
-        } else if (e.kind === 9735) {
-          const invoiceTag = e.tags.find(t => t[0] === "bolt11");
-          if (invoiceTag) {
-            const decoded = bolt11Decode(invoiceTag[1]);
-            const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
-            const sats = Number(amount.value) / 1000;
-            newZaps[e.id] = sats;
-          }
+    sub.on('event', async (e) => {
+      if (e.kind === 1 || e.kind === 9802) {
+        if (e.content.trim()) {
+          save('events', eventToNoteEvent(e));
         }
-      });
+      } else if (e.kind === 7) {
+        newLikeIds.add(e.id);
+      } else if (e.kind === 9735) {
+        const invoiceTag = e.tags.find(t => t[0] === "bolt11");
+        invoiceTag && invoiceTag[1] && (newZaps[e.id] = invoiceTag[1]);
+      }
+    });
 
-      sub.on('eose', async () => {
-        const _anchor = anchor();
+    sub.on('eose', async () => {
+      (async () => {
+        const likesAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([_anchor.value, 7]))
+          ?? { eid: _anchor.value, ids: [], k: 7 };
+        likesAggregate.ids = [...new Set([...likesAggregate.ids, ...newLikeIds])];
+        save('aggregates', likesAggregate);
 
-        (async () => {
-          const likesAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([anchor().value, 7]))
-            ?? { eid: anchor().value, ids: [], k: 7 };
-          likesAggregate.ids = [...new Set([...likesAggregate.ids, ...newLikeIds])];
-          save('aggregates', likesAggregate);
+        const zapsAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([_anchor.value, 9735]))
+          ?? { eid: _anchor.value, ids: [], k: 9735, sum: 0 };
+        zapsAggregate.sum = Object.entries(newZaps).reduce((acc, entry) => {
+          if (zapsAggregate.ids.includes(entry[0])) return acc;
+          const decoded = bolt11Decode(entry[1]);
+          const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
+          const sats = Number(amount.value) / 1000;
+          return acc + sats;
+        }, zapsAggregate.sum ?? 0);
 
-          const zapsAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([anchor().value, 9735]))
-            ?? { eid: anchor().value, ids: [], k: 9735, sum: 0 };
-          zapsAggregate.sum = Object.entries(newZaps).reduce((acc, entry) => {
-            if (zapsAggregate.ids.includes(entry[0])) return acc;
-            return acc + entry[1];
-          }, zapsAggregate.sum ?? 0);
+        zapsAggregate.ids = [...new Set([...zapsAggregate.ids, ...Object.keys(newZaps)])];
+        save('aggregates', zapsAggregate);
+      })();
 
-          zapsAggregate.ids = [...new Set([...zapsAggregate.ids, ...Object.keys(newZaps)])];
-          save('aggregates', zapsAggregate);
-        })();
+      setTimeout(async () => {
+        // Update profiles of current events (includes anchor author)
+        await updateProfiles([..._events.map(e => e.pk)], _relays, _profiles);
 
-        setTimeout(async () => {
-          // Update profiles of current events (including anchor author)
-          await updateProfiles([...events().map(e => e.pk)], relays(), store.profiles());
+        // Save latest received events for each relay
+        saveRelayLatestForFilter(_anchor, _events);
 
-          // Save latest received events for each relay
-          saveRelayLatestForFilter(_anchor, events());
+        if (closeOnEose()) {
+          sub?.unsub();
+          pool.close(_relays);
+        }
+      }, 96); // same as batched throttle in db.ts
+    });
 
-          if (closeOnEose()) {
-            sub?.unsub();
-            pool.close(relays());
-          }
-        }, 96); // same as batched throttle in db.ts
-      });
-    } catch (e) {
-      // TODO properly handle error
-      console.log(e);
-    }
   }, { defer: true }));
 
   // Login external npub/nsec
