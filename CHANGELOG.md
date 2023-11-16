@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.0
+
+### Bugfixes
+
+ - Fixed login button issue (#39)
+ - Fix race conditions in EOSE closure when quickly switching anchor
+ - Styling bugs when scaling
+
+### Features
+
+ - Much faster and efficient local storage
+ - Implement fallback for windows with unavailable IndexedDB
+ - Allow disabling `reply` for a read-only experience
+ - Display notice when replies don't match root events (#35); allow passing `version`
+ - Use `nostr-tools` directly now that it supports tree-shaking
+ - Use njump (nostr.com) by default
+ - Replace naddr mentions in comments with titles present in local storage
+ - Revamped sample app and improved styling
+
 ## 0.3.2
 
 ### Bugfixes
