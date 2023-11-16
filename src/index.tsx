@@ -16,23 +16,22 @@ import { Filter } from "nostr-tools/filter";
 import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
-  if (!['http', 'naddr', 'note', 'nevent'].some(e => props.anchor.startsWith(e))) {
-    throw "Only NIP-19 naddr, note and nevent encoded entities and URLs are supported";
-  }
-
   createComputed(() => {
     store.anchor = (() => {
       if (props.anchor.startsWith('http')) {
         return { type: 'http', value: props.anchor };
       }
-      const decoded = decode(props.anchor);
-      switch (decoded.type) {
-        case 'nevent': return { type: 'note', value: decoded.data.id };
-        case 'note': return { type: 'note', value: decoded.data };
-        case 'naddr':
-          const d = decoded.data;
-          return { type: 'naddr', value: `${d.kind}:${d.pubkey}:${d.identifier}` };
-        default: throw 'Malformed anchor';
+      try {
+        const decoded = decode(props.anchor);
+        switch (decoded.type) {
+          case 'nevent': return { type: 'note', value: decoded.data.id };
+          case 'note': return { type: 'note', value: decoded.data };
+          case 'naddr':
+            const d = decoded.data;
+            return { type: 'naddr', value: `${d.kind}:${d.pubkey}:${d.identifier}` };
+        }
+      } catch (e) {
+        return { type: 'error', value: `Malformed anchor: ${props.anchor}` };
       }
     })();
 
@@ -65,6 +64,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   // Anchors -> root events
   createComputed(on([anchor, relays], async () => {
+    if (anchor().type === 'error') return;
+
     let filterForRemoteRootEvents: Filter;
     let localRootEvents: NoteEvent[];
 
@@ -97,6 +98,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         }
         filterForRemoteRootEvents = { authors: [pubkey], kinds: [parseInt(kind)], '#d': [identifier] };
         break;
+      default: throw 'error';
     }
 
     // No `since` here as we are not keeping track of a since for root events
@@ -329,6 +331,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         return watchAll(() => ['events', store.rootEventIds, { index: 'ro' }]);
       case 'naddr':
         return watchAll(() => ['events', anchor().value, { index: 'a' }]);
+      default: // error
+        return () => [];
     }
   });
   const events = () => eventsWatcher()();
@@ -353,32 +357,31 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
   return <>
-    {content() && <div id="ztr-content" innerHTML={content()}></div>}
     <div id="ztr-root">
       <style>{style}</style>
-      {!store.disableFeatures!.includes('replies') && <RootComment />}
-      <h2 id="ztr-title">
-        {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
-      </h2>
-      <Thread nestedEvents={nestedEvents} articles={articles} />
+      {content() && <div id="ztr-content" innerHTML={content()}></div>}
+      {anchor().type === 'error' && <>
+        <h1>Error!</h1>
+        <div class="ztr-comment-text">
+          <pre>{anchor().value}</pre>
+          <p>
+            Only properly formed NIP-19 naddr, note and nevent encoded entities and URLs are supported.</p>
+        </div>
+      </>}
+      {anchor().type !== 'error' && <>
+        {!store.disableFeatures!.includes('reply') && <RootComment />}
+        <h2 id="ztr-title">
+          {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
+        </h2>
+        <Thread nestedEvents={nestedEvents} articles={articles} />
+      </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
-      {showAdvanced() && <Advanced />
-      }
+      {showAdvanced() && <><p>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></p>
+        {store.version && <p>Anchor version: {store.version}</p>}
+        <button onClick={clearCache}>Clear cache</button></>}
     </div></>;
 };
-
-const Advanced = () => <div>
-  <small>Powered by <a href="https://github.com/fr4nzap/zapthreads">zapthreads</a></small><br />
-  <small>
-    <ul>
-      {/* <For each={Object.values(pool._conn)}>
-        {r => <li>{r.url} [{r.status}] {r.status == 1 ? 'connected' : 'disconnected'}<br /></li>}
-      </For> */}
-    </ul>
-  </small>
-  <button onClick={clearCache}>Clear cache</button>
-</div>;
 
 export default ZapThreads;
 

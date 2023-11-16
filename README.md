@@ -68,6 +68,7 @@ Arguments:
  - `disable`: comma-separated string of features to disable, all enabled by default
    - `likes`
    - `zaps`
+   - `reply` (when disabled the component becomes read-only)
    - `publish` (when disabled does not send event to relays, useful for testing)
    - `watch` (when disabled queries relays and closes the connection immediately on EOSE)
    - `replyAnonymously` (when disabled requires logging in in order to publish)

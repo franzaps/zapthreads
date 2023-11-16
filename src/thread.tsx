@@ -77,18 +77,18 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
               <div class="ztr-comment-info-wrapper">
                 <div class="ztr-comment-info">
                   <div class="ztr-comment-info-picture">
-                    <img width={svgWidth} height={svgWidth} src={profilePicture()} onerror={() => setProfilePicture(defaultPicture)} />
+                    <img src={profilePicture()} onerror={() => setProfilePicture(defaultPicture)} />
                   </div>
                   <ul class="ztr-comment-info-items">
                     <li class="ztr-comment-info-author">
                       <a href={store.urlPrefixes!.npub + npub()} target="_blank" >{profile()?.n || shortenEncodedId(npub())}</a>
-                    </li>
-                    <li><strong>{action()}ed</strong> <span style="white-space: nowrap;">{createdTimeAgo()}</span></li>
-                    {total() > 0 &&
+                      <span style="white-space: nowrap;"><strong> {action()}ed</strong> {createdTimeAgo()}</span></li>
+                    {total() > 0 && size.width! > 600 &&
                       <>
-                        <li>{separatorSvg()}</li>
+                        <li>●</li>
                         <li>{total()} repl{total() > 1 ? 'ies' : 'y'}{isThreadCollapsed() ? ' (hidden)' : ''}</li>
-                      </>}
+                      </>
+                    }
                     <li>
                       <a class="ztr-comment-info-dots" onClick={() => setShowInfo(!showInfo())}>
                         {ellipsisSvg()}
@@ -107,16 +107,15 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
 
               {showInfo() &&
                 <div class="ztr-info-pane">
-                  <a href={store.urlPrefixes!.note + noteEncode(event().id)} target="_blank"><small>Event</small></a>:
-                  <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre>
-                  {store.version && <pre>Current version: {store.version}</pre>}
+                  <a href={store.urlPrefixes!.note + noteEncode(event().id)} target="_blank"><small>Event data</small></a>
+                  {/* <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre> */}
                 </div>}
 
-              <p class="ztr-comment-text warning">
-                {isMissingEvent() && <>{warningSvg()}<strong>This is a {action()} that referenced this article in <a href={store.urlPrefixes!.note + noteEncode(event().ro!)}>another thread</a></strong></>}
-                {isUnspecifiedVersion() && <>{warningSvg()}<strong>Article contents may have changed since this {action()} was made</strong></>}
-                {isDifferentVersion() && <>{warningSvg()}<strong>Article contents changed since this {action()} was made</strong></>}
-              </p>
+              <div class="ztr-comment-text">
+                {isMissingEvent() && <p class="warning">{warningSvg()}<span>This is a {action()} that referenced this article in <a href={store.urlPrefixes!.note + noteEncode(event().ro!)}>another thread</a></span></p>}
+                {isUnspecifiedVersion() && <p class="warning">{warningSvg()}<span>Article contents may have changed since this {action()} was made</span></p>}
+                {isDifferentVersion() && <p class="warning">{warningSvg()}<span>Article contents changed since this {action()} was made</span></p>}
+              </div>
 
               <div
                 ref={setTarget}
@@ -134,7 +133,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </div>}
 
               <ul class="ztr-comment-actions">
-                <Show when={!store.disableFeatures!.includes('replies')}>
+                <Show when={!store.disableFeatures!.includes('reply')}>
                   <li class="ztr-comment-action-reply" onClick={() => setOpen(!isOpen()) && setShowInfo(false)}>
                     {replySvg()}
                     <span>{isOpen() ? 'Cancel' : 'Reply'}</span>
@@ -168,7 +167,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
 
 // SVG
 
-const separatorSvg = () => <svg class="ztr-comment-info-separator" xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 16 16">
+const separatorSvg = () => <svg class="ztr-comment-info-separator" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
   <circle cx="6" cy="6" r="6" />
 </svg>;
 
@@ -177,8 +176,8 @@ export const lightningSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width=
 export const likeSvg = () => <svg width={svgWidth} height={svgWidth} viewBox="0 -16 180 180" xmlns="http://www.w3.org/2000/svg"><path d="M60.732 29.7C41.107 29.7 22 39.7 22 67.41c0 27.29 45.274 67.29 74 94.89 28.744-27.6 74-67.6 74-94.89 0-27.71-19.092-37.71-38.695-37.71C116 29.7 104.325 41.575 96 54.066 87.638 41.516 76 29.7 60.732 29.7z" /></svg>;
 
 const expandSvg = () => <svg width={svgWidth} height={svgWidth} viewBox="0 0 576 512"><path d="M168 80c-13.3 0-24 10.7-24 24V408c0 8.4-1.4 16.5-4.1 24H440c13.3 0 24-10.7 24-24V104c0-13.3-10.7-24-24-24H168zM72 480c-39.8 0-72-32.2-72-72V112C0 98.7 10.7 88 24 88s24 10.7 24 24V408c0 13.3 10.7 24 24 24s24-10.7 24-24V104c0-39.8 32.2-72 72-72H440c39.8 0 72 32.2 72 72V408c0 39.8-32.2 72-72 72H72zM176 136c0-13.3 10.7-24 24-24h96c13.3 0 24 10.7 24 24v80c0 13.3-10.7 24-24 24H200c-13.3 0-24-10.7-24-24V136zm200-24h32c13.3 0 24 10.7 24 24s-10.7 24-24 24H376c-13.3 0-24-10.7-24-24s10.7-24 24-24zm0 80h32c13.3 0 24 10.7 24 24s-10.7 24-24 24H376c-13.3 0-24-10.7-24-24s10.7-24 24-24zM200 272H408c13.3 0 24 10.7 24 24s-10.7 24-24 24H200c-13.3 0-24-10.7-24-24s10.7-24 24-24zm0 80H408c13.3 0 24 10.7 24 24s-10.7 24-24 24H200c-13.3 0-24-10.7-24-24s10.7-24 24-24z" /></svg>;
-export const ellipsisSvg = () => <svg xmlns="http://www.w3.org/2000/svg" width={svgWidth} height={svgWidth} viewBox="0 -200 560 640"><path d="M8 256a56 56 0 1 1 112 0A56 56 0 1 1 8 256zm160 0a56 56 0 1 1 112 0 56 56 0 1 1 -112 0zm216-56a56 56 0 1 1 0 112 56 56 0 1 1 0-112z" /></svg>;
-const rightArrow = () => <svg xmlns="http://www.w3.org/2000/svg" width={svgWidth * 0.7} height={svgWidth * 0.7} viewBox="0 -50 256 512"><path d="M246.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-9.2-9.2-22.9-11.9-34.9-6.9s-19.8 16.6-19.8 29.6l0 256c0 12.9 7.8 24.6 19.8 29.6s25.7 2.2 34.9-6.9l128-128z" /></svg>;
-const downArrow = () => <svg xmlns="http://www.w3.org/2000/svg" width={svgWidth * 0.7} height={svgWidth * 0.7} viewBox="0 -50 320 512"><path d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z" /></svg>;
+export const ellipsisSvg = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -200 560 640"><path d="M8 256a56 56 0 1 1 112 0A56 56 0 1 1 8 256zm160 0a56 56 0 1 1 112 0 56 56 0 1 1 -112 0zm216-56a56 56 0 1 1 0 112 56 56 0 1 1 0-112z" /></svg>;
+const rightArrow = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -50 256 512"><path d="M246.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-128-128c-9.2-9.2-22.9-11.9-34.9-6.9s-19.8 16.6-19.8 29.6l0 256c0 12.9 7.8 24.6 19.8 29.6s25.7 2.2 34.9-6.9l128-128z" /></svg>;
+const downArrow = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -50 320 512"><path d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z" /></svg>;
 
-const warningSvg = () => <svg width={svgWidth} xmlns="http://www.w3.org/2000/svg" height={svgWidth} viewBox="0 0 512 512"><path d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480H40c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24V296c0 13.3 10.7 24 24 24s24-10.7 24-24V184c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z" /></svg>;
+const warningSvg = () => <svg xmlns="http://www.w3.org/2000/svg" height={svgWidth} viewBox="0 0 512 512"><path d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480H40c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24V296c0 13.3 10.7 24 24 24s24-10.7 24-24V184c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z" /></svg>;
