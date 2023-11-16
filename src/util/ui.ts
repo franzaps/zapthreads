@@ -209,16 +209,15 @@ export const generateTags = (content: string): string[][] => {
   return result;
 };
 
-export const parseUrlPrefixes = (value?: string) => {
-  value ||= [
-    "naddr:nostr.com/",
-    "npub:nostr.com/",
-    "nprofile:nostr.com/",
-    "nevent:nostr.com/",
-    "note:nostr.com/",
-    "tag:snort.social/t/"
-  ].join(',');
-  const result: { [key in UrlPrefixesKeys]?: string; } = {};
+export const parseUrlPrefixes = (value: string = '') => {
+  const result: { [key in UrlPrefixesKeys]?: string; } = {
+    naddr: 'https://nostr.com/',
+    npub: 'https://nostr.com/',
+    nprofile: 'https://nostr.com/',
+    nevent: 'https://nostr.com/',
+    note: 'https://nostr.com/',
+    tag: 'https://snort.social/t/'
+  };
 
   for (const pair of value.split(',')) {
     const [key, value] = pair.split(':');
