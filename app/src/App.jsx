@@ -1,6 +1,6 @@
-import { For, createSignal } from 'solid-js'
-import '../../src/index.tsx' // zapthreads
-import './App.css'
+import { For, createSignal } from 'solid-js';
+import '../../src/index.tsx'; // zapthreads
+import './App.css';
 
 import { Select } from "@thisbeyond/solid-select";
 import "@thisbeyond/solid-select/style.css";
@@ -13,14 +13,14 @@ const options = [
   { label: "Fuck this dystopia (note by Odell)", name: "note15fp4nxx0du93y9r3xp33p4zljqmq6lr8c4xls46gftkl7ul4vhdq484wr8" },
   { label: "Random highlight", name: "nevent1qqsprhvdfau2ezh6mjpess9g5v6g9c657j99jke04s3hc7xrv4vve4qzypl62m6ad932k83u6sjwwkxrqq4cve0hkrvdem5la83g34m4rtqegx3l8d3" },
   { label: "Habla crowdfunding", name: "note17atrwgclprsqlskylp655saavazgmc7du6e3rrpxehd6qehnggzqnat5tp" },
-  { label: "Broken resource", name: "borked"}
+  { label: "Broken resource", name: "borked" }
 ];
 
 const sizes = [
-  {label: "small", name: "14px"},
-  {label: "medium", name: "18px"},
-  {label: "large", name: "24px"},
-  {label: "x-large", name: "30px"},
+  { label: "small", name: "14px" },
+  { label: "medium", name: "18px" },
+  { label: "large", name: "24px" },
+  { label: "x-large", name: "30px" },
 ];
 
 const relays = ['wss://relay.damus.io', 'wss://nostr-pub.wellorder.net', 'wss://relay.primal.net'];
@@ -39,9 +39,9 @@ function App() {
 
   return <>
     <style>{css}</style>
-    <span style="position: absolute; right: 12rem; font-size: 15px">Code: <a href="https://github.com/fr4nzap/zapthreads">https://github.com/fr4nzap/zapthreads</a></span>
+    <a class="github-fork-ribbon" href="https://github.com/fr4nzap/zapthreads" data-ribbon="Code on GitHub" title="Code on GitHub">Code on GitHub</a>
     <h1 style={"display: flex; justify-content: center;"}>zap<svg xmlns="http://www.w3.org/2000/svg" viewBox="-75 0 600 600"><path d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288H175.5L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7H272.5L349.4 44.6z" /></svg>threads</h1>
-    
+
     {/* <p>
       {npub() && <span>Logged in as {npub()}</span>}
     </p>
@@ -49,7 +49,7 @@ function App() {
     <hr /> */}
 
     <h3>Select a resource: &nbsp;
-    <Select class="custom" initialValue={options[0]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
+      <Select class="custom" initialValue={options[0]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
     </h3>
     <h3>(or input your own) &nbsp;<input type='text' value={anchor()} onChange={(e) => setAnchor(e.target.value)}></input></h3>
 
@@ -65,15 +65,15 @@ function App() {
     </For>
 
     <span>Size: &nbsp;
-    <Select class="custom" initialValue={sizes[1]} options={sizes} format={(i) => i.label} onChange={(e) => setSize(e.name)} />
+      <Select class="custom" initialValue={sizes[1]} options={sizes} format={(i) => i.label} onChange={(e) => setSize(e.name)} />
     </span>
 
     <p>Connected relays: <strong>{relays.join(', ')}</strong></p>
 
     <div style="min-height: 1000px; min-width: 700px; margin-top: -2rem">
-    {anchor() && <zap-threads anchor={anchor()} disable={disabled().join(',')} relays={relays.join(',')} user={npub()} />}
+      {anchor() && <zap-threads anchor={anchor()} disable={disabled().join(',')} relays={relays.join(',')} user={npub()} />}
     </div>
   </>;
 }
 
-export default App
+export default App;
