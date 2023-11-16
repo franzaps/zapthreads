@@ -7,7 +7,7 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
  - Permeate the web with Nostr
  - Make Disqus obsolete
 
-![](https://cdn.nostr.build/i/db1295c70ca0a47c3fcd3cba4f01b9ac194dc981462decae07d8fbd410d468ec.jpg)
+![](https://image.nostr.build/2cf766ce82678fa59dbb988e0efbf722877a5c768615704836f038c342858524.png)
 
 Read more: [Threading the web with Nostr](https://habla.news/franzap/threading-the-web-with-nostr)
 
@@ -74,7 +74,7 @@ Arguments:
    - `replyAnonymously` (when disabled requires logging in in order to publish)
    - `hideContent` (when disabled it shows the content if the anchor is a naddr)
  - `urls`: comma-separated pairs of URLs
-   - defaults to `naddr:habla.news/a/,npub:habla.news/p/,nprofile:habla.news/p/,nevent:habla.news/e/,note:habla.news/n/,tag:habla.news/t/`
+   - defaults to `naddr:nostr.com/,npub:nostr.com/,nprofile:nostr.com/,nevent:nostr.com/,note:nostr.com/,tag:snort.social/t/`
    - `https://` will be automatically prepended
 
 ```html
