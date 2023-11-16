@@ -21,6 +21,7 @@
   },
   "scripts": {
     "dev": "vite --config vite-app.config.js",
+    "build-app": "vite build --config vite-app.config.js",
     "build": "vite build",
     "test": "jest"
   },
