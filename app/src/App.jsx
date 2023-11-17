@@ -23,7 +23,7 @@ const sizes = [
   { label: "x-large", name: "30px" },
 ];
 
-const relays = ['wss://relay.damus.io', 'wss://nostr-pub.wellorder.net', 'wss://relay.primal.net'];
+const relays = ['wss://relay.damus.io', 'wss://nostr-pub.wellorder.net', 'wss://nostr.mom', 'wss://nos.lol'];
 
 const defaultNpub = "npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9";
 const altNpub = "npub1dergggklka99wwrs92yz8wdjs952h2ux2ha2ed598ngwu9w7a6fsh9xzpc";
@@ -52,7 +52,6 @@ function App() {
       <Select class="custom" initialValue={options[0]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
     </h3>
     <h3>(or input your own) &nbsp;<input type='text' value={anchor()} onChange={(e) => setAnchor(e.target.value)}></input></h3>
-
 
     <For each={['publish', 'likes', 'zaps', 'reply', 'replyAnonymously']}>
       {feature => <label><input type="checkbox" checked={disabled().includes(feature)} onChange={(e) => {
