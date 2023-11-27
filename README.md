@@ -2,6 +2,11 @@
 
 A threaded web commenting system built on Nostr. Inspired by [stacker.news](https://stacker.news) and [NoComment](https://github.com/fiatjaf/nocomment).
 
+Try it out:
+ - [https://zapthreads.dev](https://zapthreads.dev)
+ - Any article on [Habla.news](https://habla.news)
+ - Any recipe on [nostr.cooking](https://nostr.cooking)
+
 ## Goals
 
  - Permeate the web with Nostr
@@ -40,9 +45,17 @@ Read more: [Threading the web with Nostr](https://habla.news/franzap/threading-t
 
 ## Usage
 
-```bash
+```
 npm install zapthreads
 ```
+
+or
+
+```
+<script type="text/javascript" src="https://unpkg.com/zapthreads/dist/zapthreads.iife.js"></script>
+```
+
+Then,
 
 ```html
 import "zapthreads";
