@@ -144,7 +144,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
           created_at: Math.round(Date.now() / 1000),
           kind: 1,
           tags: [['r', url]],
-          content: `Comments on ${url}↴`
+          content: `Comments on ${url} ↴`
         };
 
         const rootEvent: Event<1> = {
