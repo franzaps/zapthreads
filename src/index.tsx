@@ -1,7 +1,7 @@
 import { JSX, createComputed, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { saveRelayLatestForFilter, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent, getRelayLatest as getRelayLatestForFilter } from "./util/ui.ts";
+import { saveRelayLatestForFilter, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent, getRelayLatest as getRelayLatestForFilter, cleanURL } from "./util/ui.ts";
 import { nest } from "./util/nest.ts";
 import { store, pool, isDisableType, signersStore } from "./util/stores.ts";
 import { Thread, ellipsisSvg } from "./thread.tsx";
@@ -19,9 +19,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     store.anchor = (() => {
       try {
         if (props.anchor.startsWith('http')) {
-          const url = new URL(props.anchor);
-          url.hash = "";
-          return { type: 'http', value: url.toString() };
+          return { type: 'http', value: cleanURL(props.anchor) };
         }
 
         const decoded = decode(props.anchor);

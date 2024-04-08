@@ -285,3 +285,12 @@ export const totalChildren = (event: NestedNoteEvent): number => {
     return acc + totalChildren(c);
   }, event.children.length);
 };
+
+export const cleanURL = (url: string): string => {
+  const u = new URL(url);
+  u.hash = "";
+  if (u.pathname.endsWith('/')) {
+    u.pathname = u.pathname.slice(0, -1);
+  }
+  return u.toString();
+};
