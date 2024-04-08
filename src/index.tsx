@@ -1,7 +1,7 @@
 import { JSX, createComputed, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
-import { saveRelayLatestForFilter, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent, getRelayLatest as getRelayLatestForFilter, cleanURL } from "./util/ui.ts";
+import { saveRelayLatestForFilter, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent, getRelayLatest as getRelayLatestForFilter, normalizeURL } from "./util/ui.ts";
 import { nest } from "./util/nest.ts";
 import { store, pool, isDisableType, signersStore } from "./util/stores.ts";
 import { Thread, ellipsisSvg } from "./thread.tsx";
@@ -17,12 +17,14 @@ import { SubCloser } from "nostr-tools";
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
     store.anchor = (() => {
+      const anchor = props.anchor.trim();
       try {
-        if (props.anchor.startsWith('http')) {
-          return { type: 'http', value: cleanURL(props.anchor) };
+        if (anchor.startsWith('http')) {
+          const removeSlashes = !props.legacyUrl; // remove slashes if legacyUrl boolean not present
+          return { type: 'http', value: normalizeURL(anchor, removeSlashes) };
         }
 
-        const decoded = decode(props.anchor);
+        const decoded = decode(anchor);
         switch (decoded.type) {
           case 'nevent': return { type: 'note', value: decoded.data.id };
           case 'note': return { type: 'note', value: decoded.data };
@@ -31,7 +33,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
             return { type: 'naddr', value: `${d.kind}:${d.pubkey}:${d.identifier}` };
         }
       } catch (e) {
-        return { type: 'error', value: `Malformed anchor: ${props.anchor}` };
+        console.error(e);
+        return { type: 'error', value: `Malformed anchor: ${anchor}` };
       }
     })();
 
@@ -76,7 +79,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
       case 'http':
         localRootEvents = await findAll('events', anchor().value, { index: 'r' });
         store.rootEventIds = sortByDate(localRootEvents).map(e => e.id);
-        filterForRemoteRootEvents = { '#r': [anchor().value], kinds: [1, 8812] };
+        const rf = props.legacyUrl ? [anchor().value] : [anchor().value, `${anchor().value}/`];
+        filterForRemoteRootEvents = { '#r': rf, kinds: [1, 8812] };
         break;
       case 'note':
         // In the case of note we only have one possible anchor, so return if found
@@ -109,7 +113,14 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
     const remoteRootNoteEvents = remoteRootEvents.map(eventToNoteEvent);
     for (const e of remoteRootNoteEvents) {
-      save('events', e);
+      if (anchor().type == 'http') {
+        // make sure it's an actual anchor and not a random comment with that URL
+        if ((e.k == 1 && e.c.includes('↴')) || e.k == 8812) {
+          save('events', e);
+        }
+      } else {
+        save('events', e);
+      }
     }
 
     switch (anchor().type) {
@@ -400,6 +411,7 @@ customElement<ZapThreadsAttributes>('zap-threads', {
   disable: "",
   urls: "",
   'reply-placeholder': "",
+  'legacy-url': "",
 }, (props) => {
   return <ZapThreads
     anchor={props['anchor'] ?? ''}
@@ -410,9 +422,10 @@ customElement<ZapThreadsAttributes>('zap-threads', {
     disable={props['disable'] ?? ''}
     urls={props['urls'] ?? ''}
     replyPlaceholder={props['reply-placeholder'] ?? ''}
+    legacyUrl={props['legacy-url'] ?? ''}
   />;
 });
 
 export type ZapThreadsAttributes = {
-  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder']?: string;
+  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder' | 'legacy-url']?: string;
 } & JSX.HTMLAttributes<HTMLElement>;

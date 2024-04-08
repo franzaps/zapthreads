@@ -9,6 +9,7 @@ import { Profile, eventToNoteEvent } from "./util/models.ts";
 import { lightningSvg, likeSvg } from "./thread.tsx";
 import { decode, npubEncode } from "nostr-tools/nip19";
 import { Relay } from "nostr-tools/relay";
+import { normalizeURL } from "nostr-tools/utils";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const [comment, setComment] = createSignal('');
@@ -136,7 +137,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         unsignedEvent.tags.push(['e', rootEventId, '', 'root']);
       } else if (anchor().type === 'http') {
         // If no root tag is present, create it to use as anchor
-        const url = anchor().value;
+        const url = normalizeURL(anchor().value);
         const unsignedRootEvent: UnsignedEvent = {
           pubkey: signer.pk,
           created_at: Math.round(Date.now() / 1000),

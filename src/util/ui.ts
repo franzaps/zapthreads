@@ -286,11 +286,13 @@ export const totalChildren = (event: NestedNoteEvent): number => {
   }, event.children.length);
 };
 
-export const cleanURL = (url: string): string => {
+const removeSlashesRegex = /\/+$/;
+
+export const normalizeURL = (url: string, removeSlashes: boolean = true): string => {
   const u = new URL(url);
   u.hash = "";
-  if (u.pathname.endsWith('/')) {
-    u.pathname = u.pathname.slice(0, -1);
+  if (removeSlashes) {
+    u.pathname = u.pathname.replace(removeSlashesRegex, '');
   }
   return u.toString();
 };

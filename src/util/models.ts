@@ -6,7 +6,7 @@ import { UnsignedEvent } from "nostr-tools/pure";
 
 export type NoteEvent = {
   id: string;
-  k: 1 | 9802 | 30023;
+  k: 1 | 8812 | 9802 | 30023;
   c: string;
   ts: number;
   pk: string;

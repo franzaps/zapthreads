@@ -8,8 +8,8 @@ import "@thisbeyond/solid-select/style.css";
 const options = [
   { label: "Purple Text, Orange Highlights (article by Gigi)", name: "naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz" },
   { label: "Nostr (fiatjaf's blog)", name: "https://fiatjaf.com/nostr.html" },
-  { label: "21ideas article", name: "https://21ideas.org/cena/1/#%D0%B5%D1%81%D1%82%D1%8C-%D0%BB%D0%B8-%D0%B0%D0%BB%D1%8C%D1%82%D0%B5%D1%80%D0%BD%D0%B0%D1%82%D0%B8%D0%B2%D0%B0" },
   { label: "A native internet protocol for social media (article by Jack)", name: "naddr1qqxnzd3cxyerxd3h8qerwwfcqgsgydql3q4ka27d9wnlrmus4tvkrnc8ftc4h8h5fgyln54gl0a7dgsrqsqqqa28387u5u" },
+  { label: "21ideas article", name: "https://21ideas.org/cena/1/#%D0%B5%D1%81%D1%82%D1%8C-%D0%BB%D0%B8-%D0%B0%D0%BB%D1%8C%D1%82%D0%B5%D1%80%D0%BD%D0%B0%D1%82%D0%B8%D0%B2%D0%B0" },
   { label: "Welcome to Nostr (by Tony)", name: "naddr1qqxnzd3cxy6rjv3hx5cnyde5qy88wumn8ghj7mn0wvhxcmmv9uq3uamnwvaz7tmwdaehgu3dwp6kytnhv4kxcmmjv3jhytnwv46z7qg3waehxw309ahx7um5wgh8w6twv5hszymhwden5te0danxvcmgv95kutnsw43z7qglwaehxw309ahx7um5wgkhyetvv9ujumn0ddhhgctjduhxxmmd9upzql6u9d8y3g8flm9x8frtz0xmsfyf7spq8xxkpgs8p2tge25p346aqvzqqqr4gukz494x" },
   { label: "Fuck this dystopia (note by Odell)", name: "note15fp4nxx0du93y9r3xp33p4zljqmq6lr8c4xls46gftkl7ul4vhdq484wr8" },
   { label: "Random highlight", name: "nevent1qqsprhvdfau2ezh6mjpess9g5v6g9c657j99jke04s3hc7xrv4vve4qzypl62m6ad932k83u6sjwwkxrqq4cve0hkrvdem5la83g34m4rtqegx3l8d3" },
@@ -23,8 +23,6 @@ const sizes = [
   { label: "large", name: "21px" },
 ];
 
-const relays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://relay.primal.net', 'wss://nos.lol'];
-
 const defaultNpub = "npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9";
 const altNpub = "npub1dergggklka99wwrs92yz8wdjs952h2ux2ha2ed598ngwu9w7a6fsh9xzpc";
 const nsec = "nsec14cp0lpl34rs3c7wmtg6lvgdndzafavlsjuhnq9zp7v05pqruxp4q9vuh9r";
@@ -34,6 +32,7 @@ function App() {
   const [anchor, setAnchor] = createSignal('');
   const [size, setSize] = createSignal('18px');
   const [disabled, setDisabled] = createSignal(['publish']);
+  const [relays, setRelays] = createSignal('wss://relay.damus.io,wss://21ideas.nostr1.com/');
 
   const css = () => `:root { --ztr-font-size: ${size()}; }`;
 
@@ -67,10 +66,10 @@ function App() {
       <Select class="custom" initialValue={sizes[1]} options={sizes} format={(i) => i.label} onChange={(e) => setSize(e.name)} />
     </span>
 
-    <p>Connected relays: <strong>{relays.join(', ')}</strong></p>
+    <h3>Relays: <input type='text' value={relays()} onChange={(e) => setRelays(e.target.value)}></input></h3>
 
     <div style="min-height: 1000px; min-width: 700px; margin-top: -2rem">
-      {anchor() && <zap-threads reply-placeholder='Write something...' anchor={anchor()} disable={disabled().join(',')} relays={relays.join(',')} user={npub()} />}
+      {anchor() && <zap-threads legacy-url='as' reply-placeholder='Write something...' anchor={anchor()} disable={disabled().join(',')} relays={relays()} user={npub()} />}
     </div>
   </>;
 }
