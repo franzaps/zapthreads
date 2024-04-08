@@ -17,10 +17,13 @@ import { SubCloser } from "nostr-tools";
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
     store.anchor = (() => {
-      if (props.anchor.startsWith('http')) {
-        return { type: 'http', value: props.anchor };
-      }
       try {
+        if (props.anchor.startsWith('http')) {
+          const url = new URL(props.anchor);
+          url.hash = "";
+          return { type: 'http', value: url.toString() };
+        }
+
         const decoded = decode(props.anchor);
         switch (decoded.type) {
           case 'nevent': return { type: 'note', value: decoded.data.id };
@@ -74,7 +77,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
       case 'http':
         localRootEvents = await findAll('events', anchor().value, { index: 'r' });
         store.rootEventIds = sortByDate(localRootEvents).map(e => e.id);
-        filterForRemoteRootEvents = { '#r': [anchor().value], kinds: [1] };
+        filterForRemoteRootEvents = { '#r': [anchor().value], kinds: [1, 8812] };
         break;
       case 'note':
         // In the case of note we only have one possible anchor, so return if found

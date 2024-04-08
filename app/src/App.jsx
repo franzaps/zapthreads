@@ -8,6 +8,7 @@ import "@thisbeyond/solid-select/style.css";
 const options = [
   { label: "Purple Text, Orange Highlights (article by Gigi)", name: "naddr1qqxnzd3cxqmrzv3exgmr2wfeqgsxu35yyt0mwjjh8pcz4zprhxegz69t4wr9t74vk6zne58wzh0waycrqsqqqa28pjfdhz" },
   { label: "Nostr (fiatjaf's blog)", name: "https://fiatjaf.com/nostr.html" },
+  { label: "21ideas article", name: "https://21ideas.org/cena/1/#%D0%B5%D1%81%D1%82%D1%8C-%D0%BB%D0%B8-%D0%B0%D0%BB%D1%8C%D1%82%D0%B5%D1%80%D0%BD%D0%B0%D1%82%D0%B8%D0%B2%D0%B0" },
   { label: "A native internet protocol for social media (article by Jack)", name: "naddr1qqxnzd3cxyerxd3h8qerwwfcqgsgydql3q4ka27d9wnlrmus4tvkrnc8ftc4h8h5fgyln54gl0a7dgsrqsqqqa28387u5u" },
   { label: "Welcome to Nostr (by Tony)", name: "naddr1qqxnzd3cxy6rjv3hx5cnyde5qy88wumn8ghj7mn0wvhxcmmv9uq3uamnwvaz7tmwdaehgu3dwp6kytnhv4kxcmmjv3jhytnwv46z7qg3waehxw309ahx7um5wgh8w6twv5hszymhwden5te0danxvcmgv95kutnsw43z7qglwaehxw309ahx7um5wgkhyetvv9ujumn0ddhhgctjduhxxmmd9upzql6u9d8y3g8flm9x8frtz0xmsfyf7spq8xxkpgs8p2tge25p346aqvzqqqr4gukz494x" },
   { label: "Fuck this dystopia (note by Odell)", name: "note15fp4nxx0du93y9r3xp33p4zljqmq6lr8c4xls46gftkl7ul4vhdq484wr8" },

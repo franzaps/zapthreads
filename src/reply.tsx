@@ -139,7 +139,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         const unsignedRootEvent: UnsignedEvent = {
           pubkey: signer.pk,
           created_at: Math.round(Date.now() / 1000),
-          kind: 1,
+          kind: 8812,
           tags: [['r', url]],
           content: `Comments on ${url} ↴`
         };
