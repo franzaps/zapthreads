@@ -8,6 +8,7 @@ import { find, save, watch } from "./util/db.ts";
 import { Profile, eventToNoteEvent } from "./util/models.ts";
 import { lightningSvg, likeSvg } from "./thread.tsx";
 import { decode, npubEncode } from "nostr-tools/nip19";
+import { Relay } from "nostr-tools/relay";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const [comment, setComment] = createSignal('');
@@ -23,7 +24,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
   const login = async () => {
     if (!window.nostr) {
-      onError('No NIP-07 extension!');
+      onError('Error: No NIP-07 extension!');
       return;
     }
     const pk = await window.nostr!.getPublicKey();
@@ -33,7 +34,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       signEvent: async (event) => window.nostr!.signEvent(event)
     };
 
-    onError(''); // clear error
+    setErrorMessage(''); // clear error
     signersStore.active = signersStore.internal;
   };
 
@@ -55,11 +56,11 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
   // Publishing
 
-  const onSuccess = async (event: Event) => {
+  const onSuccess = async (event: Event, notice?: string) => {
     setLoading(false);
-    // reset comment & error message
+    // reset comment & error message (unless supplied)
     setComment('');
-    setErrorMessage('');
+    setErrorMessage(notice ?? '');
 
     await save('events', eventToNoteEvent(event as Event), { immediate: true });
 
@@ -70,7 +71,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   const onError = (message: string) => {
     setLoading(false);
     // set error message
-    setErrorMessage(message);
+    setErrorMessage(`Error: ${message}`);
   };
 
   const publish = async (profile?: Profile) => {
@@ -89,7 +90,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     }
 
     if (!signer?.signEvent) {
-      onError('User has no signer!');
+      onError('Error: User has no signer!');
       return;
     }
 
@@ -182,13 +183,26 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       // Simulate publishing
       setTimeout(() => onSuccess(event), 1000);
     } else {
-      try {
-        await Promise.all(pool.publish(relays(), event));
-        onSuccess(event);
-      } catch (e) {
-        onError('Warning: your comment was not published to all relays');
-        setLoading(false);
+      const failures = [];
+      for (const relayUrl of relays()) {
+        try {
+          const relay = await Relay.connect(relayUrl);
+          await relay.publish(event);
+        } catch (e) {
+          console.error(e);
+          failures.push(relayUrl);
+        }
       }
+
+      if (failures.length === relays().length) {
+        onError('Error: Your comment was not published to any relay');
+      } else {
+        const msg = `Published to ${failures.length}/${relays().length} relays (see console for more info)`;
+        const notice = failures.length > 0 ? msg : undefined;
+        onSuccess(event, notice);
+      }
+      // clear up failure log
+      failures.length = 0;
     };
   };
 
