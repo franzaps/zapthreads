@@ -1,11 +1,11 @@
 import { NoteEvent, eventToNoteEvent } from "./models.ts";
 import { nest } from "./nest.ts";
-import { Event } from 'nostr-tools/event';
+import { Event } from 'nostr-tools/pure';
 
 describe("NestedNote", () => {
   describe("nest", () => {
     it('nests events from marked tags without anchor', async () => {
-      const events = rawEvents.map(e => eventToNoteEvent(e as Event<1>)) as NoteEvent[];
+      const events = rawEvents.map(e => eventToNoteEvent(e as Event)) as NoteEvent[];
       const nestedEvents = nest(events);
       expect(nestedEvents[0].c).toEqual("a");
       expect(nestedEvents[0].children[0].c).toEqual("b");

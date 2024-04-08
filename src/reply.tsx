@@ -1,13 +1,13 @@
 import { defaultPicture, generateTags, satsAbbrev, shortenEncodedId, updateProfiles } from "./util/ui.ts";
 import { Show, createEffect, createSignal } from "solid-js";
-import { UnsignedEvent, Event, getSignature, getEventHash } from "nostr-tools/event";
+import { UnsignedEvent, Event } from "nostr-tools/core";
 import { EventSigner, pool, signersStore, store } from "./util/stores.ts";
-import { generatePrivateKey, getPublicKey } from "nostr-tools/keys";
+import { generateSecretKey, getPublicKey, getEventHash, finalizeEvent } from "nostr-tools/pure";
 import { createAutofocus } from "@solid-primitives/autofocus";
 import { find, save, watch } from "./util/db.ts";
 import { Profile, eventToNoteEvent } from "./util/models.ts";
 import { lightningSvg, likeSvg } from "./thread.tsx";
-import { decode } from "nostr-tools/nip19";
+import { decode, npubEncode } from "nostr-tools/nip19";
 
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
   const [comment, setComment] = createSignal('');
@@ -61,7 +61,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     setComment('');
     setErrorMessage('');
 
-    await save('events', eventToNoteEvent(event as Event<1>), { immediate: true });
+    await save('events', eventToNoteEvent(event as Event), { immediate: true });
 
     // callback (closes the reply form)
     props.onDone?.call(this);
@@ -79,10 +79,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       signer = signersStore.active;
     } else {
       if (!signersStore.anonymous) {
-        const sk = generatePrivateKey();
+        const sk = generateSecretKey();
         signersStore.anonymous = {
           pk: getPublicKey(sk),
-          signEvent: async (event) => ({ sig: getSignature(event, sk) }),
+          signEvent: async (event) => ({ sig: finalizeEvent(event, sk).sig }),
         };
       }
       signer = signersStore.anonymous;
@@ -96,15 +96,12 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     const content = comment().trim();
     if (!content) return;
 
-    const unsignedEvent: UnsignedEvent<1> = {
+    const unsignedEvent: UnsignedEvent = {
       kind: 1,
       created_at: Math.round(Date.now() / 1000),
       content: content,
       pubkey: signer.pk,
-      tags: [
-        ...generateTags(content), // tags from content
-        ['client', 'zapthreads'] // client tag
-      ]
+      tags: generateTags(content),
     };
 
     if (store.anchorAuthor !== unsignedEvent.pubkey) {
@@ -139,7 +136,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       } else if (anchor().type === 'http') {
         // If no root tag is present, create it to use as anchor
         const url = anchor().value;
-        const unsignedRootEvent: UnsignedEvent<1> = {
+        const unsignedRootEvent: UnsignedEvent = {
           pubkey: signer.pk,
           created_at: Math.round(Date.now() / 1000),
           kind: 1,
@@ -147,7 +144,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
           content: `Comments on ${url} ↴`
         };
 
-        const rootEvent: Event<1> = {
+        const rootEvent: Event = {
           id: getEventHash(unsignedRootEvent),
           ...unsignedRootEvent,
           ...await signer.signEvent(unsignedRootEvent)
@@ -168,7 +165,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     }
 
     if (anchor().type === 'naddr') {
-      unsignedEvent.tags.push(['a', anchor().value]);
+      unsignedEvent.tags.push(['a', anchor().value, '', 'root']);
     }
 
     const id = getEventHash(unsignedEvent);
@@ -225,7 +222,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
       {loggedInUser() &&
         <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser())}>
-          Reply as {loggedInUser()!.n || shortenEncodedId(loggedInUser()!.pk)}
+          Reply as {loggedInUser()!.n || shortenEncodedId(npubEncode(loggedInUser()!.pk))}
         </button>}
 
       {!loggedInUser() && !store.disableFeatures!.includes('replyAnonymously') &&

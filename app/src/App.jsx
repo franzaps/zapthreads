@@ -18,12 +18,11 @@ const options = [
 
 const sizes = [
   { label: "small", name: "14px" },
-  { label: "medium", name: "18px" },
-  { label: "large", name: "24px" },
-  { label: "x-large", name: "30px" },
+  { label: "medium", name: "17px" },
+  { label: "large", name: "21px" },
 ];
 
-const relays = ['wss://relay.damus.io', 'wss://nostr-pub.wellorder.net', 'wss://nostr.mom', 'wss://nos.lol'];
+const relays = ['wss://relay.damus.io', 'wss://relay.nostr.band', 'wss://relay.primal.net', 'wss://nos.lol'];
 
 const defaultNpub = "npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9";
 const altNpub = "npub1dergggklka99wwrs92yz8wdjs952h2ux2ha2ed598ngwu9w7a6fsh9xzpc";

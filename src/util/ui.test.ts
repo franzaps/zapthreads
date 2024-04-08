@@ -1,4 +1,4 @@
-import { UnsignedEvent } from "nostr-tools/event";
+import { UnsignedEvent } from "nostr-tools/pure";
 import { parseContent, parseUrlPrefixes } from "./ui.ts";
 import { createMutable } from "solid-js/store";
 import { PreferencesStore } from "./stores.ts";

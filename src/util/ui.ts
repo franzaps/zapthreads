@@ -27,10 +27,10 @@ export const updateProfiles = async (pubkeys: string[], relays: string[], profil
     return;
   }
 
-  const updatedProfiles = await pool.list(relays, [{
+  const updatedProfiles = await pool.querySync(relays, {
     kinds: [0],
     authors: pubkeysToUpdate
-  }]);
+  });
 
   for (const pubkey of pubkeysToUpdate) {
     const e = updatedProfiles.find(u => u.pubkey === pubkey);
@@ -71,10 +71,12 @@ export const saveRelayLatestForFilter = async (anchor: Anchor, events: NoteEvent
   const obj: { [url: string]: number; } = {};
 
   for (const e of events) {
-    const relaysForEvent = pool.seenOn(e.id);
-    for (const relayUrl of relaysForEvent) {
-      if (e.ts > (obj[relayUrl] || 0)) {
-        obj[relayUrl] = e.ts;
+    const relaysForEvent = pool.seenOn.get(e.id);
+    if (relaysForEvent) {
+      for (const relay of relaysForEvent) {
+        if (e.ts > (obj[relay.url] || 0)) {
+          obj[relay.url] = e.ts;
+        }
       }
     }
   }

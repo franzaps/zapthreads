@@ -1,6 +1,6 @@
 import { DBSchema, IDBPDatabase, StoreNames } from "idb";
 import { parse } from "nostr-tools/nip10";
-import { UnsignedEvent } from "nostr-tools/event";
+import { UnsignedEvent } from "nostr-tools/pure";
 
 // models
 

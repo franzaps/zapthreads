@@ -1,4 +1,4 @@
-import { UnsignedEvent } from "nostr-tools/event";
+import { UnsignedEvent } from "nostr-tools/pure";
 import { SimplePool } from "nostr-tools/pool";
 import { Filter } from "nostr-tools/filter";
 import { Profile } from "./models.ts";
@@ -20,7 +20,7 @@ export const signersStore = createMutable<SignersStore>({});
 export type SignersStore = {
   [key in 'active' | 'anonymous' | 'internal' | 'external']?: EventSigner;
 };
-export type SignEvent = (event: UnsignedEvent<1>) => Promise<{ sig: string; }>;
+export type SignEvent = (event: UnsignedEvent) => Promise<{ sig: string; }>;
 export type EventSigner = {
   pk: string,
   signEvent?: SignEvent;

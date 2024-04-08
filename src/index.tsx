@@ -6,14 +6,13 @@ import { nest } from "./util/nest.ts";
 import { store, pool, isDisableType, signersStore } from "./util/stores.ts";
 import { Thread, ellipsisSvg } from "./thread.tsx";
 import { RootComment } from "./reply.tsx";
-import { Sub } from "nostr-tools/relay";
 import { decode as bolt11Decode } from "light-bolt11-decoder";
 import { clear as clearCache, find, findAll, save, watchAll } from "./util/db.ts";
 import { decode } from "nostr-tools/nip19";
-import { getPublicKey } from "nostr-tools/keys";
-import { getSignature } from "nostr-tools/event";
+import { finalizeEvent, getPublicKey } from "nostr-tools/pure";
 import { Filter } from "nostr-tools/filter";
 import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
+import { SubCloser } from "nostr-tools";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
@@ -81,10 +80,12 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         // In the case of note we only have one possible anchor, so return if found
         const e = await find('events', IDBKeyRange.only(anchor().value));
         if (e) {
+          localRootEvents = [e];
           store.rootEventIds = [e.id];
           store.anchorAuthor = e.pk;
           return;
         } else {
+          localRootEvents = [];
           // queue to fetch from remote
           filterForRemoteRootEvents = { ids: [anchor().value] };
           break;
@@ -102,31 +103,32 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
 
     // No `since` here as we are not keeping track of a since for root events
-    pool.list(relays(), [{ ...filterForRemoteRootEvents }]).then(remoteRootEvents => {
-      const remoteRootNoteEvents = remoteRootEvents.map(eventToNoteEvent);
-      for (const e of remoteRootNoteEvents) {
-        save('events', e);
-      }
+    const remoteRootEvents = await pool.querySync(relays(), { ...filterForRemoteRootEvents });
 
-      switch (anchor().type) {
-        case 'http':
-        case 'naddr':
-          const events = [...localRootEvents, ...remoteRootNoteEvents];
-          const sortedEventIds = sortByDate([...events]).map(e => e.id);
-          // only set root event ids if we have a newer event from remote
-          if ((sortedEventIds.length > 0 && sortedEventIds[0]) !== store.rootEventIds[0]) {
-            store.rootEventIds = sortedEventIds;
-          }
-          break;
-        case 'note':
-          store.rootEventIds = remoteRootNoteEvents.map(e => e.id);
-          break;
-      }
+    const remoteRootNoteEvents = remoteRootEvents.map(eventToNoteEvent);
+    for (const e of remoteRootNoteEvents) {
+      save('events', e);
+    }
 
-      if (remoteRootNoteEvents.length > 0) {
-        store.anchorAuthor = remoteRootNoteEvents[0].pk;
-      }
-    });
+    switch (anchor().type) {
+      case 'http':
+      case 'naddr':
+        const events = [...localRootEvents, ...remoteRootNoteEvents];
+        const sortedEventIds = sortByDate([...events]).map(e => e.id);
+        // only set root event ids if we have a newer event from remote
+        if ((sortedEventIds.length > 0 && sortedEventIds[0]) !== store.rootEventIds[0]) {
+          store.rootEventIds = sortedEventIds;
+        }
+        break;
+      case 'note':
+        store.rootEventIds = remoteRootNoteEvents.map(e => e.id);
+        break;
+    }
+
+    if (remoteRootNoteEvents.length > 0) {
+      store.anchorAuthor = remoteRootNoteEvents[0].pk;
+    }
+
   }));
 
   const rootEventIds = () => store.rootEventIds;
@@ -159,7 +161,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     return store.filter;
   }, { defer: true });
 
-  let sub: Sub | null;
+  let sub: SubCloser | null;
 
   // Filter -> remote events, content
   createEffect(on([filter], async () => {
@@ -175,12 +177,12 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     }
 
     // Ensure clean subs
-    sub?.unsub();
+    sub?.close();
     sub = null;
 
     onCleanup(() => {
       console.log('[zapthreads] unsubscribing and cleaning up', _anchor.value);
-      sub?.unsub();
+      sub?.close();
       sub = null;
     });
 
@@ -198,59 +200,59 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
     const since = await getRelayLatestForFilter(_anchor, _relays);
 
-    sub = pool.sub(_relays, [{ ..._filter, kinds, since }]);
-
     const newLikeIds = new Set<string>();
     const newZaps: { [id: string]: string; } = {};
 
-    sub.on('event', async (e) => {
-      if (e.kind === 1 || e.kind === 9802) {
-        if (e.content.trim()) {
-          save('events', eventToNoteEvent(e));
+    sub = pool.subscribeMany(_relays, [{ ..._filter, kinds, since }],
+      {
+        onevent(e) {
+          if (e.kind === 1 || e.kind === 9802) {
+            if (e.content.trim()) {
+              save('events', eventToNoteEvent(e));
+            }
+          } else if (e.kind === 7) {
+            newLikeIds.add(e.id);
+          } else if (e.kind === 9735) {
+            const invoiceTag = e.tags.find(t => t[0] === "bolt11");
+            invoiceTag && invoiceTag[1] && (newZaps[e.id] = invoiceTag[1]);
+          }
+        },
+        oneose() {
+          (async () => {
+            const likesAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([_anchor.value, 7]))
+              ?? { eid: _anchor.value, ids: [], k: 7 };
+            likesAggregate.ids = [...new Set([...likesAggregate.ids, ...newLikeIds])];
+            save('aggregates', likesAggregate);
+
+            const zapsAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([_anchor.value, 9735]))
+              ?? { eid: _anchor.value, ids: [], k: 9735, sum: 0 };
+            zapsAggregate.sum = Object.entries(newZaps).reduce((acc, entry) => {
+              if (zapsAggregate.ids.includes(entry[0])) return acc;
+              const decoded = bolt11Decode(entry[1]);
+              const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
+              const sats = Number(amount.value) / 1000;
+              return acc + sats;
+            }, zapsAggregate.sum ?? 0);
+
+            zapsAggregate.ids = [...new Set([...zapsAggregate.ids, ...Object.keys(newZaps)])];
+            save('aggregates', zapsAggregate);
+          })();
+
+          setTimeout(async () => {
+            // Update profiles of current events (includes anchor author)
+            await updateProfiles([..._events.map(e => e.pk)], _relays, _profiles);
+
+            // Save latest received events for each relay
+            saveRelayLatestForFilter(_anchor, _events);
+
+            if (closeOnEose()) {
+              sub?.close();
+              pool.close(_relays);
+            }
+          }, 96); // same as batched throttle in db.ts
         }
-      } else if (e.kind === 7) {
-        newLikeIds.add(e.id);
-      } else if (e.kind === 9735) {
-        const invoiceTag = e.tags.find(t => t[0] === "bolt11");
-        invoiceTag && invoiceTag[1] && (newZaps[e.id] = invoiceTag[1]);
       }
-    });
-
-    sub.on('eose', async () => {
-      (async () => {
-        const likesAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([_anchor.value, 7]))
-          ?? { eid: _anchor.value, ids: [], k: 7 };
-        likesAggregate.ids = [...new Set([...likesAggregate.ids, ...newLikeIds])];
-        save('aggregates', likesAggregate);
-
-        const zapsAggregate: AggregateEvent = await find('aggregates', IDBKeyRange.only([_anchor.value, 9735]))
-          ?? { eid: _anchor.value, ids: [], k: 9735, sum: 0 };
-        zapsAggregate.sum = Object.entries(newZaps).reduce((acc, entry) => {
-          if (zapsAggregate.ids.includes(entry[0])) return acc;
-          const decoded = bolt11Decode(entry[1]);
-          const amount = decoded.sections.find((e: { name: string; }) => e.name === 'amount');
-          const sats = Number(amount.value) / 1000;
-          return acc + sats;
-        }, zapsAggregate.sum ?? 0);
-
-        zapsAggregate.ids = [...new Set([...zapsAggregate.ids, ...Object.keys(newZaps)])];
-        save('aggregates', zapsAggregate);
-      })();
-
-      setTimeout(async () => {
-        // Update profiles of current events (includes anchor author)
-        await updateProfiles([..._events.map(e => e.pk)], _relays, _profiles);
-
-        // Save latest received events for each relay
-        saveRelayLatestForFilter(_anchor, _events);
-
-        if (closeOnEose()) {
-          sub?.unsub();
-          pool.close(_relays);
-        }
-      }, 96); // same as batched throttle in db.ts
-    });
-
+    );
   }, { defer: true }));
 
   // Login external npub/nsec
@@ -260,10 +262,10 @@ const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(on(npubOrNsec, (_) => {
     if (_) {
       let pubkey: string;
-      let privkey: string | undefined;
+      let sk: Uint8Array | undefined;
       if (_.startsWith('nsec')) {
-        privkey = decode(_).data as string;
-        pubkey = getPublicKey(privkey);
+        sk = decode(_).data as Uint8Array;
+        pubkey = getPublicKey(sk);
       } else {
         pubkey = decode(_).data as string;
       }
@@ -271,8 +273,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         pk: pubkey,
         signEvent: async (event) => {
           // Sign with private key if nsec was provided
-          if (privkey) {
-            return { sig: getSignature(event, privkey) };
+          if (sk) {
+            return { sig: finalizeEvent(event, sk).sig };
           }
 
           // We validate here in order to delay prompting the user as much as possible
