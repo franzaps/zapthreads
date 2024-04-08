@@ -70,7 +70,7 @@ function App() {
     <p>Connected relays: <strong>{relays.join(', ')}</strong></p>
 
     <div style="min-height: 1000px; min-width: 700px; margin-top: -2rem">
-      {anchor() && <zap-threads anchor={anchor()} disable={disabled().join(',')} relays={relays.join(',')} user={npub()} />}
+      {anchor() && <zap-threads reply-placeholder='Write something...' anchor={anchor()} disable={disabled().join(',')} relays={relays.join(',')} user={npub()} />}
     </div>
   </>;
 }

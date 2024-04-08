@@ -215,7 +215,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
     <textarea
       disabled={loading()}
       value={comment()}
-      placeholder='Add your comment...'
+      placeholder={store.replyPlaceholder || 'Add your comment...'}
       autofocus={autofocus}
       ref={ref}
       onChange={e => setComment(e.target.value)}

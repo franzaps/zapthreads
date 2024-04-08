@@ -5,16 +5,8 @@ A threaded web commenting system built on Nostr. Inspired by [stacker.news](http
 Try it out:
  - [https://zapthreads.dev](https://zapthreads.dev)
  - Any article on [Habla.news](https://habla.news)
- - Any recipe on [nostr.cooking](https://nostr.cooking)
-
-## Goals
-
- - Permeate the web with Nostr
- - Make Disqus obsolete
 
 ![](https://image.nostr.build/2cf766ce82678fa59dbb988e0efbf722877a5c768615704836f038c342858524.png)
-
-Read more: [Threading the web with Nostr](https://habla.news/franzap/threading-the-web-with-nostr)
 
 ## Features
 
@@ -29,19 +21,6 @@ Read more: [Threading the web with Nostr](https://habla.news/franzap/threading-t
    - Local storage caching, offline-first
    - ~40kb minified/compressed with styles and assets (nocomment is > 240kb)
  - Available as web component or embeddable script
-
-## Roadmap
-
- - Likes and zaps
-   - Ability to like and zap comments
-   - Prisms, zap splits with host
- - Signers
-   - Proper relay selection (NIP-05, nprofile, NIP-65)
-   - Ability to remote sign
-   - World class onboarding for new users
- - Migration tools
-   - Easily migrate from Disqus, Facebook comments, Wordpress, etc
- - [Much more](https://github.com/fr4nzap/zapthreads/issues)
 
 ## Usage
 

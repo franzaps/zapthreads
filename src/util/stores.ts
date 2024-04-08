@@ -43,6 +43,7 @@ export type PreferencesStore = {
   externalAuthor?: string; // prop, mostly used with http anchor type
   disableFeatures?: DisableType[]; // prop
   urlPrefixes?: { [key in UrlPrefixesKeys]?: string }, // prop
+  replyPlaceholder?: string,
 
   anchorAuthor?: string;
   profiles: () => Profile[];
