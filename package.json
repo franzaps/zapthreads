@@ -1,7 +1,7 @@
 {
   "name": "zapthreads",
   "type": "module",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Threaded comments on Nostr",
   "repository": {
     "type": "git",

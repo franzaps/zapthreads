@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1
+
+### Bugfixes
+
+ - Update `nostr-tools` to latest, fixes bug with d-tag
+ - Show better relay error reporting upon publishing
+ - Remove hashes and strip trailing slash from URL
+
+### Features
+
+ - Add custom reply placeholder
+
 ## 0.5.0
 
 ### Bugfixes
