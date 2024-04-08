@@ -32,7 +32,7 @@ function App() {
   const [anchor, setAnchor] = createSignal('');
   const [size, setSize] = createSignal('18px');
   const [disabled, setDisabled] = createSignal(['publish']);
-  const [relays, setRelays] = createSignal('wss://relay.damus.io,wss://21ideas.nostr1.com/');
+  const [relays, setRelays] = createSignal('wss://relay.damus.io,wss://relay.nostr.band,wss://relay.primal.net,wss://nos.lol');
 
   const css = () => `:root { --ztr-font-size: ${size()}; }`;
 
@@ -69,7 +69,7 @@ function App() {
     <h3>Relays: <input type='text' value={relays()} onChange={(e) => setRelays(e.target.value)}></input></h3>
 
     <div style="min-height: 1000px; min-width: 700px; margin-top: -2rem">
-      {anchor() && <zap-threads legacy-url='as' reply-placeholder='Write something...' anchor={anchor()} disable={disabled().join(',')} relays={relays()} user={npub()} />}
+      {anchor() && <zap-threads reply-placeholder='Write something...' anchor={anchor()} disable={disabled().join(',')} relays={relays()} user={npub()} />}
     </div>
   </>;
 }

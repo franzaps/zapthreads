@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+### Bugfixes
+
+ - Normalize URL fixes and improvements
+
 ## 0.5.1
 
 ### Bugfixes
