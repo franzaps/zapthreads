@@ -59,6 +59,7 @@ Arguments:
    - Useful for notifying the author of a website (http anchor)
  - `disable`: comma-separated string of features to disable, all enabled by default
    - `likes`
+   - `votes`
    - `zaps`
    - `reply` (when disabled the component becomes read-only)
    - `publish` (when disabled does not send event to relays, useful for testing)
@@ -105,6 +106,9 @@ document.querySelector('zap-threads').shadowRoot.appendChild(style);
  - Build with `pnpm build`, it will place the bundles in `dist`
 
 Any questions or ideas, please open an issue!
+
+## Icons
+- [Font Awesome](https://fontawesome.com/license/free)
 
 ## LICENSE
 

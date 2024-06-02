@@ -1,4 +1,4 @@
-import { defaultPicture, generateTags, satsAbbrev, shortenEncodedId, updateProfiles } from "./util/ui.ts";
+import { currentTime, defaultPicture, generateTags, satsAbbrev, shortenEncodedId, updateProfiles } from "./util/ui.ts";
 import { Show, createEffect, createSignal } from "solid-js";
 import { UnsignedEvent, Event } from "nostr-tools/core";
 import { EventSigner, pool, signersStore, store } from "./util/stores.ts";
@@ -100,7 +100,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
     const unsignedEvent: UnsignedEvent = {
       kind: 1,
-      created_at: Math.round(Date.now() / 1000),
+      created_at: currentTime(),
       content: content,
       pubkey: signer.pk,
       tags: generateTags(content),
@@ -140,7 +140,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         const url = normalizeURL(anchor().value);
         const unsignedRootEvent: UnsignedEvent = {
           pubkey: signer.pk,
-          created_at: Math.round(Date.now() / 1000),
+          created_at: currentTime(),
           kind: 8812,
           tags: [['r', url]],
           content: `Comments on ${url} ↴`

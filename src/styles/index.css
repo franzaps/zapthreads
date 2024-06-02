@@ -187,16 +187,21 @@ ul.ztr-comment-actions,
   align-items: center;
   list-style: none;
   margin: 0;
-  padding: 0 0 0 3.5em;
+  padding: 0 0 0 2.625em;
   font-weight: 600;
   user-select: none;
+}
+
+ul.ztr-comment-actions {
+  margin-top: -1em;
 }
 
 ul.ztr-comment-actions li {
   display: inline-flex;
   align-items: center;
   text-align: center;
-  padding: 0 2em 0 0;
+  padding: 1em;
+  margin: -0.125em;
   cursor: pointer;
 }
 
@@ -209,6 +214,31 @@ svg {
   fill: var(--ztr-icon-color, #3B3B3B);
   width: 1.1em;
   height: 1.1em;
+}
+
+li.ztr-comment-action-upvote {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+
+li.ztr-comment-action-downvote {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+
+li.ztr-comment-action-reply {
+  margin-left: 0.7em;
+  margin-right: 0.7em;
+}
+
+li.ztr-comment-action-zap {
+  margin-left: 0.7em;
+  margin-right: 0.7em;
+}
+
+li.ztr-comment-action-like {
+  margin-left: 0.7em;
+  margin-right: 0.7em;
 }
 
 .ztr-comment-action-reply:hover svg {
@@ -233,6 +263,43 @@ svg {
 
 .ztr-comment-action-like:hover span {
   color: #e35428;
+}
+
+.ztr-comment-action-upvote:hover svg {
+  fill: #0288d1;
+}
+
+.ztr-comment-action-upvote:hover span {
+  color: #0288d1;
+}
+
+.ztr-comment-action-upvote.selected {
+  svg {
+    fill: #0288d1;
+  }
+}
+
+.ztr-comment-action-downvote:hover svg {
+  fill: #0288d1;
+}
+
+.ztr-comment-action-downvote:hover span {
+  color: #0288d1;
+}
+
+.ztr-comment-action-downvote.selected {
+  svg {
+    fill: #0288d1;
+  }
+}
+
+li.ztr-comment-action-votes {
+  justify-content: center;
+  span {
+    margin-left: -0.7em;
+    margin-right: -0.7em;
+    font-size: 0.85em;
+  }
 }
 
 .ztr-reply-form {

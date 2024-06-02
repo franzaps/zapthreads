@@ -133,6 +133,15 @@ const _saveToMemoryDatabase = <Name extends StoreNames<DBTypes>, Value extends S
   }
 };
 
+const _removeFromMemoryDatabase = <Name extends StoreNames<DBTypes>, IndexName extends IndexNames<DBTypes, Name>, Value extends StoreValue<DBTypes, Name>>(type: Name, query: IndexKey<DBTypes, Name, IndexName> | IndexKey<DBTypes, Name, IndexName>[] | IndexKey<DBTypes, Name, IndexName>[][]) => {
+  const map = memDb[type];
+  if (map) {
+    // @ts-ignore
+    const idx = (query.lower ? query.lower : query).toString();
+    delete map[idx];
+  }
+}
+
 export const save = async <Name extends StoreNames<DBTypes>, Value extends StoreValue<DBTypes, Name>>(type: Name, model: Value, options: { immediate: boolean; } = { immediate: false }) => {
   const _db = await db();
 
@@ -159,6 +168,25 @@ export const save = async <Name extends StoreNames<DBTypes>, Value extends Store
     }
   }, { delay: 96 });
   batchFns[type](model);
+};
+
+export const remove = async <Name extends StoreNames<DBTypes>, IndexName extends IndexNames<DBTypes, Name>, Value extends StoreValue<DBTypes, Name>>(type: Name, query: IndexKey<DBTypes, Name, IndexName>[] | IndexKey<DBTypes, Name, IndexName>[][], options: { immediate: boolean; } = { immediate: true }) => {
+  const _db = await db();
+  let ok = true;
+  if (options.immediate) {
+    if (!_db) {
+      _removeFromMemoryDatabase(type, query);
+    } else {
+      const tx = _db.transaction(type, 'readwrite');
+      ok = !!(await Promise.all([...query.map(q => tx.store.delete(q as IDBKeyRange)), tx.done]));
+    }
+  } else {
+    throw new Error('unimplemented');
+  }
+
+  if (ok) {
+    sigStore[type] = +new Date;
+  }
 };
 
 export const clear = async () => {
