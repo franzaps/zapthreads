@@ -12,7 +12,7 @@ import { decode } from "nostr-tools/nip19";
 import { finalizeEvent, getPublicKey } from "nostr-tools/pure";
 import { Filter } from "nostr-tools/filter";
 import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
-import { SubCloser } from "nostr-tools";
+import { SubCloser } from "nostr-tools/pool";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
@@ -211,12 +211,14 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
     console.log('[zapthreads] subscribing to', _anchor.value);
 
-    const since = await getRelayLatestForFilter(_anchor, _relays);
+    const relayToSince = await getRelayLatestForFilter(_anchor);
+    const request = (url: string) => [url, [{ ..._filter, kinds, since: relayToSince[url] || 0 }]];
 
     const newLikeIds = new Set<string>();
     const newZaps: { [id: string]: string; } = {};
 
-    sub = pool.subscribeMany(_relays, [{ ..._filter, kinds, since }],
+    sub = pool.subscribeManyMap(
+      Object.fromEntries(_relays.map(request)),
       {
         onevent(e) {
           if (e.kind === 1 || e.kind === 9802) {

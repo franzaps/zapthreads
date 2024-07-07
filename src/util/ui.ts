@@ -53,13 +53,9 @@ export const updateProfiles = async (pubkeys: string[], relays: string[], profil
   }
 };
 
-export const getRelayLatest = async (anchor: Anchor, relayNames: string[]) => {
+export const getRelayLatest = async (anchor: Anchor) => {
   const relaysForAnchor = await findAll('relays', anchor.value, { index: 'a' });
-  const relaysLatest = relaysForAnchor.filter(r => relayNames.includes(r.n)).map(t => t.l);
-
-  // TODO Do not use the common minimum, pass each relay's latest as its since
-  // (but we need to stop using this pool)
-  return relaysLatest.length > 0 ? Math.min(...relaysLatest) + 1 : 0;
+  return Object.fromEntries(relaysForAnchor.map(r => [r.n, r.l + 1]));
 };
 
 // Calculate and save latest created_at to be used as `since`
