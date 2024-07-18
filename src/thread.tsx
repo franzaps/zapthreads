@@ -97,7 +97,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
             if (store.initialThreadId === event().id && commentRef) {
               setTimeout(() => {
                 commentRef.scrollIntoView({
-                  behavior: "smooth",
+                  // behavior: "smooth",
                   block: "start"
                 });
               }, 0)
