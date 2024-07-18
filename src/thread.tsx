@@ -80,6 +80,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
           const handleBack = () => {
             if (event().parent) {
               store.activeThreadId = event().parent.id
+              store.initialThreadId = event().id
             } else {
               store.activeThreadId = null
             }
