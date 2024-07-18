@@ -1,4 +1,4 @@
-import {Index, Show, createEffect, createMemo, createSignal, onCleanup} from "solid-js";
+import {Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount} from "solid-js";
 import { defaultPicture, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui.ts";
 import { ReplyEditor } from "./reply.tsx";
 import { NestedNoteEvent } from "./util/nest.ts";
@@ -75,6 +75,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
           const handleOpen = () => {
             store.activeThreadId = event().id
             store.initialThreadId = event().id
+            setThreadCollapsed(false)
           }
 
           const handleBack = () => {
@@ -83,30 +84,96 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
               store.initialThreadId = event().id
             } else {
               store.activeThreadId = null
+              store.initialThreadId = event().id
             }
           }
 
           let commentRef
+          let commentBodyRef
 
           createEffect(() => {
-            if (store.activeThreadId !== event().id) {
-              setThreadCollapsed(true)
-            } else {
+            if (event().parent) {
               setThreadCollapsed(false)
             }
 
-            if (store.initialThreadId === event().id && commentRef) {
+            if (!store.activeThreadId) {
+              setThreadCollapsed(true)
+            }
+
+            if (store.initialThreadId === event().id && commentRef && store.activeThreadId === null) {
+              commentRef.scrollIntoView({
+                behavior: "auto",
+                block: "start"
+              });
+            }
+
+            if (store.initialThreadId === event().id && commentRef && commentBodyRef && store.activeThreadId !== null) {
+              commentRef.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              });
+
+              if (commentBodyRef.classList.contains('highlightable')) {
+                commentBodyRef.classList.remove('highlightable')
+                setTimeout(() => {
+                  commentBodyRef.classList.add('highlightable')
+                }, 100)
+              } else {
+                commentBodyRef.classList.add('highlightable')
+              }
+
               setTimeout(() => {
-                commentRef.scrollIntoView({
-                  // behavior: "smooth",
-                  block: "start"
-                });
-              }, 0)
+                store.initialThreadId = null
+              }, 1000)
             }
           });
 
-          return <div ref={(el) => commentRef = el} class="ztr-comment">
-            <div class="ztr-comment-body">
+          const handleGoToParent = () => {
+            store.initialThreadId = event().parent.id
+          }
+
+          const extractFirstParagraph = (str) => {
+            const match = str.match(/<p>(.*?)<\/p>/);
+            return match ? match[1] : null;
+          }
+
+          const replatedText = event().parent ? extractFirstParagraph(parseContent(event().parent, store, props.articles())) : '';
+
+          onMount(() => {
+            const observer = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                if (entry.isIntersecting && store.activeThreadId === null) {
+                  store.initialThreadId = null
+                }
+                if (entry.isIntersecting && store.initialThreadId === event().id) {
+                  if (commentBodyRef.classList.contains('highlightable')) {
+                    commentBodyRef.classList.remove('highlightable')
+                    setTimeout(() => {
+                      commentBodyRef.classList.add('highlightable')
+                    }, 100)
+                  } else {
+                    commentBodyRef.classList.add('highlightable')
+                  }
+                } else {
+                  commentBodyRef.classList.remove('highlightable')
+                }
+              });
+            });
+
+            if (commentBodyRef) {
+              observer.observe(commentBodyRef);
+            }
+
+            onCleanup(() => {
+              if (commentBodyRef) {
+                observer.unobserve(commentBodyRef);
+              }
+              observer.disconnect();
+            });
+          });
+
+          return <div ref={(el) => commentRef = el} class="ztr-comment" style={{display: store.activeThreadId === event().id || store.activeThreadId === null || event().parent  ? 'block' : 'none' }}>
+            <div class="ztr-comment-body" ref={(el) => commentBodyRef = el}>
               <div class="ztr-comment-info-wrapper">
                 <div class="ztr-comment-info">
                   <div class="ztr-comment-info-picture">
@@ -131,12 +198,16 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </div>
                 <ul class="ztr-comment-info-items">
                   {total() > 0 && <li>
-                    {/*<span onClick={() => handleOpen()}>*/}
-                    {/*  {isThreadCollapsed() ? rightArrow() : downArrow()}*/}
-                    {/*</span>*/}
-                    {isThreadCollapsed() ? (  <span onClick={() => handleOpen()}>
+                    {
+                        store.activeThreadId === event().id && (<div class="ztr-reply-controls">
+                          <button class="ztr-reply-login-button" onClick={() => handleBack()}>back</button>
+                        </div>)
+                    }
+                    {
+                        store.activeThreadId === null && ( <span onClick={() => handleOpen()}>
                       {rightArrow()}
-                    </span>) : (<div class="ztr-reply-controls"><button class="ztr-reply-login-button" onClick={() => handleBack()}>back</button></div>)}
+                    </span>)
+                    }
                   </li>}
                 </ul>
               </div>
@@ -146,6 +217,8 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                   <a href={store.urlPrefixes!.note + noteEncode(event().id)} target="_blank"><small>Event data</small></a>
                   {/* <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre> */}
                 </div>}
+
+              {event().parent && <div class="ztr-comment-text"><div onClick={() => handleGoToParent()} class="replied-budge">Reply: <span>{replatedText}</span></div></div>}
 
               <div class="ztr-comment-text">
                 {isMissingEvent() && <p class="warning">{warningSvg()}<span>This is a {action()} that referenced this article in <a href={store.urlPrefixes!.note + noteEncode(event().ro!)}>another thread</a></span></p>}
@@ -191,7 +264,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
               {isOpen() &&
                 <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
-            {!isThreadCollapsed() && <div class="ztr-comment-replies">
+            {!isThreadCollapsed() && <div class="ztr-comment-replies" style={{padding: store.activeThreadId === event().id  ? '1em' : '0' }}>
               <Thread nestedEvents={() => event().children} articles={props.articles} />
             </div>}
           </div>;
