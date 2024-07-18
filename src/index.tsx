@@ -2,7 +2,7 @@ import { JSX, createComputed, createEffect, createMemo, createSignal, on, onClea
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { saveRelayLatestForFilter, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent, getRelayLatest as getRelayLatestForFilter, normalizeURL } from "./util/ui.ts";
-import { nest } from "./util/nest.ts";
+import {nest, NestedNoteEvent} from "./util/nest.ts";
 import { store, pool, isDisableType, signersStore } from "./util/stores.ts";
 import { Thread, ellipsisSvg } from "./thread.tsx";
 import { RootComment } from "./reply.tsx";
@@ -371,6 +371,39 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
+  const [activeEvent, setActiveEvent] = createSignal<NestedNoteEvent | null>(null);
+
+  createComputed(on([() => store.activeThreadId, () => nestedEvents()], () => {
+    if (store.activeThreadId) {
+      const findObjectById = (data, targetId) => {
+        for (let item of data) {
+          if (item.id === targetId) {
+            return item;
+          } else if (item.children && item.children.length > 0) {
+            const result = findObjectById(item.children, targetId);
+            if (result) {
+              return result;
+            }
+          }
+        }
+        return null;
+      }
+
+      const result = findObjectById(nestedEvents(), store.activeThreadId);
+      setActiveEvent(result)
+    } else {
+      setActiveEvent(null)
+    }
+  }));
+
+  const findO = () => {
+    if (activeEvent()) {
+      return [activeEvent()]
+    }
+
+    return nestedEvents()
+  }
+
   return <>
     <div id="ztr-root">
       <style>{style}</style>
@@ -388,7 +421,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
         </h2>
-        <Thread nestedEvents={nestedEvents} articles={articles} />
+        <Thread nestedEvents={findO} articles={articles} />
       </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>

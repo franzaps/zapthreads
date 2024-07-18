@@ -1,4 +1,4 @@
-import { Index, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import {Index, Show, createEffect, createMemo, createSignal, onCleanup} from "solid-js";
 import { defaultPicture, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui.ts";
 import { ReplyEditor } from "./reply.tsx";
 import { NestedNoteEvent } from "./util/nest.ts";
@@ -17,7 +17,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
         (event) => {
           const [isOpen, setOpen] = createSignal(false);
           const [isExpanded, setExpanded] = createSignal(false);
-          const [isThreadCollapsed, setThreadCollapsed] = createSignal(false);
+          const [isThreadCollapsed, setThreadCollapsed] = createSignal(true);
           const [showInfo, setShowInfo] = createSignal(false);
 
           const MAX_HEIGHT = 500;
@@ -72,7 +72,39 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
 
           onCleanup(() => clearInterval(timer));
 
-          return <div class="ztr-comment">
+          const handleOpen = () => {
+            store.activeThreadId = event().id
+            store.initialThreadId = event().id
+          }
+
+          const handleBack = () => {
+            if (event().parent) {
+              store.activeThreadId = event().parent.id
+            } else {
+              store.activeThreadId = null
+            }
+          }
+
+          let commentRef
+
+          createEffect(() => {
+            if (store.activeThreadId !== event().id) {
+              setThreadCollapsed(true)
+            } else {
+              setThreadCollapsed(false)
+            }
+
+            if (store.initialThreadId === event().id && commentRef) {
+              setTimeout(() => {
+                commentRef.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start"
+                });
+              }, 0)
+            }
+          });
+
+          return <div ref={(el) => commentRef = el} class="ztr-comment">
             <div class="ztr-comment-body">
               <div class="ztr-comment-info-wrapper">
                 <div class="ztr-comment-info">
@@ -98,9 +130,12 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </div>
                 <ul class="ztr-comment-info-items">
                   {total() > 0 && <li>
-                    <span onClick={() => setThreadCollapsed(!isThreadCollapsed())}>
-                      {isThreadCollapsed() ? rightArrow() : downArrow()}
-                    </span>
+                    {/*<span onClick={() => handleOpen()}>*/}
+                    {/*  {isThreadCollapsed() ? rightArrow() : downArrow()}*/}
+                    {/*</span>*/}
+                    {isThreadCollapsed() ? (  <span onClick={() => handleOpen()}>
+                      {rightArrow()}
+                    </span>) : (<div class="ztr-reply-controls"><button class="ztr-reply-login-button" onClick={() => handleBack()}>back</button></div>)}
                   </li>}
                 </ul>
               </div>

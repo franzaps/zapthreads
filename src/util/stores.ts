@@ -11,6 +11,8 @@ export const store = createMutable<PreferencesStore>({
   rootEventIds: [],
   filter: {},
   profiles: () => [],
+  activeThreadId: null,
+  initialThreadId: null,
 });
 
 export const signersStore = createMutable<SignersStore>({});
@@ -47,6 +49,9 @@ export type PreferencesStore = {
 
   anchorAuthor?: string;
   profiles: () => Profile[];
+
+  activeThreadId?: string | null
+  initialThreadId?: string | null
 };
 
 export type Anchor = { type: 'http' | 'naddr' | 'note' | 'error', value: string; };
