@@ -39,6 +39,7 @@ export const isDisableType = (type: string): type is DisableType => {
 export type PreferencesStore = {
   anchor?: Anchor, // derived from anchor prop
   relays?: string[]; // prop
+  mode?: string;
   version?: string;  // derived from version prop
   rootEventIds: string[];  // derived from anchor prop
   filter: Filter;  // derived from anchor prop

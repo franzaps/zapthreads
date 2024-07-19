@@ -18,6 +18,9 @@ import {ThreadChatMode} from "./threadChatMode.js";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
+    store.mode = props.mode ? props.mode : ''
+    console.log(props)
+    
     store.anchor = (() => {
       const anchor = props.anchor.trim();
       try {
@@ -373,11 +376,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
-  const scriptTag = document.querySelector('script[data-mode="chat"]');
-  const accentColor = scriptTag?.getAttribute('data-accent-color') || '#cccccc';
-  const mode = scriptTag?.getAttribute('data-mode') || 'default';
-  const isChatMode = mode === 'chat'
-
+  const isChatMode = store.mode === 'chat'
 
   return <>
     <div id="ztr-root">
@@ -396,7 +395,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
         </h2>
-        {isChatMode ? <ThreadChatMode accentColor={accentColor} nestedEvents={nestedEvents} articles={articles} /> : <Thread nestedEvents={nestedEvents} articles={articles} />}
+        {isChatMode ? <ThreadChatMode nestedEvents={nestedEvents} articles={articles} /> : <Thread nestedEvents={nestedEvents} articles={articles} />}
       </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
@@ -413,6 +412,7 @@ export default ZapThreads;
 customElement<ZapThreadsAttributes>('zap-threads', {
   anchor: "",
   version: "",
+  mode: "",
   relays: "",
   user: "",
   author: "",
@@ -424,6 +424,7 @@ customElement<ZapThreadsAttributes>('zap-threads', {
   return <ZapThreads
     anchor={props['anchor'] ?? ''}
     version={props['version'] ?? ''}
+    mode={props['mode'] ?? ''}
     relays={props['relays'] ?? ''}
     user={props['user'] ?? ''}
     author={props['author'] ?? ''}
@@ -435,5 +436,5 @@ customElement<ZapThreadsAttributes>('zap-threads', {
 });
 
 export type ZapThreadsAttributes = {
-  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder' | 'legacy-url']?: string;
+  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder' | 'legacy-url' | 'mode']?: string;
 } & JSX.HTMLAttributes<HTMLElement>;

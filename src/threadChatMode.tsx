@@ -7,7 +7,7 @@ import { createElementSize } from "@solid-primitives/resize-observer";
 import { store } from "./util/stores.ts";
 import { NoteEvent } from "./util/models.ts";
 
-export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; articles: () => NoteEvent[]; accentColor?: string }) => {
+export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; articles: () => NoteEvent[]; }) => {
   const anchor = () => store.anchor!;
   const profiles = store.profiles!;
 
@@ -191,8 +191,17 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
 
           const totalReplies = countChildren(event())
 
-          return <div ref={(el) => commentRef = el} class="ztr-comment" style={{ "--highlightable-background": props.accentColor, display: store.activeThreadId === event().id || store.activeThreadId === null || event().parent  ? 'block' : 'none' }}>
+          return <div ref={(el) => commentRef = el} class="ztr-comment" style={{ "--highlightable-background": '#cccccc', display: store.activeThreadId === event().id || store.activeThreadId === null || event().parent  ? 'block' : 'none' }}>
             <div class="ztr-comment-body" ref={(el) => commentBodyRef = el}>
+              {
+                  store.activeThreadId === event().id && ( <ul class="ztr-comment-actions p-0 mb-1">
+                    <li class="ztr-comment-action-reply" onClick={() => handleBack()}>
+                      {backIcon()}
+                      <span class="p-0">Back</span>
+                    </li>
+                  </ul>)
+              }
+
               <div class="ztr-comment-info-wrapper">
                 <div class="ztr-comment-info">
                   <div class="ztr-comment-info-picture">
@@ -217,11 +226,6 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                 </div>
                 <ul class="ztr-comment-info-items">
                   {total() > 0 && <li>
-                    {
-                        store.activeThreadId === event().id && (<div class="ztr-reply-controls">
-                          <button class="ztr-reply-login-button" onClick={() => handleBack()}>back</button>
-                        </div>)
-                    }
                     {
                         store.activeThreadId === null && ( <span onClick={() => handleOpen()}>
                       {rightArrow()}
@@ -252,17 +256,6 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                 innerHTML={parseContent(event(), store, props.articles())}>
               </div>
 
-              {Boolean(totalReplies) && (
-                  <div class="ztr-comment-text">
-                {
-                    store.activeThreadId === null && (
-                        <button class="ztr-reply-count-button" onClick={() => handleOpen()}>{totalReplies} replies</button>
-                    )
-                }
-              </div>
-              )
-              }
-
               {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
                 <div class="ztr-comment-expand">
                   <a style={{ 'height': `${svgWidth}px` }}>
@@ -277,6 +270,17 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                     {replySvg()}
                     <span>{isOpen() ? 'Cancel' : 'Reply'}</span>
                   </li>
+
+                  {Boolean(totalReplies) && (
+                      <li class="ztr-comment-action-reply" onClick={() => handleOpen()}>
+                        {
+                            store.activeThreadId === null && (
+                                <span>{totalReplies} replies</span>
+                            )
+                        }
+                      </li>
+                  )
+                  }
                 </Show>
                 {/* <Show when={!store.disableZaps}>
                   <li class="ztr-comment-action-zap">
@@ -295,7 +299,7 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                 <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
             {!isThreadCollapsed() && <div class="ztr-comment-replies" style={{padding: store.activeThreadId === event().id  ? '1em' : '0' }}>
-              <ThreadChatMode nestedEvents={() => event().children} articles={props.articles} accentColor={props.accentColor} />
+              <ThreadChatMode nestedEvents={() => event().children} articles={props.articles} />
             </div>}
           </div>;
         }
@@ -320,3 +324,5 @@ const rightArrow = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -50 
 const downArrow = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -50 320 512"><path d="M137.4 374.6c12.5 12.5 32.8 12.5 45.3 0l128-128c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8L32 192c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l128 128z" /></svg>;
 
 const warningSvg = () => <svg xmlns="http://www.w3.org/2000/svg" height={svgWidth} viewBox="0 0 512 512"><path d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480H40c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24V296c0 13.3 10.7 24 24 24s24-10.7 24-24V184c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z" /></svg>;
+
+  const backIcon = () => <svg height="512px" id="Layer_1" style="enable-background:new 0 0 512 512;" version="1.1" viewBox="0 0 512 512" width="512px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><polygon points="352,128.4 319.7,96 160,256 160,256 160,256 319.7,416 352,383.6 224.7,256 "/></svg>
