@@ -12,6 +12,7 @@ import { decode } from "nostr-tools/nip19";
 import { finalizeEvent, getPublicKey } from "nostr-tools/pure";
 import { Filter } from "nostr-tools/filter";
 import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
+// @ts-ignore
 import { SubCloser } from "nostr-tools";
 import {ThreadChatMode} from "./threadChatMode.js";
 
@@ -175,7 +176,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     return store.filter;
   }, { defer: true });
 
-  let sub: SubCloser | null;
+  let sub: SubCloser | null = null;
 
   // Filter -> remote events, content
   createEffect(on([filter], async () => {

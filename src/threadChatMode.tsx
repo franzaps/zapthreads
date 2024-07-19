@@ -80,7 +80,7 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
 
           const handleBack = () => {
             if (event().parent) {
-              store.activeThreadId = event().parent.id
+              store.activeThreadId = event().parent!.id
               store.initialThreadId = event().id
             } else {
               store.activeThreadId = null
@@ -88,8 +88,8 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
             }
           }
 
-          let commentRef
-          let commentBodyRef
+          let commentRef: any
+          let commentBodyRef: any
 
           createEffect(() => {
             if (event().parent) {
@@ -129,15 +129,18 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
           });
 
           const handleGoToParent = () => {
-            store.initialThreadId = event().parent.id
+            store.initialThreadId = event().parent!.id
           }
 
-          const extractFirstParagraph = (str) => {
-            const match = str.match(/<p>(.*?)<\/p>/);
-            return match ? match[1] : null;
+          const extractFirstParagraph = (str: string) => {
+            const matches = [...str.matchAll(/<p>([^<]*)</g)];
+            console.log("extractFirstParagraph", str, matches);
+            for (const match of matches)
+              if (match[1]) return match[1];
+            return null;
           }
 
-          const replatedText = event().parent ? extractFirstParagraph(parseContent(event().parent, store, props.articles())) : '';
+          const replatedText = event().parent ? extractFirstParagraph(parseContent(event().parent!, store, props.articles())) : '';
 
           onMount(() => {
             const observer = new IntersectionObserver((entries) => {
@@ -172,7 +175,7 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
             });
           });
 
-          const countChildren = (node) => {
+          const countChildren = (node: any) => {
             if (!node.children || node.children.length === 0) {
               return 0;
             }
@@ -234,7 +237,7 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                   {/* <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre> */}
                 </div>}
 
-              {(event().parent && store.activeThreadId !== event().parent.id) && <div class="ztr-comment-text"><div onClick={() => handleGoToParent()} class="replied-budge">Reply: <span>{replatedText}</span></div></div>}
+              {(event().parent && store.activeThreadId !== event().parent!.id) && <div class="ztr-comment-text"><div onClick={() => handleGoToParent()} class="replied-budge">Reply: <span>{replatedText}</span></div></div>}
 
               <div class="ztr-comment-text">
                 {isMissingEvent() && <p class="warning">{warningSvg()}<span>This is a {action()} that referenced this article in <a href={store.urlPrefixes!.note + noteEncode(event().ro!)}>another thread</a></span></p>}
