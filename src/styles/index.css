@@ -160,15 +160,19 @@ ul.ztr-comment-info-items li a {
 }
 
 .ztr-comment-replies {
-  /*margin-left: 2em;*/
+  margin-left: 2em;
 }
 
-.ztr-comment-replies .ztr-comment {
+.chat-mode .ztr-comment-replies {
+  margin-left: 0;
+}
+
+.chat-mode .ztr-comment-replies .ztr-comment {
   background: inherit;
   padding-top: 1em;
 }
 
-.ztr-comment-replies .ztr-comment-body {
+.chat-mode .ztr-comment-replies .ztr-comment-body {
   border-radius: 1em;
   background: #e9e7e7;
   transition: background-color 1s;
@@ -179,11 +183,11 @@ ul.ztr-comment-info-items li a {
   max-width: 300px;
   padding: 0.5em;
   border-radius: 0.5em;
-  color: #fff;
+  border: 1px solid #a3a3a3;
   display: flex;
   text-wrap: nowrap;
   gap: 10px;
-  background: repeating-linear-gradient(45deg, /* Угол наклона полосок */ #421946, /* Цвет первой полосы */ #421946 10px, /* Конец первой полосы */ #553459 10px, /* Начало второй полосы */ #553459 20px /* Конец второй полосы */);
+  background: #d9d9d9;
 }
 
 .replied-budge span {
@@ -202,7 +206,7 @@ ul.ztr-comment-info-items li a {
 
 @keyframes highlightable-animation-parent {
   0% {
-    background-color: #f39eff;
+    background-color: var(--highlightable-background);
   }
   100% {
     background-color: initial;
@@ -211,7 +215,7 @@ ul.ztr-comment-info-items li a {
 
 @keyframes highlightable-animation {
   0% {
-    background-color: #f39eff;
+    background-color: var(--highlightable-background);
   }
   100% {
     background-color: #e9e7e7;
@@ -350,6 +354,19 @@ svg {
   color: white;
   background-color: var(--ztr-login-button-color, #2B2B2B);
   margin-left: 1em;
+}
+
+.ztr-reply-count-button {
+  font-family: var(--ztr-font);
+  appearance: none;
+  border: none;
+  padding: 0.5em 1em;
+  border-radius: 0.2em;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  color: white;
+  background-color: var(--ztr-login-button-color, #2B2B2B);
 }
 
 .ztr-reply-button {

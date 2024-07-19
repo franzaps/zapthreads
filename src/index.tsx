@@ -13,6 +13,7 @@ import { finalizeEvent, getPublicKey } from "nostr-tools/pure";
 import { Filter } from "nostr-tools/filter";
 import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
 import { SubCloser } from "nostr-tools";
+import {ThreadChatMode} from "./threadChatMode.js";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
@@ -371,6 +372,12 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
+  const scriptTag = document.querySelector('script[data-mode="chat"]');
+  const accentColor = scriptTag?.getAttribute('data-accent-color') || '#cccccc';
+  const mode = scriptTag?.getAttribute('data-mode') || 'default';
+  const isChatMode = mode === 'chat'
+
+
   return <>
     <div id="ztr-root">
       <style>{style}</style>
@@ -388,7 +395,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
         </h2>
-        <Thread nestedEvents={nestedEvents} articles={articles} />
+        {isChatMode ? <ThreadChatMode accentColor={accentColor} nestedEvents={nestedEvents} articles={articles} /> : <Thread nestedEvents={nestedEvents} articles={articles} />}
       </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>

@@ -1,4 +1,4 @@
-import { Index, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import {Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount} from "solid-js";
 import { defaultPicture, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui.ts";
 import { ReplyEditor } from "./reply.tsx";
 import { NestedNoteEvent } from "./util/nest.ts";
@@ -7,17 +7,17 @@ import { createElementSize } from "@solid-primitives/resize-observer";
 import { store } from "./util/stores.ts";
 import { NoteEvent } from "./util/models.ts";
 
-export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles: () => NoteEvent[]; }) => {
+export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; articles: () => NoteEvent[]; accentColor?: string }) => {
   const anchor = () => store.anchor!;
   const profiles = store.profiles!;
 
-  return <div class="ztr-thread">
+  return <div class="ztr-thread chat-mode">
     <Index each={sortByDate(props.nestedEvents())}>
       {
         (event) => {
           const [isOpen, setOpen] = createSignal(false);
           const [isExpanded, setExpanded] = createSignal(false);
-          const [isThreadCollapsed, setThreadCollapsed] = createSignal(false);
+          const [isThreadCollapsed, setThreadCollapsed] = createSignal(true);
           const [showInfo, setShowInfo] = createSignal(false);
 
           const MAX_HEIGHT = 500;
@@ -53,27 +53,143 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
           const total = createMemo(() => totalChildren(event()));
 
           const isUnspecifiedVersion = () =>
-              // if it does not have a parent or rootId
-              !event().parent && !event().ro;
+            // if it does not have a parent or rootId
+            !event().parent && !event().ro;
 
           const isMissingEvent = () =>
-              // if it does not have a parent
-              !event().parent &&
-              // does have a root but it's not in the rootEvents
-              event().ro && !store.rootEventIds.includes(event().ro!);
+            // if it does not have a parent
+            !event().parent &&
+            // does have a root but it's not in the rootEvents
+            event().ro && !store.rootEventIds.includes(event().ro!);
 
           const isDifferentVersion = () =>
-              // if it does not have a parent
-              !event().parent &&
-              // does have a root in root events
-              event().ro && store.rootEventIds.includes(event().ro!)
-              // but does not match the current version
-              && store.version && store.version !== event().ro;
+            // if it does not have a parent
+            !event().parent &&
+            // does have a root in root events
+            event().ro && store.rootEventIds.includes(event().ro!)
+            // but does not match the current version
+            && store.version && store.version !== event().ro;
 
           onCleanup(() => clearInterval(timer));
 
-          return <div class="ztr-comment">
-            <div class="ztr-comment-body">
+          const handleOpen = () => {
+            store.activeThreadId = event().id
+            store.initialThreadId = event().id
+            setThreadCollapsed(false)
+          }
+
+          const handleBack = () => {
+            if (event().parent) {
+              store.activeThreadId = event().parent.id
+              store.initialThreadId = event().id
+            } else {
+              store.activeThreadId = null
+              store.initialThreadId = event().id
+            }
+          }
+
+          let commentRef
+          let commentBodyRef
+
+          createEffect(() => {
+            if (event().parent) {
+              setThreadCollapsed(false)
+            }
+
+            if (!store.activeThreadId) {
+              setThreadCollapsed(true)
+            }
+
+            if (store.initialThreadId === event().id && commentRef && store.activeThreadId === null) {
+              commentRef.scrollIntoView({
+                behavior: "auto",
+                block: "start"
+              });
+            }
+
+            if (store.initialThreadId === event().id && commentRef && commentBodyRef && store.activeThreadId !== null) {
+              commentRef.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              });
+
+              if (commentBodyRef.classList.contains('highlightable')) {
+                commentBodyRef.classList.remove('highlightable')
+                setTimeout(() => {
+                  commentBodyRef.classList.add('highlightable')
+                }, 100)
+              } else {
+                commentBodyRef.classList.add('highlightable')
+              }
+
+              setTimeout(() => {
+                store.initialThreadId = null
+              }, 1000)
+            }
+          });
+
+          const handleGoToParent = () => {
+            store.initialThreadId = event().parent.id
+          }
+
+          const extractFirstParagraph = (str) => {
+            const match = str.match(/<p>(.*?)<\/p>/);
+            return match ? match[1] : null;
+          }
+
+          const replatedText = event().parent ? extractFirstParagraph(parseContent(event().parent, store, props.articles())) : '';
+
+          onMount(() => {
+            const observer = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                if (entry.isIntersecting && store.activeThreadId === null) {
+                  store.initialThreadId = null
+                }
+                if (entry.isIntersecting && store.initialThreadId === event().id) {
+                  if (commentBodyRef.classList.contains('highlightable')) {
+                    commentBodyRef.classList.remove('highlightable')
+                    setTimeout(() => {
+                      commentBodyRef.classList.add('highlightable')
+                    }, 100)
+                  } else {
+                    commentBodyRef.classList.add('highlightable')
+                  }
+                } else {
+                  commentBodyRef.classList.remove('highlightable')
+                }
+              });
+            });
+
+            if (commentBodyRef) {
+              observer.observe(commentBodyRef);
+            }
+
+            onCleanup(() => {
+              if (commentBodyRef) {
+                observer.unobserve(commentBodyRef);
+              }
+              observer.disconnect();
+            });
+          });
+
+          const countChildren = (node) => {
+            if (!node.children || node.children.length === 0) {
+              return 0;
+            }
+
+            let count = node.children.length;
+
+            for (let child of node.children) {
+              count += countChildren(child);
+            }
+
+            return count;
+          }
+
+          const totalReplies = countChildren(event())
+
+          return <div ref={(el) => commentRef = el} class="ztr-comment" style={{ "--highlightable-background": props.accentColor, display: store.activeThreadId === event().id || store.activeThreadId === null || event().parent  ? 'block' : 'none' }}>
+            <div class="ztr-comment-body" ref={(el) => commentBodyRef = el}>
               <div class="ztr-comment-info-wrapper">
                 <div class="ztr-comment-info">
                   <div class="ztr-comment-info-picture">
@@ -84,10 +200,10 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                       <a href={store.urlPrefixes!.npub + npub()} target="_blank" >{profile()?.n || shortenEncodedId(npub())}</a>
                       <span style="white-space: nowrap;"><strong> {action()}ed</strong> {createdTimeAgo()}</span></li>
                     {total() > 0 && size.width! > 600 &&
-                        <>
-                          <li>●</li>
-                          <li>{total()} repl{total() > 1 ? 'ies' : 'y'}{isThreadCollapsed() ? ' (hidden)' : ''}</li>
-                        </>
+                      <>
+                        <li>●</li>
+                        <li>{total()} repl{total() > 1 ? 'ies' : 'y'}{isThreadCollapsed() ? ' (hidden)' : ''}</li>
+                      </>
                     }
                     <li>
                       <a class="ztr-comment-info-dots" onClick={() => setShowInfo(!showInfo())}>
@@ -98,18 +214,27 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </div>
                 <ul class="ztr-comment-info-items">
                   {total() > 0 && <li>
-                    <span onClick={() => setThreadCollapsed(!isThreadCollapsed())}>
-                      {isThreadCollapsed() ? rightArrow() : downArrow()}
-                    </span>
+                    {
+                        store.activeThreadId === event().id && (<div class="ztr-reply-controls">
+                          <button class="ztr-reply-login-button" onClick={() => handleBack()}>back</button>
+                        </div>)
+                    }
+                    {
+                        store.activeThreadId === null && ( <span onClick={() => handleOpen()}>
+                      {rightArrow()}
+                    </span>)
+                    }
                   </li>}
                 </ul>
               </div>
 
               {showInfo() &&
-                  <div class="ztr-info-pane">
-                    <a href={store.urlPrefixes!.note + noteEncode(event().id)} target="_blank"><small>Event data</small></a>
-                    {/* <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre> */}
-                  </div>}
+                <div class="ztr-info-pane">
+                  <a href={store.urlPrefixes!.note + noteEncode(event().id)} target="_blank"><small>Event data</small></a>
+                  {/* <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre> */}
+                </div>}
+
+              {(event().parent && store.activeThreadId !== event().parent.id) && <div class="ztr-comment-text"><div onClick={() => handleGoToParent()} class="replied-budge">Reply: <span>{replatedText}</span></div></div>}
 
               <div class="ztr-comment-text">
                 {isMissingEvent() && <p class="warning">{warningSvg()}<span>This is a {action()} that referenced this article in <a href={store.urlPrefixes!.note + noteEncode(event().ro!)}>another thread</a></span></p>}
@@ -118,19 +243,30 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
               </div>
 
               <div
-                  ref={setTarget}
-                  classList={{ "ztr-comment-text": true, "highlight": event().k == 9802 }}
-                  style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
-                  innerHTML={parseContent(event(), store, props.articles())}>
+                ref={setTarget}
+                classList={{ "ztr-comment-text": true, "highlight": event().k == 9802 }}
+                style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
+                innerHTML={parseContent(event(), store, props.articles())}>
               </div>
 
+              {Boolean(totalReplies) && (
+                  <div class="ztr-comment-text">
+                {
+                    store.activeThreadId === null && (
+                        <button class="ztr-reply-count-button" onClick={() => handleOpen()}>{totalReplies} replies</button>
+                    )
+                }
+              </div>
+              )
+              }
+
               {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
-                  <div class="ztr-comment-expand">
-                    <a style={{ 'height': `${svgWidth}px` }}>
-                      {expandSvg()}
-                    </a>
-                    <span onClick={() => setExpanded(true)}>Show full comment</span>
-                  </div>}
+                <div class="ztr-comment-expand">
+                  <a style={{ 'height': `${svgWidth}px` }}>
+                    {expandSvg()}
+                  </a>
+                  <span onClick={() => setExpanded(true)}>Show full comment</span>
+                </div>}
 
               <ul class="ztr-comment-actions">
                 <Show when={!store.disableFeatures!.includes('reply')}>
@@ -153,10 +289,10 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </Show> */}
               </ul>
               {isOpen() &&
-                  <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
+                <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
-            {!isThreadCollapsed() && <div class="ztr-comment-replies">
-              <Thread nestedEvents={() => event().children} articles={props.articles} />
+            {!isThreadCollapsed() && <div class="ztr-comment-replies" style={{padding: store.activeThreadId === event().id  ? '1em' : '0' }}>
+              <ThreadChatMode nestedEvents={() => event().children} articles={props.articles} accentColor={props.accentColor} />
             </div>}
           </div>;
         }
