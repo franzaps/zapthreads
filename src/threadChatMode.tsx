@@ -209,14 +209,12 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
 
             if (store.activeThreadId === event().id) {
               function flattenAndSort(data) {
-                // Вспомогательная функция для рекурсивного обхода и схлопывания
                 function flatten(node) {
                   let result = [];
 
-                  // Добавляем текущий узел в результат
                   result.push({
                     ...node,
-                    children: [] // Мы не нуждаемся в детях после схлопывания
+                    children: []
                   });
 
                   // Обрабатываем детей
@@ -229,10 +227,8 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                   return result;
                 }
 
-                // Начинаем с корневого узла и выполняем схлопывание
                 let flatList = flatten(data);
 
-                // Сортируем по timestamp в порядке убывания
                 flatList.sort((a, b) => b.ts - a.ts);
 
                 return flatList;
