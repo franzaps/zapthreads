@@ -69,7 +69,7 @@ function App() {
     <h3>Relays: <input type='text' value={relays()} onChange={(e) => setRelays(e.target.value)}></input></h3>
 
     <div style="min-height: 1000px; min-width: 700px; margin-top: -2rem">
-      {anchor() && <zap-threads reply-placeholder='Write something...' anchor={anchor()} disable={disabled().join(',')} relays={relays()} user={npub()} />}
+      {anchor() && <zap-threads reply-placeholder='Write something...' anchor={anchor()} mode="chat" disable={disabled().join(',')} relays={relays()} user={npub()} />}
     </div>
   </>;
 }

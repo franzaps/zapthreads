@@ -1,4 +1,4 @@
-import {Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount} from "solid-js";
+import {Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount, on, createComputed} from "solid-js";
 import { defaultPicture, parseContent, shortenEncodedId, sortByDate, svgWidth, timeAgo, totalChildren } from "./util/ui.ts";
 import { ReplyEditor } from "./reply.tsx";
 import { NestedNoteEvent } from "./util/nest.ts";
@@ -76,6 +76,13 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
             store.activeThreadId = event().id
             store.initialThreadId = event().id
             setThreadCollapsed(false)
+          }
+
+          const handleOpenLastComment = () => {
+            if(store.activeThreadId === null && store.initialThreadId === null) {
+              store.activeThreadId = event().id
+              setThreadCollapsed(false)
+            }
           }
 
           const handleBack = () => {
@@ -189,7 +196,50 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
             return count;
           }
 
-          const totalReplies = countChildren(event())
+          const [totalReplies, setTotalReplies] = createSignal<number>(countChildren(event()));
+
+          createComputed(on([event],() => {
+            const getTotalReplies = countChildren(event())
+
+            setTotalReplies(getTotalReplies)
+
+            if(store.activeThreadId === event().id && store.initialThreadId === null) {
+              store.initialThreadId = event().children.sort((a, b) => b.ts - a.ts)[0]?.id
+            }
+
+            if (store.activeThreadId === event().id) {
+              function flattenAndSort(data) {
+                // Вспомогательная функция для рекурсивного обхода и схлопывания
+                function flatten(node) {
+                  let result = [];
+
+                  // Добавляем текущий узел в результат
+                  result.push({
+                    ...node,
+                    children: [] // Мы не нуждаемся в детях после схлопывания
+                  });
+
+                  // Обрабатываем детей
+                  if (node.children && node.children.length > 0) {
+                    for (let child of node.children) {
+                      result = result.concat(flatten(child));
+                    }
+                  }
+
+                  return result;
+                }
+
+                // Начинаем с корневого узла и выполняем схлопывание
+                let flatList = flatten(data);
+
+                // Сортируем по timestamp в порядке убывания
+                flatList.sort((a, b) => b.ts - a.ts);
+
+                return flatList;
+              }
+              store.initialThreadId = flattenAndSort(event())[0]?.id
+            }
+          }, { defer: true }));
 
           return <div ref={(el) => commentRef = el} class="ztr-comment" style={{ "--highlightable-background": '#cccccc', display: store.activeThreadId === event().id || store.activeThreadId === null || event().parent  ? 'block' : 'none' }}>
             <div class="ztr-comment-body" ref={(el) => commentBodyRef = el}>
@@ -296,7 +346,10 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                 </Show> */}
               </ul>
               {isOpen() &&
-                <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
+                <ReplyEditor replyTo={event().id} onDone={() => {
+                  setOpen(false)
+                  handleOpenLastComment()
+                }} />}
             </div>
             {!isThreadCollapsed() && <div class="ztr-comment-replies" style={{padding: store.activeThreadId === event().id  ? '1em' : '0' }}>
               <ThreadChatMode nestedEvents={() => event().children} articles={props.articles} />
