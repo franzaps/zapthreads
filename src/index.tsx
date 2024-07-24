@@ -395,7 +395,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
         </h2>
-        {isChatMode ? <ThreadChatMode nestedEvents={nestedEvents} articles={articles} /> : <Thread nestedEvents={nestedEvents} articles={articles} />}
+        {isChatMode ? <ThreadChatMode child={false} nestedEvents={nestedEvents} articles={articles} /> : <Thread nestedEvents={nestedEvents} articles={articles} />}
       </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>

@@ -209,18 +209,32 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
   // Only autofocus if 
   const autofocus = props.replyTo !== undefined;
-  let ref!: HTMLTextAreaElement;
+  let ref!: HTMLInputElement & HTMLTextAreaElement ;
   createAutofocus(() => autofocus && ref);
 
+  const isChatMode = store.mode === 'chat'
+
   return <div class="ztr-reply-form">
-    <textarea
-      disabled={loading()}
-      value={comment()}
-      placeholder={store.replyPlaceholder || 'Add your comment...'}
-      autofocus={autofocus}
-      ref={ref}
-      onChange={e => setComment(e.target.value)}
-    />
+    {isChatMode ?
+      <input
+          disabled={loading()}
+          value={comment()}
+          placeholder="Reply something..."
+          autofocus={autofocus}
+          ref={ref}
+          onChange={e => setComment(e.target.value)}
+      /> : (
+            <textarea
+                disabled={loading()}
+                value={comment()}
+                placeholder={store.replyPlaceholder || 'Add your comment...'}
+                autofocus={autofocus}
+                ref={ref}
+                onChange={e => setComment(e.target.value)}
+            />
+        )
+    }
+
     <div class="ztr-reply-controls">
       {store.disableFeatures!.includes('publish') && <span>Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
