@@ -334,6 +334,12 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
             {!isThreadCollapsed() && <div class="ztr-comment-replies" style={{padding: store.activeThreadId === event().id  ? '1em' : '0' }}>
               <ThreadChatMode child={true} nestedEvents={() => flattenEvents(event().children).sort((a, b) => a.ts - b.ts)} articles={props.articles} />
             </div>}
+
+            {store.activeThreadId === event().id &&
+                <div class="footer-editor"><ReplyEditor input={true} replyTo={event().id} onDone={() => {
+                  setOpen(false)
+                  handleOpenLastComment()
+                }} /></div>}
           </div>;
         }
       }
