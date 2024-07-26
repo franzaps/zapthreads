@@ -325,7 +325,7 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                 </Show> */}
               </ul>
                {isOpen() &&
-                  <ReplyEditor input={true} replyTo={event().id} onDone={() => {
+                  <ReplyEditor input={true} isFocus={true} replyTo={event().id} onDone={() => {
                     setOpen(false)
                     handleOpenLastComment()
                   }} />}

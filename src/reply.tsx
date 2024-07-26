@@ -11,7 +11,7 @@ import { decode, npubEncode } from "nostr-tools/nip19";
 import { Relay } from "nostr-tools/relay";
 import { normalizeURL } from "nostr-tools/utils";
 
-export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?: boolean }) => {
+export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?: boolean; isFocus?: boolean }) => {
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [loggedInUser, setLoggedInUser] = createSignal<Profile>();
@@ -210,7 +210,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
   // Only autofocus if 
   const autofocus = props.replyTo !== undefined;
   let ref!: HTMLInputElement & HTMLTextAreaElement ;
-  createAutofocus(() => autofocus && ref);
+  createAutofocus(() => props.isFocus ? (autofocus && ref) : false);
 
   return <div class="ztr-reply-form">
     {props.input ?
@@ -218,6 +218,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
           disabled={loading()}
           value={comment()}
           placeholder="Reply something..."
+          autofocus={props.isFocus ? autofocus : false}
+          ref={ref}
           onChange={e => setComment(e.target.value)}
       /> : (
             <textarea
