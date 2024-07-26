@@ -6,6 +6,7 @@ import { noteEncode, npubEncode } from "nostr-tools/nip19";
 import { createElementSize } from "@solid-primitives/resize-observer";
 import { store } from "./util/stores.ts";
 import { NoteEvent } from "./util/models.ts";
+import {flattenEvents} from "./util/helpers.js";
 
 export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; articles: () => NoteEvent[]; child: boolean }) => {
   const anchor = () => store.anchor!;
@@ -219,21 +220,6 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
           }, { defer: true }));
 
 
-
-          const flattenEvents = (arr: NestedNoteEvent[]) => {
-            let result: NestedNoteEvent[] = [];
-
-            const flatten = (item: NestedNoteEvent) => {
-              result.push({ ...item, children: [] });
-              if (item.children && item.children.length > 0) {
-                item.children.forEach(flatten);
-              }
-            }
-
-            arr.forEach(flatten);
-            return result;
-          }
-
           return <div ref={(el) => commentRef = el} class="ztr-comment" style={{ "--highlightable-background": '#cccccc', display: store.activeThreadId === event().id || store.activeThreadId === null || event().parent  ? 'block' : 'none' }}>
             <div class="ztr-comment-body" ref={(el) => commentBodyRef = el}>
               {
@@ -338,22 +324,16 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
                   </li>
                 </Show> */}
               </ul>
-              {store.activeThreadId !== event().id && (<> {isOpen() &&
-                  <ReplyEditor replyTo={event().id} onDone={() => {
+               {isOpen() &&
+                  <ReplyEditor input={true} replyTo={event().id} onDone={() => {
                     setOpen(false)
                     handleOpenLastComment()
-                  }} />}</>)}
-
+                  }} />}
             </div>
+
             {!isThreadCollapsed() && <div class="ztr-comment-replies" style={{padding: store.activeThreadId === event().id  ? '1em' : '0' }}>
               <ThreadChatMode child={true} nestedEvents={() => flattenEvents(event().children).sort((a, b) => a.ts - b.ts)} articles={props.articles} />
             </div>}
-
-            {store.activeThreadId === event().id && (<> {isOpen() &&
-                <div class="footer-editor"><ReplyEditor replyTo={event().id} onDone={() => {
-                  setOpen(false)
-                  handleOpenLastComment()
-                }} /></div>}</>)}
           </div>;
         }
       }

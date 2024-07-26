@@ -499,6 +499,10 @@ svg {
   margin-bottom: 1em !important;
 }
 
+.mt-1 {
+  margin-top: 1em !important;
+}
+
 @media screen and (max-width: 900px) {
   .ztr-action-commented {
     display: none;

@@ -11,7 +11,7 @@ import { decode, npubEncode } from "nostr-tools/nip19";
 import { Relay } from "nostr-tools/relay";
 import { normalizeURL } from "nostr-tools/utils";
 
-export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
+export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?: boolean }) => {
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [loggedInUser, setLoggedInUser] = createSignal<Profile>();
@@ -212,10 +212,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   let ref!: HTMLInputElement & HTMLTextAreaElement ;
   createAutofocus(() => autofocus && ref);
 
-  const isChatMode = store.mode === 'chat'
-
   return <div class="ztr-reply-form">
-    {isChatMode ?
+    {props.input ?
       <input
           disabled={loading()}
           value={comment()}
@@ -264,13 +262,19 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
   </div>;
 };
 
-export const RootComment = () => {
+export const RootComment = (props: {handleExitThread?: boolean}) => {
   const anchor = () => store.anchor!;
 
   const zapsAggregate = watch(() => ['aggregates', IDBKeyRange.only([anchor().value, 9735])]);
   const likesAggregate = watch(() => ['aggregates', IDBKeyRange.only([anchor().value, 7])]);
   const zapCount = () => zapsAggregate()?.sum ?? 0;
   const likeCount = () => likesAggregate()?.ids.length ?? 0;
+
+  const handleExit = () => {
+    if (props.handleExitThread) {
+      store.activeThreadId = null
+    }
+  }
 
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
@@ -288,7 +292,7 @@ export const RootComment = () => {
           </li>
         </Show>
       </ul>
-      <ReplyEditor />
+      <ReplyEditor onDone={() => handleExit()} />
     </div>
   </div>;
 };

@@ -15,6 +15,7 @@ import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
 // @ts-ignore
 import { SubCloser } from "nostr-tools";
 import {ThreadChatMode} from "./threadChatMode.js";
+import {flattenEvents} from "./util/helpers.js";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
@@ -391,11 +392,12 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         </div>
       </>}
       {anchor().type !== 'error' && <>
-        {!store.disableFeatures!.includes('reply') && <RootComment />}
+        {store.activeThreadId === null && <>{!store.disableFeatures!.includes('reply') && <RootComment />}</>}
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
         </h2>
         {isChatMode ? <ThreadChatMode child={false} nestedEvents={nestedEvents} articles={articles} /> : <Thread nestedEvents={nestedEvents} articles={articles} />}
+        {store.activeThreadId !== null && <div class="mt-1">{!store.disableFeatures!.includes('reply') && <RootComment handleExitThread={true} />}</div>}
       </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
