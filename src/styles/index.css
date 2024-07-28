@@ -67,6 +67,7 @@ a {
 
 .ztr-comment-info-picture {
   width: 3.5em;
+  /* padding: 0.5em; */
 }
 
 ul.ztr-comment-info-items {
@@ -105,10 +106,13 @@ ul.ztr-comment-info-items li a {
   width: 2em;
   height: 2em;
   border-radius: 50%;
-  padding: 0.5em;
   position: relative;
   display: block;
   object-fit: cover;
+}
+
+.ztr-comment-picture-wrap {
+  padding: 0.5em;
 }
 
 .ztr-comment-text,
@@ -516,3 +520,15 @@ svg {
 .footer-editor .ztr-reply-form {
   padding: 0;
 }
+
+
+@media screen and (max-width: 416px) {
+  .ztr-comment-text, .ztr-comment-actions {
+    padding: 0 !important;
+  }
+
+  .ztr-comment-picture-wrap {
+    padding-left: 0;
+  }
+}
+

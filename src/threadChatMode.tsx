@@ -234,7 +234,9 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
               <div class="ztr-comment-info-wrapper">
                 <div class="ztr-comment-info">
                   <div class="ztr-comment-info-picture">
+                    <div class="ztr-comment-picture-wrap">
                     <img src={profilePicture()} onerror={() => setProfilePicture(defaultPicture)} />
+                  </div>
                   </div>
                   <ul class="ztr-comment-info-items">
                     <li class="ztr-comment-info-author">
