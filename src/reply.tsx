@@ -14,16 +14,22 @@ import { normalizeURL } from "nostr-tools/utils";
 export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?: boolean; isFocus?: boolean }) => {
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+  const [isLoginProcess, setLoginProcess] = createSignal(false);
   const [loggedInUser, setLoggedInUser] = createSignal<Profile>();
   const [errorMessage, setErrorMessage] = createSignal('');
 
   const anchor = () => store.anchor!;
   const profiles = store.profiles!;
   const relays = () => store.relays!;
+  const isMinControl = store.minControl === 'true'
 
   // Sessions
 
   const login = async () => {
+    if(isMinControl) {
+      setLoginProcess(true)
+    }
+
     if (!window.nostr) {
       onError('Error: No NIP-07 extension!');
       return;
@@ -52,6 +58,18 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
       updateProfiles([pk], relays(), profiles());
     } else {
       setLoggedInUser();
+    }
+  });
+
+  createEffect(async () => {
+    if(isMinControl) {
+      if(loggedInUser() && isLoginProcess()) {
+        setLoginProcess(false)
+  
+        if(comment().length) {
+          await publish(loggedInUser())
+        }
+      }
     }
   });
 
@@ -199,7 +217,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
         onError('Error: Your comment was not published to any relay');
       } else {
         const msg = `Published to ${failures.length}/${relays().length} relays (see console for more info)`;
-        const notice = failures.length > 0 ? msg : undefined;
+        const notice = relays().length === 0 ? msg : undefined;
         onSuccess(event, notice);
       }
       // clear up failure log
@@ -232,8 +250,7 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
             />
         )
     }
-
-    <div class="ztr-reply-controls">
+{isMinControl && !loggedInUser() ? <div class="ztr-reply-controls"><button class="ztr-reply-login-button" onClick={() => login()}>Reply</button></div> :     <div class="ztr-reply-controls">
       {store.disableFeatures!.includes('publish') && <span>Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
@@ -258,7 +275,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
         </button>}
 
       {!loggedInUser() && <button class="ztr-reply-login-button" onClick={() => login()}>Log in</button>}
-    </div>
+    </div>}
+
   </div>;
 };
 

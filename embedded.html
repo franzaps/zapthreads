@@ -11,11 +11,15 @@
 
   <link rel="stylesheet" href="./src/styles/index.css">
   <link rel="stylesheet" href="./app/style.css">
-
+  <script src="./nostr-login.js" data-perms="sign_event:1985,sign_event:3,sign_event:30000" data-local-signup="false"></script>
   <style>
     zap-threads {
       --ztr-link-color: #92379c;
       --ztr-login-button-color: yellow;
+      --ztr-icon-color: red;
+--ztr-text-color: red;
+--ztr-link-color:red;
+
     }
 
     @media (prefers-color-scheme: dark) {
@@ -45,8 +49,8 @@
     cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
   </p>
 
-  <zap-threads mode="chat" anchor="nevent1qqsq6g0tytafts9pysutk56ah9jguy65kytqx9mg6g2hnh2a2525pvcsxxw9v"
-    user="npub1wf4pufsucer5va8g9p0rj5dnhvfeh6d8w0g6eayaep5dhps6rsgs43dgh9" disable="zaps,publish" />
+  <zap-threads  min-control="true" mode="chat" anchor="nevent1qqsq6g0tytafts9pysutk56ah9jguy65kytqx9mg6g2hnh2a2525pvcsxxw9v"
+     disable="zaps,publish" />
 
 </body>
 
