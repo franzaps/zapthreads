@@ -20,7 +20,7 @@ import {flattenEvents} from "./util/helpers.js";
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
     store.mode = props.mode ? props.mode : ''
-    store.minControl = props.minControl ? props.minControl : ''
+    store.npubPro = props.npubPro ? props.npubPro : ''
     console.log(props)
     
     store.anchor = (() => {
@@ -415,7 +415,7 @@ customElement<ZapThreadsAttributes>('zap-threads', {
   anchor: "",
   version: "",
   mode: "",
-  "min-control": "",
+  npubpro: "",
   relays: "",
   user: "",
   author: "",
@@ -428,7 +428,7 @@ customElement<ZapThreadsAttributes>('zap-threads', {
     anchor={props['anchor'] ?? ''}
     version={props['version'] ?? ''}
     mode={props['mode'] ?? ''}
-    minControl={props['min-control'] ?? ''}
+    npubPro={props['npubpro'] ?? ''}
     relays={props['relays'] ?? ''}
     user={props['user'] ?? ''}
     author={props['author'] ?? ''}
@@ -440,5 +440,5 @@ customElement<ZapThreadsAttributes>('zap-threads', {
 });
 
 export type ZapThreadsAttributes = {
-  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder' | 'legacy-url' | 'mode' | 'min-control']?: string;
+  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder' | 'legacy-url' | 'mode' | 'npubpro']?: string;
 } & JSX.HTMLAttributes<HTMLElement>;

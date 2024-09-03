@@ -21,12 +21,12 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
   const anchor = () => store.anchor!;
   const profiles = store.profiles!;
   const relays = () => store.relays!;
-  const isMinControl = store.minControl === 'true'
+  const isNpubPro = store.npubPro === 'true'
 
   // Sessions
 
   const login = async () => {
-    if(isMinControl) {
+    if(isNpubPro) {
       setLoginProcess(true)
     }
 
@@ -61,8 +61,10 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
     }
   });
 
+  // for npubPro mode this will publish the
+  // comment after login was executed
   createEffect(async () => {
-    if(isMinControl) {
+    if(isNpubPro) {
       if(loggedInUser() && isLoginProcess()) {
         setLoginProcess(false)
   
@@ -202,22 +204,29 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
       // Simulate publishing
       setTimeout(() => onSuccess(event), 1000);
     } else {
-      const failures = [];
+      const failures: string[] = [];
+      const promises = [];
       for (const relayUrl of relays()) {
-        try {
-          const relay = await Relay.connect(relayUrl);
-          await relay.publish(event);
-        } catch (e) {
-          console.error(e);
-          failures.push(relayUrl);
-        }
+        promises.push(new Promise<void>(async (ok) => {
+          try {
+            const relay = await Relay.connect(relayUrl);
+            await relay.publish(event);
+          } catch (e) {
+            console.warn(e);
+            failures.push(relayUrl);
+          }
+          ok();
+        }))
       }
+
+      // publish in parallel
+      await Promise.allSettled(promises);
 
       if (failures.length === relays().length) {
         onError('Error: Your comment was not published to any relay');
       } else {
         const msg = `Published to ${failures.length}/${relays().length} relays (see console for more info)`;
-        const notice = relays().length === 0 ? msg : undefined;
+        const notice = !isNpubPro && failures.length > 0 ? msg : undefined;
         onSuccess(event, notice);
       }
       // clear up failure log
@@ -250,7 +259,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
             />
         )
     }
-{isMinControl && !loggedInUser() ? <div class="ztr-reply-controls"><button class="ztr-reply-login-button" onClick={() => login()}>Reply</button></div> :     <div class="ztr-reply-controls">
+    {isNpubPro && !loggedInUser() && <div class="ztr-reply-controls"><button class="ztr-reply-login-button" onClick={() => login()}>Reply</button></div>}
+    {!(isNpubPro && !loggedInUser()) && <div class="ztr-reply-controls">
       {store.disableFeatures!.includes('publish') && <span>Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
@@ -266,7 +276,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?
 
       {loggedInUser() &&
         <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser())}>
-          Reply as {loggedInUser()!.n || shortenEncodedId(npubEncode(loggedInUser()!.pk))}
+          {isNpubPro && <>Reply</>}
+          {!isNpubPro && <>Reply as {loggedInUser()!.n || shortenEncodedId(npubEncode(loggedInUser()!.pk))}</>}
         </button>}
 
       {!loggedInUser() && !store.disableFeatures!.includes('replyAnonymously') &&
