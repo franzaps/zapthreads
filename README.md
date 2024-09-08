@@ -66,7 +66,7 @@ Arguments:
    - `replyAnonymously` (when disabled requires logging in in order to publish)
    - `hideContent` (when disabled it shows the content if the anchor is a naddr)
  - `urls`: comma-separated pairs of URLs
-   - defaults to `naddr:nostr.com/,npub:nostr.com/,nprofile:nostr.com/,nevent:nostr.com/,note:nostr.com/,tag:snort.social/t/`
+   - defaults to `naddr:njump.me/,npub:njump.me/,nprofile:njump.me/,nevent:njump.me/,note:njump.me/,tag:snort.social/t/`
    - `https://` will be automatically prepended
 
 ```html
