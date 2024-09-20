@@ -132,6 +132,8 @@ export const ThreadChatMode = (props: { nestedEvents: () => NestedNoteEvent[]; a
 
               setTimeout(() => {
                 store.initialThreadId = null
+
+                commentBodyRef.classList.remove('highlightable')
               }, 1000)
             }
           });

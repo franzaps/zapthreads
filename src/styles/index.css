@@ -178,7 +178,10 @@ ul.ztr-comment-info-items li a {
 
 .chat-mode .ztr-comment-replies .ztr-comment-body {
   border-radius: 1em;
-  background: #e9e7e7;
+  /* background: #e9e7e7; */
+
+  background-color: var(--ztr-background-color, rgba(0, 0, 0, 0.03));
+
   transition: background-color 1s;
 }
 
@@ -191,7 +194,7 @@ ul.ztr-comment-info-items li a {
   display: flex;
   text-wrap: nowrap;
   gap: 10px;
-  background: #d9d9d9;
+  background-color: var(--ztr-background-color, rgba(0, 0, 0, 0.03));
 }
 
 .replied-budge span {
@@ -307,8 +310,10 @@ svg {
   font-family: var(--ztr-font);
   font-size: 1.1em;
   line-height: 1.4;
-  color: #2B2B2B;
-  background-color: #FDFDFD;
+  /* color: #2B2B2B; */
+  /* background-color: #FDFDFD; */
+  color: var(--ztr-text-color);
+  background-color: var(--ztr-background-color, rgba(0, 0, 0, 0.03));
   border: 1px solid #BBB;
   outline: none;
   width: calc(100% - 1.5em);
@@ -324,8 +329,10 @@ svg {
   font-family: var(--ztr-font);
   font-size: 1.1em;
   line-height: 1.4;
-  color: #2B2B2B;
-  background-color: #FDFDFD;
+  /* color: #2B2B2B;
+  background-color: #FDFDFD; */
+  color: var(--ztr-text-color);
+  background-color: var(--ztr-background-color, rgba(0, 0, 0, 0.03));
   border: 1px solid #BBB;
   outline: none;
   width: calc(100% - 1.5em);
