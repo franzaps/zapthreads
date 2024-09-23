@@ -11,19 +11,25 @@ import { decode, npubEncode } from "nostr-tools/nip19";
 import { Relay } from "nostr-tools/relay";
 import { normalizeURL } from "nostr-tools/utils";
 
-export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => {
+export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; input?: boolean; isFocus?: boolean }) => {
   const [comment, setComment] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+  const [isLoginProcess, setLoginProcess] = createSignal(false);
   const [loggedInUser, setLoggedInUser] = createSignal<Profile>();
   const [errorMessage, setErrorMessage] = createSignal('');
 
   const anchor = () => store.anchor!;
   const profiles = store.profiles!;
   const relays = () => store.relays!;
+  const isNpubPro = store.npubPro === 'true'
 
   // Sessions
 
   const login = async () => {
+    if(isNpubPro) {
+      setLoginProcess(true)
+    }
+
     if (!window.nostr) {
       onError('Error: No NIP-07 extension!');
       return;
@@ -52,6 +58,20 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       updateProfiles([pk], relays(), profiles());
     } else {
       setLoggedInUser();
+    }
+  });
+
+  // for npubPro mode this will publish the
+  // comment after login was executed
+  createEffect(async () => {
+    if(isNpubPro) {
+      if(loggedInUser() && isLoginProcess()) {
+        setLoginProcess(false)
+  
+        if(comment().length) {
+          await publish(loggedInUser())
+        }
+      }
     }
   });
 
@@ -184,22 +204,29 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
       // Simulate publishing
       setTimeout(() => onSuccess(event), 1000);
     } else {
-      const failures = [];
+      const failures: string[] = [];
+      const promises = [];
       for (const relayUrl of relays()) {
-        try {
-          const relay = await Relay.connect(relayUrl);
-          await relay.publish(event);
-        } catch (e) {
-          console.error(e);
-          failures.push(relayUrl);
-        }
+        promises.push(new Promise<void>(async (ok) => {
+          try {
+            const relay = await Relay.connect(relayUrl);
+            await relay.publish(event);
+          } catch (e) {
+            console.warn(e);
+            failures.push(relayUrl);
+          }
+          ok();
+        }))
       }
+
+      // publish in parallel
+      await Promise.allSettled(promises);
 
       if (failures.length === relays().length) {
         onError('Error: Your comment was not published to any relay');
       } else {
         const msg = `Published to ${failures.length}/${relays().length} relays (see console for more info)`;
-        const notice = failures.length > 0 ? msg : undefined;
+        const notice = !isNpubPro && failures.length > 0 ? msg : undefined;
         onSuccess(event, notice);
       }
       // clear up failure log
@@ -209,19 +236,31 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
   // Only autofocus if 
   const autofocus = props.replyTo !== undefined;
-  let ref!: HTMLTextAreaElement;
-  createAutofocus(() => autofocus && ref);
+  let ref!: HTMLInputElement & HTMLTextAreaElement ;
+  createAutofocus(() => props.isFocus ? (autofocus && ref) : false);
 
   return <div class="ztr-reply-form">
-    <textarea
-      disabled={loading()}
-      value={comment()}
-      placeholder={store.replyPlaceholder || 'Add your comment...'}
-      autofocus={autofocus}
-      ref={ref}
-      onChange={e => setComment(e.target.value)}
-    />
-    <div class="ztr-reply-controls">
+    {props.input ?
+      <input
+          disabled={loading()}
+          value={comment()}
+          placeholder="Reply something..."
+          autofocus={props.isFocus ? autofocus : false}
+          ref={ref}
+          onChange={e => setComment(e.target.value)}
+      /> : (
+            <textarea
+                disabled={loading()}
+                value={comment()}
+                placeholder={store.replyPlaceholder || 'Add your comment...'}
+                autofocus={autofocus}
+                ref={ref}
+                onChange={e => setComment(e.target.value)}
+            />
+        )
+    }
+    {isNpubPro && !loggedInUser() && <div class="ztr-reply-controls"><button class="ztr-reply-login-button" onClick={() => login()}>Reply</button></div>}
+    {!(isNpubPro && !loggedInUser()) && <div class="ztr-reply-controls">
       {store.disableFeatures!.includes('publish') && <span>Publishing is disabled</span>}
       {errorMessage() && <span class="ztr-reply-error">Error: {errorMessage()}</span>}
 
@@ -237,7 +276,8 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
 
       {loggedInUser() &&
         <button disabled={loading()} class="ztr-reply-button" onClick={() => publish(loggedInUser())}>
-          Reply as {loggedInUser()!.n || shortenEncodedId(npubEncode(loggedInUser()!.pk))}
+          {isNpubPro && <>Reply</>}
+          {!isNpubPro && <>Reply as {loggedInUser()!.n || shortenEncodedId(npubEncode(loggedInUser()!.pk))}</>}
         </button>}
 
       {!loggedInUser() && !store.disableFeatures!.includes('replyAnonymously') &&
@@ -246,17 +286,24 @@ export const ReplyEditor = (props: { replyTo?: string; onDone?: Function; }) => 
         </button>}
 
       {!loggedInUser() && <button class="ztr-reply-login-button" onClick={() => login()}>Log in</button>}
-    </div>
+    </div>}
+
   </div>;
 };
 
-export const RootComment = () => {
+export const RootComment = (props: {handleExitThread?: boolean}) => {
   const anchor = () => store.anchor!;
 
   const zapsAggregate = watch(() => ['aggregates', IDBKeyRange.only([anchor().value, 9735])]);
   const likesAggregate = watch(() => ['aggregates', IDBKeyRange.only([anchor().value, 7])]);
   const zapCount = () => zapsAggregate()?.sum ?? 0;
   const likeCount = () => likesAggregate()?.ids.length ?? 0;
+
+  const handleExit = () => {
+    if (props.handleExitThread) {
+      store.activeThreadId = null
+    }
+  }
 
   return <div class="ztr-comment-new">
     <div class="ztr-comment-body">
@@ -274,7 +321,7 @@ export const RootComment = () => {
           </li>
         </Show>
       </ul>
-      <ReplyEditor />
+      <ReplyEditor onDone={() => handleExit()} />
     </div>
   </div>;
 };

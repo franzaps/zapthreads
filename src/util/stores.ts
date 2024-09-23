@@ -11,6 +11,8 @@ export const store = createMutable<PreferencesStore>({
   rootEventIds: [],
   filter: {},
   profiles: () => [],
+  activeThreadId: null,
+  initialThreadId: null,
 });
 
 export const signersStore = createMutable<SignersStore>({});
@@ -37,6 +39,8 @@ export const isDisableType = (type: string): type is DisableType => {
 export type PreferencesStore = {
   anchor?: Anchor, // derived from anchor prop
   relays?: string[]; // prop
+  mode?: string;
+  npubPro?: string;
   version?: string;  // derived from version prop
   rootEventIds: string[];  // derived from anchor prop
   filter: Filter;  // derived from anchor prop
@@ -47,6 +51,9 @@ export type PreferencesStore = {
 
   anchorAuthor?: string;
   profiles: () => Profile[];
+
+  activeThreadId?: string | null
+  initialThreadId?: string | null
 };
 
 export type Anchor = { type: 'http' | 'naddr' | 'note' | 'error', value: string; };

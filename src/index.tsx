@@ -2,7 +2,7 @@ import { JSX, createComputed, createEffect, createMemo, createSignal, on, onClea
 import { customElement } from 'solid-element';
 import style from './styles/index.css?raw';
 import { saveRelayLatestForFilter, updateProfiles, totalChildren, sortByDate, parseUrlPrefixes, parseContent, getRelayLatest as getRelayLatestForFilter, normalizeURL } from "./util/ui.ts";
-import { nest } from "./util/nest.ts";
+import {nest} from "./util/nest.ts";
 import { store, pool, isDisableType, signersStore } from "./util/stores.ts";
 import { Thread, ellipsisSvg } from "./thread.tsx";
 import { RootComment } from "./reply.tsx";
@@ -12,10 +12,17 @@ import { decode } from "nostr-tools/nip19";
 import { finalizeEvent, getPublicKey } from "nostr-tools/pure";
 import { Filter } from "nostr-tools/filter";
 import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
+// @ts-ignore
 import { SubCloser } from "nostr-tools";
+import {ThreadChatMode} from "./threadChatMode.js";
+import {flattenEvents} from "./util/helpers.js";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
   createComputed(() => {
+    store.mode = props.mode ? props.mode : ''
+    store.npubPro = props.npubPro ? props.npubPro : ''
+    console.log(props)
+    
     store.anchor = (() => {
       const anchor = props.anchor.trim();
       try {
@@ -174,7 +181,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     return store.filter;
   }, { defer: true });
 
-  let sub: SubCloser | null;
+  let sub: SubCloser | null = null;
 
   // Filter -> remote events, content
   createEffect(on([filter], async () => {
@@ -371,6 +378,8 @@ const ZapThreads = (props: { [key: string]: string; }) => {
 
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
+  const isChatMode = store.mode === 'chat'
+
   return <>
     <div id="ztr-root">
       <style>{style}</style>
@@ -384,11 +393,11 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         </div>
       </>}
       {anchor().type !== 'error' && <>
-        {!store.disableFeatures!.includes('reply') && <RootComment />}
+        {!store.disableFeatures!.includes('reply') && <RootComment handleExitThread={true} />}
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
         </h2>
-        <Thread nestedEvents={nestedEvents} articles={articles} />
+        {isChatMode ? <ThreadChatMode child={false} nestedEvents={nestedEvents} articles={articles} /> : <Thread nestedEvents={nestedEvents} articles={articles} />}
       </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>
@@ -405,6 +414,8 @@ export default ZapThreads;
 customElement<ZapThreadsAttributes>('zap-threads', {
   anchor: "",
   version: "",
+  mode: "",
+  npubpro: "",
   relays: "",
   user: "",
   author: "",
@@ -416,6 +427,8 @@ customElement<ZapThreadsAttributes>('zap-threads', {
   return <ZapThreads
     anchor={props['anchor'] ?? ''}
     version={props['version'] ?? ''}
+    mode={props['mode'] ?? ''}
+    npubPro={props['npubpro'] ?? ''}
     relays={props['relays'] ?? ''}
     user={props['user'] ?? ''}
     author={props['author'] ?? ''}
@@ -427,5 +440,5 @@ customElement<ZapThreadsAttributes>('zap-threads', {
 });
 
 export type ZapThreadsAttributes = {
-  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder' | 'legacy-url']?: string;
+  [key in 'anchor' | 'version' | 'relays' | 'user' | 'author' | 'disable' | 'urls' | 'reply-placeholder' | 'legacy-url' | 'mode' | 'npubpro']?: string;
 } & JSX.HTMLAttributes<HTMLElement>;

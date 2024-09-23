@@ -41,11 +41,11 @@ function App() {
     <a class="github-fork-ribbon" href="https://github.com/fr4nzap/zapthreads" data-ribbon="Code on GitHub" title="Code on GitHub">Code on GitHub</a>
     <h1 style={"display: flex; justify-content: center;"}>zap<svg xmlns="http://www.w3.org/2000/svg" viewBox="-75 0 600 600"><path d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288H175.5L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7H272.5L349.4 44.6z" /></svg>threads</h1>
 
-    {/* <p>
+    <p>
       {npub() && <span>Logged in as {npub()}</span>}
     </p>
     <button onClick={() => npub() ? setNpub('') : setNpub(defaultNpub)}>{npub() ? 'Log out' : 'Log in'}</button>
-    <hr /> */}
+    <hr />
 
     <h3>Select a resource: &nbsp;
       <Select class="custom" initialValue={options[0]} options={options} format={(item) => item.label} onChange={(e) => setAnchor(e.name)} />
@@ -69,7 +69,7 @@ function App() {
     <h3>Relays: <input type='text' value={relays()} onChange={(e) => setRelays(e.target.value)}></input></h3>
 
     <div style="min-height: 1000px; min-width: 700px; margin-top: -2rem">
-      {anchor() && <zap-threads reply-placeholder='Write something...' anchor={anchor()} disable={disabled().join(',')} relays={relays()} user={npub()} />}
+      {anchor() && <zap-threads npubpro="true" reply-placeholder='Reply something...' anchor={anchor()} mode="chat" disable={disabled().join(',')} relays={relays()} user={npub()} />}
     </div>
   </>;
 }
