@@ -6,6 +6,7 @@ import { createMutable } from "solid-js/store";
 
 // Global data (for now)
 export const pool = new SimplePool();
+pool.trackRelays = true;
 
 export const store = createMutable<PreferencesStore>({
   rootEventIds: [],
