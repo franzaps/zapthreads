@@ -23,6 +23,29 @@ export type NoteEvent = {
   tl?: string; // title
 };
 
+export type NoteId = string;
+export type Pk = string;
+export type Eid = string;
+export type VoteKind = -1 | 0 | 1;
+export type ReactionEvent = {
+  id: Eid;
+  noteId: NoteId;
+  content: string;
+  pk: Pk;
+  ts: number;
+  a: string;
+};
+
+export const voteKind = (r: ReactionEvent): VoteKind => {
+  if (r.content === '-') {
+    return -1;
+  } else if (r.content.length === 0 || r.content === '+') {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 export type AggregateEvent = {
   eid: string;
   k: 7 | 9735;
@@ -58,6 +81,13 @@ export interface ZapthreadsSchema extends DBSchema {
       'k': number;
     };
   };
+  reactions: {
+    key: string;
+    value: ReactionEvent;
+    indexes: {
+      'a': string;
+    };
+  };
   aggregates: {
     key: string[];
     value: AggregateEvent;
@@ -80,6 +110,7 @@ export interface ZapthreadsSchema extends DBSchema {
 
 export const indices: { [key in StoreNames<ZapthreadsSchema>]: any } = {
   'events': 'id',
+  'reactions': 'id',
   'aggregates': ['eid', 'k'],
   'profiles': ['pk'],
   'relays': ['n', 'a']
@@ -97,6 +128,9 @@ export const upgrade = async (db: IDBPDatabase<ZapthreadsSchema>, currentVersion
   events.createIndex('r', 'r');
   events.createIndex('d', 'd');
   events.createIndex('k', 'k');
+
+  const reactions = db.createObjectStore('reactions', { keyPath: indices['reactions'] });
+  reactions.createIndex('a', 'a');
 
   db.createObjectStore('aggregates', { keyPath: indices['aggregates'] });
 
@@ -142,3 +176,25 @@ export const eventToNoteEvent = (e: UnsignedEvent & { id?: string; }): NoteEvent
     tl,
   };
 };
+
+export const eventToReactionEvent = (e: UnsignedEvent & { id?: string; }, anchor: string): ReactionEvent => {
+  const nip10result = parse(e);
+
+  // extracting note id we reply to, otherwise root note id
+  const eTags = e.tags.filter(t => t.length > 1 && t[0] === 'e');
+  const tags = eTags.filter(t => t.length > 2);
+  const noteId = tags
+    .filter(t => t[3] === 'reply')
+    .concat(tags.filter(t => t[3] === 'root'))
+    .map(t => t[1])
+    .concat(eTags.length > 0 && eTags[0].length > 1 && [eTags[0][1]] || [])[0];
+
+  return {
+    id: e.id ?? '',
+    noteId,
+    pk: e.pubkey,
+    content: e.content,
+    ts: e.created_at,
+    a: anchor,
+  };
+}

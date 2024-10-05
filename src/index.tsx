@@ -11,7 +11,7 @@ import { clear as clearCache, find, findAll, save, watchAll } from "./util/db.ts
 import { decode } from "nostr-tools/nip19";
 import { finalizeEvent, getPublicKey } from "nostr-tools/pure";
 import { Filter } from "nostr-tools/filter";
-import { AggregateEvent, NoteEvent, eventToNoteEvent } from "./util/models.ts";
+import { AggregateEvent, NoteEvent, eventToNoteEvent, eventToReactionEvent, voteKind } from "./util/models.ts";
 import { SubCloser } from "nostr-tools";
 
 const ZapThreads = (props: { [key: string]: string; }) => {
@@ -225,6 +225,12 @@ const ZapThreads = (props: { [key: string]: string; }) => {
             }
           } else if (e.kind === 7) {
             newLikeIds.add(e.id);
+            if (e.content.trim()) {
+              const reactionEvent = eventToReactionEvent(e, _anchor.value);
+              if (voteKind(reactionEvent) !== 0) { // remove this condition if you want to track all reactions
+                save('reactions', reactionEvent);
+              }
+            }
           } else if (e.kind === 9735) {
             const invoiceTag = e.tags.find(t => t[0] === "bolt11");
             invoiceTag && invoiceTag[1] && (newZaps[e.id] = invoiceTag[1]);
@@ -369,6 +375,9 @@ const ZapThreads = (props: { [key: string]: string; }) => {
     return nestedEvents().reduce((acc, n) => acc + totalChildren(n), nestedEvents().length);
   };
 
+  const reactions = watchAll(() => ['reactions', anchor().value, { index: 'a' }]);
+  const votes = createMemo(() => reactions().filter(r => voteKind(r) !== 0));
+
   const [showAdvanced, setShowAdvanced] = createSignal(false);
 
   return <>
@@ -388,7 +397,7 @@ const ZapThreads = (props: { [key: string]: string; }) => {
         <h2 id="ztr-title">
           {commentsLength() > 0 && `${commentsLength()} comment${commentsLength() == 1 ? '' : 's'}`}
         </h2>
-        <Thread nestedEvents={nestedEvents} articles={articles} />
+        <Thread nestedEvents={nestedEvents} articles={articles} votes={votes} />
       </>}
 
       <div style="float:right; opacity: 0.2;" onClick={() => setShowAdvanced(!showAdvanced())}>{ellipsisSvg()}</div>

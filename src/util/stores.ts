@@ -28,7 +28,7 @@ export type EventSigner = {
 
 export type UrlPrefixesKeys = 'naddr' | 'nevent' | 'note' | 'npub' | 'nprofile' | 'tag';
 
-const _types = ['reply', 'likes', 'zaps', 'publish', 'watch', 'replyAnonymously', 'hideContent'] as const;
+const _types = ['reply', 'likes', 'votes', 'zaps', 'publish', 'watch', 'replyAnonymously', 'hideContent'] as const;
 type DisableType = typeof _types[number];
 export const isDisableType = (type: string): type is DisableType => {
   return _types.includes(type as DisableType);

@@ -280,6 +280,8 @@ export const satsAbbrev = (sats: number): string => {
   }
 };
 
+export const currentTime = () => Math.round(Date.now() / 1000);
+
 export const totalChildren = (event: NestedNoteEvent): number => {
   return event.children.reduce<number>((acc, c) => {
     return acc + totalChildren(c);
