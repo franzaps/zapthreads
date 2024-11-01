@@ -53,22 +53,22 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
           const total = createMemo(() => totalChildren(event()));
 
           const isUnspecifiedVersion = () =>
-            // if it does not have a parent or rootId
-            !event().parent && !event().ro;
+              // if it does not have a parent or rootId
+              !event().parent && !event().ro;
 
           const isMissingEvent = () =>
-            // if it does not have a parent
-            !event().parent &&
-            // does have a root but it's not in the rootEvents
-            event().ro && !store.rootEventIds.includes(event().ro!);
+              // if it does not have a parent
+              !event().parent &&
+              // does have a root but it's not in the rootEvents
+              event().ro && !store.rootEventIds.includes(event().ro!);
 
           const isDifferentVersion = () =>
-            // if it does not have a parent
-            !event().parent &&
-            // does have a root in root events
-            event().ro && store.rootEventIds.includes(event().ro!)
-            // but does not match the current version
-            && store.version && store.version !== event().ro;
+              // if it does not have a parent
+              !event().parent &&
+              // does have a root in root events
+              event().ro && store.rootEventIds.includes(event().ro!)
+              // but does not match the current version
+              && store.version && store.version !== event().ro;
 
           onCleanup(() => clearInterval(timer));
 
@@ -84,10 +84,10 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                       <a href={store.urlPrefixes!.npub + npub()} target="_blank" >{profile()?.n || shortenEncodedId(npub())}</a>
                       <span style="white-space: nowrap;"><strong> {action()}ed</strong> {createdTimeAgo()}</span></li>
                     {total() > 0 && size.width! > 600 &&
-                      <>
-                        <li>●</li>
-                        <li>{total()} repl{total() > 1 ? 'ies' : 'y'}{isThreadCollapsed() ? ' (hidden)' : ''}</li>
-                      </>
+                        <>
+                          <li>●</li>
+                          <li>{total()} repl{total() > 1 ? 'ies' : 'y'}{isThreadCollapsed() ? ' (hidden)' : ''}</li>
+                        </>
                     }
                     <li>
                       <a class="ztr-comment-info-dots" onClick={() => setShowInfo(!showInfo())}>
@@ -106,10 +106,10 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
               </div>
 
               {showInfo() &&
-                <div class="ztr-info-pane">
-                  <a href={store.urlPrefixes!.note + noteEncode(event().id)} target="_blank"><small>Event data</small></a>
-                  {/* <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre> */}
-                </div>}
+                  <div class="ztr-info-pane">
+                    <a href={store.urlPrefixes!.note + noteEncode(event().id)} target="_blank"><small>Event data</small></a>
+                    {/* <pre>{JSON.stringify(event(), ['id', 'ts', 'pk', 'ro', 're', 'me', 'a', 'am', 'p'], 2)}</pre> */}
+                  </div>}
 
               <div class="ztr-comment-text">
                 {isMissingEvent() && <p class="warning">{warningSvg()}<span>This is a {action()} that referenced this article in <a href={store.urlPrefixes!.note + noteEncode(event().ro!)}>another thread</a></span></p>}
@@ -118,19 +118,19 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
               </div>
 
               <div
-                ref={setTarget}
-                classList={{ "ztr-comment-text": true, "highlight": event().k == 9802 }}
-                style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
-                innerHTML={parseContent(event(), store, props.articles())}>
+                  ref={setTarget}
+                  classList={{ "ztr-comment-text": true, "highlight": event().k == 9802 }}
+                  style={!isExpanded() ? { 'max-height': `${MAX_HEIGHT}px` } : {}}
+                  innerHTML={parseContent(event(), store, props.articles())}>
               </div>
 
               {size.height && size.height >= MAX_HEIGHT && !isExpanded() &&
-                <div class="ztr-comment-expand">
-                  <a style={{ 'height': `${svgWidth}px` }}>
-                    {expandSvg()}
-                  </a>
-                  <span onClick={() => setExpanded(true)}>Show full comment</span>
-                </div>}
+                  <div class="ztr-comment-expand">
+                    <a style={{ 'height': `${svgWidth}px` }}>
+                      {expandSvg()}
+                    </a>
+                    <span onClick={() => setExpanded(true)}>Show full comment</span>
+                  </div>}
 
               <ul class="ztr-comment-actions">
                 <Show when={!store.disableFeatures!.includes('reply')}>
@@ -153,7 +153,7 @@ export const Thread = (props: { nestedEvents: () => NestedNoteEvent[]; articles:
                 </Show> */}
               </ul>
               {isOpen() &&
-                <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
+                  <ReplyEditor replyTo={event().id} onDone={() => setOpen(false)} />}
             </div>
             {!isThreadCollapsed() && <div class="ztr-comment-replies">
               <Thread nestedEvents={() => event().children} articles={props.articles} />
